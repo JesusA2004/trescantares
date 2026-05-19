@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(node -e \"const {default: mod} = require\\('./node_modules/@inertiajs/vite/dist/index.js'\\); console.log\\(Object.keys\\(mod\\)\\)\")",
+      "Bash(npm run *)"
+    ]
+  }
+}

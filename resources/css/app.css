@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-
 @import 'tw-animate-css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -169,4 +168,70 @@
     body {
         @apply bg-background text-foreground;
     }
+}
+
+/* =========================================
+   TRES CANTARES — Estilos públicos
+   ========================================= */
+:root {
+    --tc-rojo: #b83a4b;
+    --tc-azul: #1f5f8b;
+    --tc-verde: #1f8a4c;
+    --tc-crema: #f7f3ea;
+    --tc-papel: #fbfaf5;
+    --tc-oscuro: #1f1f1f;
+    --tc-font-display: 'Bebas Neue', sans-serif;
+    --tc-font-body: 'Poppins', sans-serif;
+}
+
+.font-display {
+    font-family: var(--tc-font-display);
+    letter-spacing: 0.05em;
+}
+
+.font-body {
+    font-family: var(--tc-font-body);
+}
+
+.bg-papel {
+    background-color: var(--tc-papel);
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(0,0,0,0.04) 1px, transparent 0);
+    background-size: 24px 24px;
+}
+
+.bg-crema {
+    background-color: var(--tc-crema);
+}
+
+.text-tc-rojo { color: var(--tc-rojo); }
+.text-tc-azul { color: var(--tc-azul); }
+.text-tc-verde { color: var(--tc-verde); }
+
+.bg-tc-rojo { background-color: var(--tc-rojo); }
+.bg-tc-azul { background-color: var(--tc-azul); }
+.bg-tc-verde { background-color: var(--tc-verde); }
+
+.hero-overlay {
+    background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.7) 100%);
+}
+
+.tc-title {
+    font-family: var(--tc-font-display);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.tc-section {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+}
+
+.tc-card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tc-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
 }

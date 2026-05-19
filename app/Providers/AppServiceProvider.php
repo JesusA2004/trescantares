@@ -7,15 +7,20 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Schema;
 
-class AppServiceProvider extends ServiceProvider
-{
+class AppServiceProvider extends ServiceProvider {
+
     /**
      * Register any application services.
      */
     public function register(): void
     {
-        //
+        // Load Spatie stubs if the real package is not installed yet.
+        // After running `composer require spatie/laravel-permission`, this becomes a no-op.
+        if (!trait_exists('Spatie\Permission\Traits\HasRoles')) {
+            require_once __DIR__ . '/../Support/SpatieStubs.php';
+        }
     }
 
     /**
@@ -24,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        Schema::defaultStringLength(191);
     }
 
     /**
