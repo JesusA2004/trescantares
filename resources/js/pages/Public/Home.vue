@@ -18,14 +18,18 @@ import {
     cardCantarito,
     cardNopal,
     cardRose,
-    tornPaperLarge,
     paperWhite,
 } from '@/lib/tres-cantares-assets';
 
 const page = usePage();
 const settings = computed(() => (page.props as any).settings ?? {});
 
-const paperBg = { backgroundImage: `url(${paperWhite})` };
+const paperBg = {
+    backgroundImage: `url(${paperWhite})`,
+    backgroundRepeat: 'repeat',
+    backgroundSize: '420px auto',
+    backgroundColor: 'var(--tc-paper)',
+};
 </script>
 
 <template>
@@ -34,76 +38,46 @@ const paperBg = { backgroundImage: `url(${paperWhite})` };
     <div class="tc-home-page">
 
         <!-- ============================================================
-             NAVBAR  (con torn-paper-small.png como fondo real)
-        ============================================================ -->
-        <Navbar :settings="settings" />
-
-        <!-- ============================================================
-             HERO
+             HERO — Navbar flota encima como papel rasgado
         ============================================================ -->
         <section class="tc-home-hero">
 
-            <!-- Fondo: hero-home.jpeg + overlay -->
+            <!-- Navbar absolutamente posicionado encima del hero -->
+            <Navbar :settings="settings" />
+
+            <!-- Fondo -->
             <div class="tc-home-hero-bg">
-                <img
-                    :src="settings.hero_background_url || settings.hero_background || heroHome"
+                <img :src="settings.hero_background_url || settings.hero_background || heroHome"
                     alt="Tres Cantares" />
                 <div class="tc-home-hero-overlay"></div>
             </div>
 
-            <!-- Cartas LEFT: card-nopal + card-cantarito, parcialmente fuera -->
-            <div class="tc-hero-loteria tc-hero-left hidden md:flex">
-                <div class="tc-hero-card loteria-card"
-                    style="width: 142px; height: 190px; transform: rotate(-7deg);">
-                    <img :src="cardNopal" alt=""
-                        style="width: 100%; height: 100%; object-fit: cover;" />
-                </div>
-                <div class="tc-hero-card loteria-card"
-                    style="width: 142px; height: 190px; transform: rotate(5deg);">
-                    <img :src="cardCantarito" alt=""
-                        style="width: 100%; height: 100%; object-fit: cover;" />
-                </div>
-            </div>
+            <!-- Cartas: position absolute sobre el hero -->
+            <img :src="cardNopal"     class="tc-hero-card tc-hero-card-nopal     hidden md:block" alt="" />
+            <img :src="cardCantarito" class="tc-hero-card tc-hero-card-cantarito hidden md:block" alt="" />
+            <img :src="cardBorracho"  class="tc-hero-card tc-hero-card-borracho  hidden md:block" alt="" />
 
-            <!-- Carta RIGHT: card-borracho, grande, parcialmente fuera -->
-            <div class="tc-hero-loteria tc-hero-right hidden md:flex">
-                <div class="tc-hero-card loteria-card"
-                    style="width: 200px; height: 267px; transform: rotate(8deg);">
-                    <img :src="cardBorracho" alt=""
-                        style="width: 100%; height: 100%; object-fit: cover;" />
-                </div>
-            </div>
-
-            <!-- Título TRES CANTARES + texto -->
+            <!-- Título + texto centrado -->
             <div class="tc-hero-content">
-                <h1 style="font-family: var(--tc-font-display); color: white; font-size: 78px; line-height: 1; text-transform: uppercase; text-align: center; letter-spacing: 0.07em; margin-bottom: 16px; text-shadow: 2px 4px 12px rgba(0,0,0,0.6);">
-                    TRES CANTARES
-                </h1>
-                <p style="color: white; font-size: 13px; line-height: 1.7; text-align: center; max-width: 580px; font-family: var(--tc-font-body);">
+                <h1 class="tc-hero-title">TRES CANTARES</h1>
+                <p class="tc-hero-text">
                     ¡Ven a disfrutar el auténtico sabor de México en un espacio cálido y moderno,
                     donde la tradición, la buena música y los mejores momentos se comparten
                     en familia, con amigos o en pareja! Vive la experiencia Tres Cantares.
                 </p>
             </div>
-
-            <!-- Papel rasgado inferior (torn-paper-large.png) -->
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; z-index: 30; line-height: 0; pointer-events: none;">
-                <img :src="tornPaperLarge" alt=""
-                    style="width: 100%; display: block; height: 58px; object-fit: fill; transform: scaleY(-1);" />
-            </div>
         </section>
 
         <!-- ============================================================
              NUESTRO CONCEPTO
-             Fondo: paper-white.png (import Vite)
         ============================================================ -->
         <section class="tc-concept" :style="paperBg">
             <div class="tc-concept-artboard">
 
-                <!-- concepto.png + texto — columna izquierda -->
+                <!-- Izquierda: título gráfico + texto azul -->
                 <div class="tc-concept-title">
                     <img :src="imgConcepto" alt="Nuestro Concepto"
-                        style="width: 100%; height: auto; display: block;" />
+                        style="width:100%; height:auto; display:block;" />
                     <p class="tc-concept-text">
                         En Tres Cantares fusionamos la tradición mexicana con un ambiente moderno y acogedor,
                         creando el lugar perfecto para compartir grandes momentos. Disfruta sabores auténticos,
@@ -111,70 +85,50 @@ const paperBg = { backgroundImage: `url(${paperWhite})` };
                     </p>
                 </div>
 
-                <!-- card-rose.png — detrás del cantarito (z-index 1) -->
-                <div class="tc-concept-card-rose loteria-card hidden md:block">
-                    <img :src="cardRose" alt=""
-                        style="width: 100%; height: 100%; object-fit: cover;" />
-                </div>
+                <!-- Cartas detrás del cantarito (z-index 2) -->
+                <img :src="cardRose"     class="tc-concept-card-rose     hidden md:block" alt="" />
+                <img :src="cardCantarito" class="tc-concept-card-cantarito hidden md:block" alt="" />
 
-                <!-- card-cantarito.png — detrás del cantarito (z-index 1) -->
-                <div class="tc-concept-card-cantarito loteria-card hidden md:block">
-                    <img :src="cardCantarito" alt=""
-                        style="width: 100%; height: 100%; object-fit: cover;" />
-                </div>
+                <!-- Cantarito principal — encima de las cartas (z-index 5) -->
+                <img :src="cantaritoMain" class="tc-concept-cantarito hidden md:block"
+                    alt="Cantarito Tres Cantares" />
 
-                <!-- cantarito-main.png — grande a la derecha, desborda abajo (z-index 2) -->
-                <img :src="cantaritoMain" alt="Cantarito Tres Cantares"
-                    class="tc-concept-cantarito hidden md:block" />
+                <!-- Tacos cruzando entre concepto y menú (z-index 20) -->
+                <img :src="tacoLeft" class="tc-cross-tacos hidden md:block" alt="" />
             </div>
         </section>
 
-        <!-- ============================================================
-             DIVISOR  (mexican-divider-up.png + mexican-divider-down.png)
-        ============================================================ -->
-        <DecorativeDivider />
+        <!-- Divisor entre concepto y menú -->
+        <DecorativeDivider type="up" />
 
         <!-- ============================================================
              CONOCE NUESTRO MENÚ
-             Fondo: paper-white.png (import Vite)
         ============================================================ -->
         <section class="tc-menu-preview" :style="paperBg">
             <div class="tc-menu-artboard">
 
-                <!-- taco-lef.png — izquierda, grande, desborda borde -->
-                <img :src="tacoLeft"      class="tc-menu-taco      hidden md:block" alt="" />
-
-                <!-- limon-left.png — izquierda media, pequeño -->
-                <img :src="limonLeft"     class="tc-menu-limon     hidden lg:block" alt="" />
-
-                <!-- pozole-left.png — inferior izquierda -->
-                <img :src="pozoleLeft"    class="tc-menu-pozole    hidden md:block" alt="" />
-
-                <!-- menu-dish-right.png — derecha, grande, desborda borde -->
+                <!-- Comidas decorativas — sin taco (viene del cross-tacos de arriba) -->
+                <img :src="limonLeft"     class="tc-menu-limon      hidden lg:block" alt="" />
+                <img :src="pozoleLeft"    class="tc-menu-pozole     hidden md:block" alt="" />
                 <img :src="menuDishRight" class="tc-menu-dish-right hidden md:block" alt="" />
 
-                <!-- menu.png — centrado -->
+                <!-- menu.png título gráfico -->
                 <div class="tc-menu-title">
-                    <img :src="imgMenu" alt="Conoce Nuestro Menú" />
+                    <img :src="imgMenu" alt="Conoce Nuestro Menú"
+                        style="width:100%; height:auto; display:block;" />
                 </div>
 
-                <!-- Botón MENÚ -->
+                <!-- Botón MENÚ — siempre debajo del título -->
                 <div class="tc-menu-button">
-                    <Link href="/menu" class="btn-menu-vintage">
-                        MENÚ
-                    </Link>
+                    <Link href="/menu" class="btn-menu-vintage">MENÚ</Link>
                 </div>
             </div>
         </section>
 
-        <!-- ============================================================
-             DIVISOR
-        ============================================================ -->
-        <DecorativeDivider />
+        <!-- Divisor entre menú y footer -->
+        <DecorativeDivider type="down" />
 
-        <!-- ============================================================
-             FOOTER  (bg-footer.png como fondo real)
-        ============================================================ -->
+        <!-- FOOTER -->
         <Footer :settings="settings" />
 
     </div>

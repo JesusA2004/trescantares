@@ -17,7 +17,9 @@
       "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\js\\\\img\\\\decorations\" /b)",
       "Read(//mnt/c/wamp64/www/**)",
       "Bash(composer require *)",
-      "Bash(/c/wamp64/bin/mysql/mysql9.1.0/bin/mysql.exe *)"
+      "Bash(/c/wamp64/bin/mysql/mysql9.1.0/bin/mysql.exe *)",
+      "Bash(node -e ' *)",
+      "Bash(python3 *)"
     ]
   }
 }
