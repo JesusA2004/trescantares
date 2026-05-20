@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { logoTresCantares } from '@/lib/tres-cantares-assets';
+import { logoTresCantares, tornPaperSmall } from '@/lib/tres-cantares-assets';
 
 defineProps<{ settings: Record<string, any> }>();
 
@@ -10,87 +10,86 @@ const page = usePage();
 </script>
 
 <template>
-    <!--
-        Navbar en flujo normal del documento (NO absolute).
-        Franja de papel claro arriba, links rosas, logo centrado.
-    -->
-    <nav style="background-color: var(--tc-paper-light); border-bottom: 1px solid rgba(0,0,0,0.06);">
-        <!-- Desktop -->
-        <div class="hidden lg:flex items-center justify-between max-w-6xl mx-auto px-8 py-2">
+    <nav class="tc-public-navbar">
 
-            <!-- Links izquierda -->
-            <div class="flex items-center gap-10">
-                <Link href="/"
-                    class="font-display uppercase tracking-[0.18em] transition-opacity hover:opacity-70"
-                    style="font-size: 18px; color: var(--tc-pink);"
-                    :style="page.url === '/' ? 'color: var(--tc-blue);' : ''">
-                    Nosotros
-                </Link>
-                <Link href="/ubicacion"
-                    class="font-display uppercase tracking-[0.18em] transition-opacity hover:opacity-70"
-                    style="font-size: 18px; color: var(--tc-pink);"
-                    :style="page.url === '/ubicacion' ? 'color: var(--tc-blue);' : ''">
-                    Ubicación
-                </Link>
-            </div>
+        <!-- torn-paper-small.png ES el fondo del navbar -->
+        <img :src="tornPaperSmall" class="tc-navbar-paper" alt="" />
 
-            <!-- Logo centrado -->
-            <Link href="/" class="flex-shrink-0">
-                <img
-                    v-if="settings.logo_url || settings.logo"
-                    :src="settings.logo_url || settings.logo"
-                    alt="Tres Cantares"
-                    style="height: 95px; object-fit: contain;" />
-                <img
-                    v-else
-                    :src="logoTresCantares"
-                    alt="Tres Cantares"
-                    style="height: 95px; object-fit: contain;" />
-            </Link>
+        <!-- Desktop: contenido sobre el papel, posición absoluta -->
+        <div class="tc-navbar-inner hidden lg:flex items-center">
+            <div class="tc-navbar-content">
 
-            <!-- Links derecha -->
-            <div class="flex items-center gap-10">
-                <Link href="/menu"
-                    class="font-display uppercase tracking-[0.18em] transition-opacity hover:opacity-70"
-                    style="font-size: 18px; color: var(--tc-pink);"
-                    :style="page.url === '/menu' ? 'color: var(--tc-blue);' : ''">
-                    Menú
+                <!-- Links izquierda -->
+                <div style="display: flex; align-items: center; gap: 44px;">
+                    <Link href="/" class="tc-nav-link"
+                        :class="{ 'tc-nav-link-active': page.url === '/' }">
+                        Nosotros
+                    </Link>
+                    <Link href="/ubicacion" class="tc-nav-link"
+                        :class="{ 'tc-nav-link-active': page.url === '/ubicacion' }">
+                        Ubicación
+                    </Link>
+                </div>
+
+                <!-- Logo centrado -->
+                <Link href="/" style="flex-shrink: 0; display: block;">
+                    <img
+                        v-if="settings.logo_url || settings.logo"
+                        :src="settings.logo_url || settings.logo"
+                        alt="Tres Cantares"
+                        class="tc-navbar-logo" />
+                    <img
+                        v-else
+                        :src="logoTresCantares"
+                        alt="Tres Cantares"
+                        class="tc-navbar-logo" />
                 </Link>
-                <a
-                    :href="settings.billing_url && settings.billing_url !== '#' ? settings.billing_url : '#'"
-                    class="font-display uppercase tracking-[0.18em] transition-opacity hover:opacity-70"
-                    style="font-size: 18px; color: var(--tc-pink);">
-                    Facturación
-                </a>
+
+                <!-- Links derecha -->
+                <div style="display: flex; align-items: center; gap: 44px;">
+                    <Link href="/menu" class="tc-nav-link"
+                        :class="{ 'tc-nav-link-active': page.url === '/menu' }">
+                        Menú
+                    </Link>
+                    <a
+                        :href="settings.billing_url && settings.billing_url !== '#' ? settings.billing_url : '#'"
+                        class="tc-nav-link">
+                        Facturación
+                    </a>
+                </div>
             </div>
         </div>
 
-        <!-- Mobile -->
-        <div class="lg:hidden flex items-center justify-between px-4 py-3">
-            <Link href="/">
-                <img
-                    v-if="settings.logo_url || settings.logo"
-                    :src="settings.logo_url || settings.logo"
-                    alt="Tres Cantares"
-                    style="height: 65px; object-fit: contain;" />
-                <img
-                    v-else
-                    :src="logoTresCantares"
-                    alt="Tres Cantares"
-                    style="height: 65px; object-fit: contain;" />
-            </Link>
-            <button @click="menuOpen = !menuOpen"
-                style="color: var(--tc-pink);" aria-label="Menú">
-                <svg v-if="!menuOpen" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-                <svg v-else class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
+        <!-- Mobile: header sobre el papel -->
+        <div class="tc-navbar-inner lg:hidden flex items-center">
+            <div style="width: 100%; padding: 0 16px; display: flex; align-items: center; justify-content: space-between;">
+                <Link href="/">
+                    <img
+                        v-if="settings.logo_url || settings.logo"
+                        :src="settings.logo_url || settings.logo"
+                        alt="Tres Cantares"
+                        style="height: 50px; object-fit: contain;" />
+                    <img
+                        v-else
+                        :src="logoTresCantares"
+                        alt="Tres Cantares"
+                        style="height: 50px; object-fit: contain;" />
+                </Link>
+                <button
+                    @click="menuOpen = !menuOpen"
+                    style="color: var(--tc-pink); background: none; border: none; cursor: pointer; padding: 4px;"
+                    aria-label="Menú">
+                    <svg v-if="!menuOpen" style="width: 28px; height: 28px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                    <svg v-else style="width: 28px; height: 28px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
         </div>
 
-        <!-- Mobile dropdown -->
+        <!-- Mobile dropdown (en flujo normal, debajo del papel) -->
         <Transition
             enter-active-class="transition-all duration-300"
             enter-from-class="opacity-0 -translate-y-2"
@@ -98,27 +97,16 @@ const page = usePage();
             leave-active-class="transition-all duration-200"
             leave-from-class="opacity-100 translate-y-0"
             leave-to-class="opacity-0 -translate-y-2">
-            <div v-show="menuOpen"
-                class="lg:hidden flex flex-col items-center gap-5 py-6 border-t"
-                style="background-color: var(--tc-paper); border-color: rgba(0,0,0,0.08);">
-                <Link href="/" @click="menuOpen = false"
-                    class="font-display uppercase tracking-widest"
-                    style="font-size: 18px; color: var(--tc-pink);">
-                    Nosotros
-                </Link>
-                <Link href="/ubicacion" @click="menuOpen = false"
-                    class="font-display uppercase tracking-widest"
-                    style="font-size: 18px; color: var(--tc-pink);">
-                    Ubicación
-                </Link>
-                <Link href="/menu" @click="menuOpen = false"
-                    class="font-display uppercase tracking-widest"
-                    style="font-size: 18px; color: var(--tc-pink);">
-                    Menú
-                </Link>
-                <a :href="settings.billing_url && settings.billing_url !== '#' ? settings.billing_url : '#'"
-                    class="font-display uppercase tracking-widest"
-                    style="font-size: 18px; color: var(--tc-pink);">
+            <div
+                v-show="menuOpen"
+                class="lg:hidden"
+                style="background-color: var(--tc-paper); border-top: 1px solid rgba(0,0,0,0.08); display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 20px 0 22px;">
+                <Link href="/"         @click="menuOpen = false" class="tc-nav-link" style="font-size: 20px;">Nosotros</Link>
+                <Link href="/ubicacion" @click="menuOpen = false" class="tc-nav-link" style="font-size: 20px;">Ubicación</Link>
+                <Link href="/menu"      @click="menuOpen = false" class="tc-nav-link" style="font-size: 20px;">Menú</Link>
+                <a
+                    :href="settings.billing_url && settings.billing_url !== '#' ? settings.billing_url : '#'"
+                    class="tc-nav-link" style="font-size: 20px;">
                     Facturación
                 </a>
             </div>

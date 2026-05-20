@@ -396,3 +396,343 @@
     font-size: 0.6em;
     opacity: 0.6;
 }
+
+/* =============================================
+   PÚBLICO — Navbar con papel rasgado
+   ============================================= */
+
+.tc-public-navbar {
+    position: relative;
+    width: 100%;
+    z-index: 20;
+}
+
+.tc-navbar-paper {
+    display: block;
+    width: 100%;
+    height: 115px;
+    object-fit: fill;
+}
+
+.tc-navbar-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+}
+
+.tc-navbar-content {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tc-nav-link {
+    font-family: var(--tc-font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--tc-pink);
+    font-size: 24px;
+    text-decoration: none;
+    transition: color 0.2s, opacity 0.2s;
+}
+
+.tc-nav-link:hover {
+    opacity: 0.7;
+}
+
+.tc-nav-link-active {
+    color: var(--tc-blue);
+}
+
+.tc-navbar-logo {
+    width: 128px;
+    height: auto;
+    object-fit: contain;
+}
+
+/* =============================================
+   HOME PAGE — Composición gráfica
+   ============================================= */
+
+.tc-home-page {
+    background: var(--tc-paper);
+    overflow-x: hidden;
+}
+
+/* HERO */
+.tc-home-hero {
+    position: relative;
+    height: 310px;
+    overflow: hidden;
+}
+
+.tc-home-hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.tc-home-hero-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    display: block;
+}
+
+.tc-home-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.58) 0%,
+        rgba(0,0,0,0.38) 50%,
+        rgba(0,0,0,0.68) 100%
+    );
+}
+
+.tc-hero-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    padding: 0 220px;
+}
+
+.tc-hero-loteria {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+}
+
+.tc-hero-left  { left:  -58px; }
+.tc-hero-right { right: -62px; }
+
+.tc-hero-card {
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* CONCEPTO */
+.tc-concept {
+    position: relative;
+    height: 440px;
+    overflow: hidden;
+    background-color: var(--tc-paper);
+    background-repeat: repeat;
+    background-size: 400px auto;
+}
+
+.tc-concept-artboard {
+    position: relative;
+    width: min(100%, 1120px);
+    height: 100%;
+    margin: 0 auto;
+}
+
+.tc-concept-title {
+    position: absolute;
+    left: 80px;
+    top: 48px;
+    width: 440px;
+    z-index: 10;
+}
+
+.tc-concept-text {
+    font-family: var(--tc-font-body);
+    font-size: 14px;
+    color: var(--tc-blue);
+    line-height: 1.78;
+    max-width: 430px;
+    margin-top: 14px;
+}
+
+.tc-concept-card-rose {
+    position: absolute;
+    right: 538px;
+    bottom: 22px;
+    width: 118px;
+    height: 157px;
+    transform: rotate(-9deg);
+    z-index: 1;
+    overflow: hidden;
+}
+
+.tc-concept-card-cantarito {
+    position: absolute;
+    right: 515px;
+    top: 52px;
+    width: 108px;
+    height: 144px;
+    transform: rotate(10deg);
+    z-index: 1;
+    overflow: hidden;
+}
+
+.tc-concept-cantarito {
+    position: absolute;
+    right: 78px;
+    bottom: -32px;
+    width: 492px;
+    height: auto;
+    z-index: 2;
+}
+
+/* DIVISOR REAL */
+.tc-real-divider {
+    width: 100%;
+    overflow: hidden;
+    line-height: 0;
+}
+
+.tc-real-divider img {
+    display: block;
+    width: 100%;
+    height: 30px;
+    object-fit: fill;
+}
+
+/* MENÚ PREVIEW */
+.tc-menu-preview {
+    position: relative;
+    height: 440px;
+    overflow: hidden;
+    background-color: var(--tc-paper);
+    background-repeat: repeat;
+    background-size: 400px auto;
+}
+
+.tc-menu-artboard {
+    position: relative;
+    width: min(100%, 1120px);
+    height: 100%;
+    margin: 0 auto;
+}
+
+.tc-menu-title {
+    position: absolute;
+    top: 42px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    white-space: nowrap;
+    width: 580px;
+}
+
+.tc-menu-title img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.tc-menu-button {
+    position: absolute;
+    bottom: 58px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    white-space: nowrap;
+}
+
+.tc-menu-taco {
+    position: absolute;
+    left: -52px;
+    bottom: 0;
+    width: 420px;
+    height: auto;
+    z-index: 3;
+}
+
+.tc-menu-limon {
+    position: absolute;
+    left: 68px;
+    top: 30%;
+    width: 88px;
+    height: auto;
+    z-index: 4;
+}
+
+.tc-menu-pozole {
+    position: absolute;
+    left: 138px;
+    bottom: -26px;
+    width: 352px;
+    height: auto;
+    z-index: 2;
+}
+
+.tc-menu-dish-right {
+    position: absolute;
+    right: -52px;
+    bottom: -22px;
+    width: 424px;
+    height: auto;
+    z-index: 3;
+}
+
+/* FOOTER */
+.tc-footer-public {
+    background-size: cover;
+    background-position: center top;
+    position: relative;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .tc-navbar-paper   { height: 78px; }
+    .tc-nav-link       { font-size: 20px; }
+    .tc-navbar-logo    { width: 100px; }
+    .tc-hero-content   { padding: 0 130px; }
+    .tc-hero-left      { left:  -42px; }
+    .tc-hero-right     { right: -46px; }
+}
+
+@media (max-width: 768px) {
+    .tc-home-hero {
+        height: 250px;
+    }
+    .tc-hero-content {
+        padding: 0 30px;
+    }
+    .tc-concept {
+        height: auto;
+        min-height: 300px;
+        padding-bottom: 30px;
+    }
+    .tc-concept-artboard {
+        height: auto;
+        padding: 30px 20px;
+    }
+    .tc-concept-title {
+        position: static;
+        width: 100%;
+    }
+    .tc-concept-card-rose,
+    .tc-concept-card-cantarito,
+    .tc-concept-cantarito {
+        display: none;
+    }
+    .tc-menu-preview {
+        height: 250px;
+    }
+    .tc-menu-taco,
+    .tc-menu-pozole,
+    .tc-menu-dish-right,
+    .tc-menu-limon {
+        display: none;
+    }
+}

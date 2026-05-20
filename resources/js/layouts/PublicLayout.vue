@@ -6,15 +6,20 @@ import { computed } from 'vue';
 
 const page = usePage();
 const settings = computed(() => (page.props as any).settings ?? {});
-const setting = (key: string, fallback = '') => settings.value?.[key] ?? fallback;
+const isHome = computed(() => page.component === 'Public/Home');
 </script>
 
 <template>
-    <div class="min-h-screen flex flex-col font-body" style="font-family: var(--tc-font-body)">
-        <Navbar :settings="settings" />
-        <main class="flex-1">
+    <div class="min-h-screen font-body" style="font-family: var(--tc-font-body)">
+        <template v-if="isHome">
             <slot />
-        </main>
-        <Footer :settings="settings" />
+        </template>
+        <template v-else>
+            <Navbar :settings="settings" />
+            <main>
+                <slot />
+            </main>
+            <Footer :settings="settings" />
+        </template>
     </div>
 </template>

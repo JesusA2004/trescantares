@@ -9,18 +9,15 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-    <div class="w-full overflow-hidden leading-[0]">
+    <!-- mexican-divider-up.png + mexican-divider-down.png — imágenes reales, sin CSS inventado -->
+    <div class="tc-real-divider">
         <img
             v-if="variant === 'up' || variant === 'both'"
             :src="dividerUp"
-            alt=""
-            class="w-full block"
-            style="object-fit: fill;" />
+            alt="" />
         <img
             v-if="variant === 'down' || variant === 'both'"
             :src="dividerDown"
-            alt=""
-            class="w-full block"
-            style="object-fit: fill;" />
+            alt="" />
     </div>
 </template>

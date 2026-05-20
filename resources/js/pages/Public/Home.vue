@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import Navbar from '@/components/Public/Navbar.vue';
+import Footer from '@/components/Public/Footer.vue';
 import DecorativeDivider from '@/components/Public/DecorativeDivider.vue';
 import {
     heroHome,
@@ -7,6 +11,7 @@ import {
     imgMenu,
     cantaritoMain,
     tacoLeft,
+    pozoleLeft,
     menuDishRight,
     limonLeft,
     cardBorracho,
@@ -14,163 +19,163 @@ import {
     cardNopal,
     cardRose,
     tornPaperLarge,
-    tornPaperSmall,
+    paperWhite,
 } from '@/lib/tres-cantares-assets';
 
-defineProps<{
-    settings: Record<string, any>
-}>();
+const page = usePage();
+const settings = computed(() => (page.props as any).settings ?? {});
+
+const paperBg = { backgroundImage: `url(${paperWhite})` };
 </script>
 
 <template>
     <Head title="Inicio" />
 
-    <!-- ============================================================
-         HERO
-    ============================================================ -->
-    <section class="relative overflow-hidden" style="height: 310px;">
+    <div class="tc-home-page">
 
-        <!-- Background image -->
-        <div class="absolute inset-0">
-            <img
-                v-if="settings.hero_background_url || settings.hero_background"
-                :src="settings.hero_background_url || settings.hero_background"
-                alt="Tres Cantares"
-                class="w-full h-full object-cover object-center" />
-            <img
-                v-else
-                :src="heroHome"
-                alt="Tres Cantares"
-                class="w-full h-full object-cover object-center" />
-            <div class="absolute inset-0 hero-overlay"></div>
-        </div>
+        <!-- ============================================================
+             NAVBAR  (con torn-paper-small.png como fondo real)
+        ============================================================ -->
+        <Navbar :settings="settings" />
 
-        <!-- Lotería cards LEFT — partially cut off at edge -->
-        <div class="absolute left-0 top-1/2 -translate-y-1/2 hidden md:flex flex-col gap-4"
-            style="transform: translate(-30%, -50%);">
-            <div class="loteria-card w-[100px] h-[135px] rotate-[-7deg] overflow-hidden shadow-2xl">
-                <img :src="cardNopal" alt="" class="w-full h-full object-cover" />
+        <!-- ============================================================
+             HERO
+        ============================================================ -->
+        <section class="tc-home-hero">
+
+            <!-- Fondo: hero-home.jpeg + overlay -->
+            <div class="tc-home-hero-bg">
+                <img
+                    :src="settings.hero_background_url || settings.hero_background || heroHome"
+                    alt="Tres Cantares" />
+                <div class="tc-home-hero-overlay"></div>
             </div>
-            <div class="loteria-card w-[100px] h-[135px] rotate-[5deg] overflow-hidden shadow-2xl">
-                <img :src="cardCantarito" alt="" class="w-full h-full object-cover" />
+
+            <!-- Cartas LEFT: card-nopal + card-cantarito, parcialmente fuera -->
+            <div class="tc-hero-loteria tc-hero-left hidden md:flex">
+                <div class="tc-hero-card loteria-card"
+                    style="width: 142px; height: 190px; transform: rotate(-7deg);">
+                    <img :src="cardNopal" alt=""
+                        style="width: 100%; height: 100%; object-fit: cover;" />
+                </div>
+                <div class="tc-hero-card loteria-card"
+                    style="width: 142px; height: 190px; transform: rotate(5deg);">
+                    <img :src="cardCantarito" alt=""
+                        style="width: 100%; height: 100%; object-fit: cover;" />
+                </div>
             </div>
-        </div>
 
-        <!-- Lotería cards RIGHT — partially cut off at edge -->
-        <div class="absolute right-0 top-1/2 -translate-y-1/2 hidden md:flex flex-col gap-4"
-            style="transform: translate(30%, -50%);">
-            <div class="loteria-card w-[100px] h-[135px] rotate-[7deg] overflow-hidden shadow-2xl">
-                <img :src="cardBorracho" alt="" class="w-full h-full object-cover" />
+            <!-- Carta RIGHT: card-borracho, grande, parcialmente fuera -->
+            <div class="tc-hero-loteria tc-hero-right hidden md:flex">
+                <div class="tc-hero-card loteria-card"
+                    style="width: 200px; height: 267px; transform: rotate(8deg);">
+                    <img :src="cardBorracho" alt=""
+                        style="width: 100%; height: 100%; object-fit: cover;" />
+                </div>
             </div>
-            <div class="loteria-card w-[100px] h-[135px] rotate-[-5deg] overflow-hidden shadow-2xl">
-                <img :src="cardRose" alt="" class="w-full h-full object-cover" />
+
+            <!-- Título TRES CANTARES + texto -->
+            <div class="tc-hero-content">
+                <h1 style="font-family: var(--tc-font-display); color: white; font-size: 78px; line-height: 1; text-transform: uppercase; text-align: center; letter-spacing: 0.07em; margin-bottom: 16px; text-shadow: 2px 4px 12px rgba(0,0,0,0.6);">
+                    TRES CANTARES
+                </h1>
+                <p style="color: white; font-size: 13px; line-height: 1.7; text-align: center; max-width: 580px; font-family: var(--tc-font-body);">
+                    ¡Ven a disfrutar el auténtico sabor de México en un espacio cálido y moderno,
+                    donde la tradición, la buena música y los mejores momentos se comparten
+                    en familia, con amigos o en pareja! Vive la experiencia Tres Cantares.
+                </p>
             </div>
-        </div>
 
-        <!-- Torn paper bottom -->
-        <div class="absolute bottom-0 left-0 right-0 z-20 leading-[0] pointer-events-none">
-            <img :src="tornPaperLarge" alt="" class="w-full block"
-                style="transform: scaleY(-1); height: 60px; object-fit: fill;" />
-        </div>
-    </section>
+            <!-- Papel rasgado inferior (torn-paper-large.png) -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; z-index: 30; line-height: 0; pointer-events: none;">
+                <img :src="tornPaperLarge" alt=""
+                    style="width: 100%; display: block; height: 58px; object-fit: fill; transform: scaleY(-1);" />
+            </div>
+        </section>
 
-    <!-- ============================================================
-         NUESTRO CONCEPTO
-    ============================================================ -->
-    <section class="relative overflow-hidden" style="background-color: var(--tc-paper);">
+        <!-- ============================================================
+             NUESTRO CONCEPTO
+             Fondo: paper-white.png (import Vite)
+        ============================================================ -->
+        <section class="tc-concept" :style="paperBg">
+            <div class="tc-concept-artboard">
 
-        <!-- Torn paper top -->
-        <div class="absolute top-0 left-0 right-0 z-10 leading-[0] pointer-events-none">
-            <img :src="tornPaperSmall" alt="" class="w-full block" style="height: 50px; object-fit: fill;" />
-        </div>
-
-        <div class="max-w-7xl mx-auto px-6 pt-24 pb-20">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-
-                <!-- Left: concepto image + text -->
-                <div class="relative z-10">
-                    <div class="mb-6">
-                        <img :src="imgConcepto" alt="Nuestro Concepto"
-                            style="width: 380px; max-width: 100%; height: auto;"
-                            class="drop-shadow-sm" />
-                    </div>
-                    <p class="font-body text-gray-700 text-base sm:text-lg leading-relaxed max-w-lg">
+                <!-- concepto.png + texto — columna izquierda -->
+                <div class="tc-concept-title">
+                    <img :src="imgConcepto" alt="Nuestro Concepto"
+                        style="width: 100%; height: auto; display: block;" />
+                    <p class="tc-concept-text">
                         En Tres Cantares fusionamos la tradición mexicana con un ambiente moderno y acogedor,
                         creando el lugar perfecto para compartir grandes momentos. Disfruta sabores auténticos,
                         buena música y una experiencia pensada para reunirte con quienes más quieres.
                     </p>
                 </div>
 
-                <!-- Right: cantarito + decorative lotería cards -->
-                <div class="relative flex justify-center items-center min-h-80">
-
-                    <!-- Card behind, rotated left -->
-                    <div class="absolute -left-4 top-4 w-28 h-36 rotate-[-8deg] z-0 hidden sm:block">
-                        <div class="loteria-card w-full h-full overflow-hidden">
-                            <img :src="cardRose" alt="" class="w-full h-full object-cover" />
-                        </div>
-                    </div>
-
-                    <!-- Main cantarito -->
-                    <div class="relative z-10">
-                        <img :src="cantaritoMain" alt="Cantarito Tres Cantares"
-                            class="w-64 sm:w-80 lg:w-96 h-auto drop-shadow-2xl object-contain" />
-                    </div>
-
-                    <!-- Card front-right, rotated -->
-                    <div class="absolute right-0 bottom-4 w-24 h-32 rotate-[7deg] z-20 hidden sm:block">
-                        <div class="loteria-card w-full h-full overflow-hidden">
-                            <img :src="cardCantarito" alt="" class="w-full h-full object-cover" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ============================================================
-         DIVIDER
-    ============================================================ -->
-    <DecorativeDivider />
-
-    <!-- ============================================================
-         CONOCE NUESTRO MENÚ
-    ============================================================ -->
-    <section class="relative overflow-hidden" style="background-color: var(--tc-paper-light);">
-
-        <div class="max-w-7xl mx-auto px-6 py-20 relative">
-
-            <!-- Taco — left edge -->
-            <div class="absolute -left-10 bottom-0 w-44 sm:w-56 lg:w-72 opacity-90 pointer-events-none hidden sm:block">
-                <img :src="tacoLeft" alt="" class="w-full h-auto drop-shadow-xl" />
-            </div>
-
-            <!-- Limón — upper left area -->
-            <div class="absolute left-40 top-10 w-16 sm:w-20 opacity-70 pointer-events-none hidden lg:block">
-                <img :src="limonLeft" alt="" class="w-full h-auto" />
-            </div>
-
-            <!-- Dish — right edge -->
-            <div class="absolute -right-10 bottom-0 w-44 sm:w-56 lg:w-72 opacity-90 pointer-events-none hidden sm:block">
-                <img :src="menuDishRight" alt="" class="w-full h-auto drop-shadow-xl" />
-            </div>
-
-            <!-- Center: title image + button -->
-            <div class="relative z-10 text-center">
-                <div class="flex justify-center mb-10">
-                    <img :src="imgMenu" alt="Conoce Nuestro Menú"
-                        class="max-w-sm sm:max-w-md lg:max-w-xl w-full h-auto drop-shadow-sm" />
+                <!-- card-rose.png — detrás del cantarito (z-index 1) -->
+                <div class="tc-concept-card-rose loteria-card hidden md:block">
+                    <img :src="cardRose" alt=""
+                        style="width: 100%; height: 100%; object-fit: cover;" />
                 </div>
 
-                <Link href="/menu" class="btn-menu-vintage">
-                    MENÚ
-                </Link>
-            </div>
-        </div>
-    </section>
+                <!-- card-cantarito.png — detrás del cantarito (z-index 1) -->
+                <div class="tc-concept-card-cantarito loteria-card hidden md:block">
+                    <img :src="cardCantarito" alt=""
+                        style="width: 100%; height: 100%; object-fit: cover;" />
+                </div>
 
-    <!-- ============================================================
-         DIVIDER
-    ============================================================ -->
-    <DecorativeDivider />
+                <!-- cantarito-main.png — grande a la derecha, desborda abajo (z-index 2) -->
+                <img :src="cantaritoMain" alt="Cantarito Tres Cantares"
+                    class="tc-concept-cantarito hidden md:block" />
+            </div>
+        </section>
+
+        <!-- ============================================================
+             DIVISOR  (mexican-divider-up.png + mexican-divider-down.png)
+        ============================================================ -->
+        <DecorativeDivider />
+
+        <!-- ============================================================
+             CONOCE NUESTRO MENÚ
+             Fondo: paper-white.png (import Vite)
+        ============================================================ -->
+        <section class="tc-menu-preview" :style="paperBg">
+            <div class="tc-menu-artboard">
+
+                <!-- taco-lef.png — izquierda, grande, desborda borde -->
+                <img :src="tacoLeft"      class="tc-menu-taco      hidden md:block" alt="" />
+
+                <!-- limon-left.png — izquierda media, pequeño -->
+                <img :src="limonLeft"     class="tc-menu-limon     hidden lg:block" alt="" />
+
+                <!-- pozole-left.png — inferior izquierda -->
+                <img :src="pozoleLeft"    class="tc-menu-pozole    hidden md:block" alt="" />
+
+                <!-- menu-dish-right.png — derecha, grande, desborda borde -->
+                <img :src="menuDishRight" class="tc-menu-dish-right hidden md:block" alt="" />
+
+                <!-- menu.png — centrado -->
+                <div class="tc-menu-title">
+                    <img :src="imgMenu" alt="Conoce Nuestro Menú" />
+                </div>
+
+                <!-- Botón MENÚ -->
+                <div class="tc-menu-button">
+                    <Link href="/menu" class="btn-menu-vintage">
+                        MENÚ
+                    </Link>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             DIVISOR
+        ============================================================ -->
+        <DecorativeDivider />
+
+        <!-- ============================================================
+             FOOTER  (bg-footer.png como fondo real)
+        ============================================================ -->
+        <Footer :settings="settings" />
+
+    </div>
 </template>
