@@ -11,7 +11,23 @@ const setting = (key: string, fallback = '') => props.settings?.[key] ?? fallbac
 </script>
 
 <template>
-    <Head title="Ubicación" />
+    <Head>
+        <title>Ubicación — Tres Cantares | Tepoztlán, Morelos</title>
+        <meta head-key="description" name="description"
+            content="Encuéntranos en Pino González 1, La Santísima, Tepoztlán, Morelos. Abiertos todos los días de 08:00 a 22:00 hrs. ¡Te esperamos en Tres Cantares!" />
+        <meta head-key="keywords" name="keywords"
+            content="ubicación Tres Cantares, dónde está Tres Cantares, restaurante Tepoztlán dirección, cómo llegar Tres Cantares, Pino González Tepoztlán" />
+        <meta head-key="og:title" property="og:title"
+            content="Ubicación — Tres Cantares | Tepoztlán, Morelos" />
+        <meta head-key="og:description" property="og:description"
+            content="Nos encontramos en Pino González 1, La Santísima, Tepoztlán, Morelos. Abiertos todos los días de 08:00 a 22:00 hrs. ¡Ven a vivir la experiencia Tres Cantares!" />
+        <meta head-key="og:url" property="og:url" content="/ubicacion" />
+        <meta head-key="twitter:title" name="twitter:title"
+            content="Ubicación — Tres Cantares | Tepoztlán, Morelos" />
+        <meta head-key="twitter:description" name="twitter:description"
+            content="Nos encontramos en Tepoztlán, Morelos. Abiertos todos los días de 08:00 a 22:00 hrs. ¡Ven a Tres Cantares!" />
+        <link head-key="canonical" rel="canonical" href="/ubicacion" />
+    </Head>
 
     <!-- ============================================================
          HERO

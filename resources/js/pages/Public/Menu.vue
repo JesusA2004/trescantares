@@ -23,7 +23,23 @@ function setCategory(id: number | null) {
 </script>
 
 <template>
-    <Head title="Menú" />
+    <Head>
+        <title>Menú — Tres Cantares | Comida Mexicana Auténtica en Tepoztlán</title>
+        <meta head-key="description" name="description"
+            content="Explora el menú de Tres Cantares: platillos mexicanos auténticos preparados con ingredientes frescos. Cantaritos, tacos, pozole y mucho más en Tepoztlán, Morelos." />
+        <meta head-key="keywords" name="keywords"
+            content="menú Tres Cantares, platillos mexicanos, cantarito Tepoztlán, tacos Tepoztlán, comida mexicana auténtica, pozole Morelos" />
+        <meta head-key="og:title" property="og:title"
+            content="Menú — Tres Cantares | Comida Mexicana Auténtica en Tepoztlán" />
+        <meta head-key="og:description" property="og:description"
+            content="Descubre nuestros platillos mexicanos auténticos: cantaritos, tacos, pozole y mucho más. El sabor de México en cada bocado, en Tepoztlán, Morelos." />
+        <meta head-key="og:url" property="og:url" content="/menu" />
+        <meta head-key="twitter:title" name="twitter:title"
+            content="Menú — Tres Cantares | Comida Mexicana Auténtica" />
+        <meta head-key="twitter:description" name="twitter:description"
+            content="Cantaritos, tacos, pozole y mucho más. El sabor auténtico de México en Tres Cantares, Tepoztlán." />
+        <link head-key="canonical" rel="canonical" href="/menu" />
+    </Head>
 
     <!-- ============================================================
          HERO DEL MENÚ

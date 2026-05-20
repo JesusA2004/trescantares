@@ -505,7 +505,7 @@
 
 .tc-home-hero {
     position: relative;
-    height: 560px;
+    height: 680px;
     overflow: hidden;
 }
 
@@ -972,7 +972,7 @@
 }
 
 @media (max-width: 768px) {
-    .tc-home-hero { height: 420px; }
+    .tc-home-hero { height: 500px; }
 
     .tc-hero-title { font-size: 52px; margin-bottom: 14px; }
     .tc-hero-text  { font-size: 12px; }

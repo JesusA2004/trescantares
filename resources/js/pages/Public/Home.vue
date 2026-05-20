@@ -33,37 +33,89 @@ const paperBg = {
 </script>
 
 <template>
-    <Head title="Inicio" />
+    <Head>
+        <title></title>
+        <meta
+            head-key="description"
+            name="description"
+            content="Ven a disfrutar el auténtico sabor de México en Tres Cantares, Tepoztlán. Comida mexicana tradicional, buena música y los mejores momentos para compartir en familia o con amigos. Abiertos todos los días de 08:00 a 22:00 hrs."
+        />
+        <meta
+            head-key="keywords"
+            name="keywords"
+            content="restaurante Tepoztlán, comida mexicana Tepoztlán, Tres Cantares, gastronomía mexicana, restaurante Morelos, cantarito, sabores auténticos México"
+        />
+        <meta
+            head-key="og:title"
+            property="og:title"
+            content="Tres Cantares | Restaurante Mexicano en Tepoztlán, Morelos"
+        />
+        <meta
+            head-key="og:description"
+            property="og:description"
+            content="Ven a vivir la experiencia Tres Cantares: sabores auténticos de México, buena música y momentos únicos en Tepoztlán. Abiertos todos los días de 08:00 a 22:00 hrs."
+        />
+        <meta head-key="og:url" property="og:url" content="/" />
+        <meta head-key="og:type" property="og:type" content="website" />
+        <meta
+            head-key="twitter:title"
+            name="twitter:title"
+            content="Tres Cantares | Restaurante Mexicano en Tepoztlán, Morelos"
+        />
+        <meta
+            head-key="twitter:description"
+            name="twitter:description"
+            content="Ven a vivir la experiencia Tres Cantares: sabores auténticos de México, buena música y momentos únicos en Tepoztlán. Abiertos todos los días."
+        />
+        <link head-key="canonical" rel="canonical" href="/" />
+    </Head>
 
     <div class="tc-home-page">
-
         <!-- ============================================================
              HERO — Navbar flota encima como papel rasgado
         ============================================================ -->
         <section class="tc-home-hero">
-
             <!-- Navbar absolutamente posicionado encima del hero -->
             <Navbar :settings="settings" />
 
             <!-- Fondo -->
             <div class="tc-home-hero-bg">
-                <img :src="settings.hero_background_url || settings.hero_background || heroHome"
-                    alt="Tres Cantares" />
+                <img
+                    :src="
+                        settings.hero_background_url ||
+                        settings.hero_background ||
+                        heroHome
+                    "
+                    alt="Tres Cantares"
+                />
                 <div class="tc-home-hero-overlay"></div>
             </div>
 
             <!-- Cartas: position absolute sobre el hero -->
-            <img :src="cardNopal"     class="tc-hero-card tc-hero-card-nopal     hidden md:block" alt="" />
-            <img :src="cardCantarito" class="tc-hero-card tc-hero-card-cantarito hidden md:block" alt="" />
-            <img :src="cardBorracho"  class="tc-hero-card tc-hero-card-borracho  hidden md:block" alt="" />
+            <img
+                :src="cardNopal"
+                class="tc-hero-card tc-hero-card-nopal hidden md:block"
+                alt=""
+            />
+            <img
+                :src="cardCantarito"
+                class="tc-hero-card tc-hero-card-cantarito hidden md:block"
+                alt=""
+            />
+            <img
+                :src="cardBorracho"
+                class="tc-hero-card tc-hero-card-borracho hidden md:block"
+                alt=""
+            />
 
             <!-- Título + texto centrado -->
             <div class="tc-hero-content">
                 <h1 class="tc-hero-title">TRES CANTARES</h1>
                 <p class="tc-hero-text">
-                    ¡Ven a disfrutar el auténtico sabor de México en un espacio cálido y moderno,
-                    donde la tradición, la buena música y los mejores momentos se comparten
-                    en familia, con amigos o en pareja! Vive la experiencia Tres Cantares.
+                    ¡Ven a disfrutar el auténtico sabor de México en un espacio
+                    cálido y moderno, donde la tradición, la buena música y los
+                    mejores momentos se comparten en familia, con amigos o en
+                    pareja! Vive la experiencia Tres Cantares.
                 </p>
             </div>
         </section>
@@ -73,28 +125,47 @@ const paperBg = {
         ============================================================ -->
         <section class="tc-concept" :style="paperBg">
             <div class="tc-concept-artboard">
-
                 <!-- Izquierda: título gráfico + texto azul -->
                 <div class="tc-concept-title">
-                    <img :src="imgConcepto" alt="Nuestro Concepto"
-                        style="width:100%; height:auto; display:block;" />
+                    <img
+                        :src="imgConcepto"
+                        alt="Nuestro Concepto"
+                        style="width: 100%; height: auto; display: block"
+                    />
                     <p class="tc-concept-text">
-                        En Tres Cantares fusionamos la tradición mexicana con un ambiente moderno y acogedor,
-                        creando el lugar perfecto para compartir grandes momentos. Disfruta sabores auténticos,
-                        buena música y una experiencia pensada para reunirte con quienes más quieres.
+                        En Tres Cantares fusionamos la tradición mexicana con un
+                        ambiente moderno y acogedor, creando el lugar perfecto
+                        para compartir grandes momentos. Disfruta sabores
+                        auténticos, buena música y una experiencia pensada para
+                        reunirte con quienes más quieres.
                     </p>
                 </div>
 
                 <!-- Cartas detrás del cantarito (z-index 2) -->
-                <img :src="cardRose"     class="tc-concept-card-rose     hidden md:block" alt="" />
-                <img :src="cardCantarito" class="tc-concept-card-cantarito hidden md:block" alt="" />
+                <img
+                    :src="cardRose"
+                    class="tc-concept-card-rose hidden md:block"
+                    alt=""
+                />
+                <img
+                    :src="cardCantarito"
+                    class="tc-concept-card-cantarito hidden md:block"
+                    alt=""
+                />
 
                 <!-- Cantarito principal — encima de las cartas (z-index 5) -->
-                <img :src="cantaritoMain" class="tc-concept-cantarito hidden md:block"
-                    alt="Cantarito Tres Cantares" />
+                <img
+                    :src="cantaritoMain"
+                    class="tc-concept-cantarito hidden md:block"
+                    alt="Cantarito Tres Cantares"
+                />
 
                 <!-- Tacos cruzando entre concepto y menú (z-index 20) -->
-                <img :src="tacoLeft" class="tc-cross-tacos hidden md:block" alt="" />
+                <img
+                    :src="tacoLeft"
+                    class="tc-cross-tacos hidden md:block"
+                    alt=""
+                />
             </div>
         </section>
 
@@ -106,16 +177,30 @@ const paperBg = {
         ============================================================ -->
         <section class="tc-menu-preview" :style="paperBg">
             <div class="tc-menu-artboard">
-
                 <!-- Comidas decorativas — sin taco (viene del cross-tacos de arriba) -->
-                <img :src="limonLeft"     class="tc-menu-limon      hidden lg:block" alt="" />
-                <img :src="pozoleLeft"    class="tc-menu-pozole     hidden md:block" alt="" />
-                <img :src="menuDishRight" class="tc-menu-dish-right hidden md:block" alt="" />
+                <img
+                    :src="limonLeft"
+                    class="tc-menu-limon hidden lg:block"
+                    alt=""
+                />
+                <img
+                    :src="pozoleLeft"
+                    class="tc-menu-pozole hidden md:block"
+                    alt=""
+                />
+                <img
+                    :src="menuDishRight"
+                    class="tc-menu-dish-right hidden md:block"
+                    alt=""
+                />
 
                 <!-- menu.png título gráfico -->
                 <div class="tc-menu-title">
-                    <img :src="imgMenu" alt="Conoce Nuestro Menú"
-                        style="width:100%; height:auto; display:block;" />
+                    <img
+                        :src="imgMenu"
+                        alt="Conoce Nuestro Menú"
+                        style="width: 100%; height: auto; display: block"
+                    />
                 </div>
 
                 <!-- Botón MENÚ — siempre debajo del título -->
@@ -130,6 +215,5 @@ const paperBg = {
 
         <!-- FOOTER -->
         <Footer :settings="settings" />
-
     </div>
 </template>

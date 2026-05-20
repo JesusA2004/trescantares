@@ -19,7 +19,11 @@
       "Bash(composer require *)",
       "Bash(/c/wamp64/bin/mysql/mysql9.1.0/bin/mysql.exe *)",
       "Bash(node -e ' *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(findstr /i \"APP_NAME APP_URL\")",
+      "PowerShell(New-Item *)",
+      "PowerShell(Start-Sleep -Seconds 3; Invoke-WebRequest -Uri \"http://127.0.0.1:8000\" -UseBasicParsing -TimeoutSec 5 | Select-Object StatusCode, StatusDescription)",
+      "PowerShell(Copy-Item *)"
     ]
   }
 }

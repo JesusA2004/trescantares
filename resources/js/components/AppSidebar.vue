@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, ListOrdered, UtensilsCrossed, Users, Settings, Globe } from 'lucide-vue-next';
+import { FolderGit2, LayoutGrid, ListOrdered, UtensilsCrossed, Users, Settings, Globe } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -50,11 +50,6 @@ const footerNavItems: NavItem[] = [
         title: 'Ver Sitio Web',
         href: '/',
         icon: Globe,
-    },
-    {
-        title: 'Documentación',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
     },
 ];
 </script>

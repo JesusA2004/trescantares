@@ -1,51 +1,110 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ($appearance ?? 'system') == 'dark'])>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="es" class="{{ ($appearance ?? 'system') === 'dark' ? 'dark' : '' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
-        <script>
-            (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
-
-                if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                    if (prefersDark) {
-                        document.documentElement.classList.add('dark');
-                    }
+    {{-- Detección de modo oscuro --}}
+    <script>
+        (function() {
+            const appearance = '{{ $appearance ?? "system" }}';
+            if (appearance === 'system') {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.documentElement.classList.add('dark');
                 }
-            })();
-        </script>
-
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
-        <style>
-            html {
-                background-color: oklch(1 0 0);
             }
+        })();
+    </script>
 
-            html.dark {
-                background-color: oklch(0.145 0 0);
+    {{-- Fondo base para evitar flash --}}
+    <style>
+        html { background-color: oklch(1 0 0); }
+        html.dark { background-color: oklch(0.145 0 0); }
+    </style>
+
+    {{-- Favicons --}}
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+
+    {{-- SEO base --}}
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#144E8F">
+    <meta name="author" content="Tres Cantares">
+
+    {{-- Open Graph (defaults; cada página los sobreescribe via Inertia Head) --}}
+    <meta property="og:site_name" content="Tres Cantares">
+    <meta property="og:locale" content="es_MX">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ config('app.url') }}/img/logo-tres-cantares.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Tres Cantares — Restaurante Mexicano en Tepoztlán, Morelos">
+
+    {{-- Twitter Card (defaults) --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="{{ config('app.url') }}/img/logo-tres-cantares.png">
+    <meta name="twitter:image:alt" content="Tres Cantares — Restaurante Mexicano en Tepoztlán, Morelos">
+
+    {{--
+        JSON-LD — Schema.org Restaurant / LocalBusiness
+        NOTA: @@ escapa la arroba para que Blade no lo interprete como directiva.
+        En el HTML final se renderiza como @ (correcto para JSON-LD).
+    --}}
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": ["Restaurant", "FoodEstablishment", "LocalBusiness"],
+        "name": "Tres Cantares",
+        "alternateName": "Restaurante Tres Cantares",
+        "description": "Restaurante mexicano en Tepoztlán, Morelos. Sabores auténticos de México en un espacio cálido y moderno con buena música y los mejores momentos para compartir.",
+        "url": "{{ config('app.url') }}",
+        "logo": "{{ config('app.url') }}/img/logo-tres-cantares.png",
+        "image": "{{ config('app.url') }}/img/logo-tres-cantares.png",
+        "telephone": "+52 777 153 1475",
+        "address": {
+            "@@type": "PostalAddress",
+            "streetAddress": "Pino González 1, La Santísima",
+            "addressLocality": "Tepoztlán",
+            "addressRegion": "Morelos",
+            "postalCode": "62520",
+            "addressCountry": "MX"
+        },
+        "geo": {
+            "@@type": "GeoCoordinates",
+            "latitude": 18.9843,
+            "longitude": -99.1009
+        },
+        "openingHoursSpecification": [
+            {
+                "@@type": "OpeningHoursSpecification",
+                "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+                "opens": "08:00",
+                "closes": "22:00"
             }
-        </style>
+        ],
+        "servesCuisine": ["Comida Mexicana", "Gastronomía Mexicana Tradicional"],
+        "priceRange": "$$",
+        "areaServed": {
+            "@@type": "Place",
+            "name": "Tepoztlán, Morelos, México"
+        },
+        "hasMap": "https://www.google.com/maps/search/Tres+Cantares+Tepoztlan+Morelos",
+        "sameAs": []
+    }
+    </script>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    {{-- Preconnect fuentes --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-        @fonts
-
-        @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
-        <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
-        </x-inertia::head>
-    </head>
-    <body class="font-sans antialiased">
-        <x-inertia::app />
-    </body>
+    @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
+    <x-inertia::head>
+        <title>Tres Cantares | Restaurante Mexicano en Tepoztlán</title>
+    </x-inertia::head>
+</head>
+<body class="font-sans antialiased">
+    <x-inertia::app />
+</body>
 </html>
