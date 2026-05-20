@@ -7,6 +7,25 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================
+   TRES CANTARES — Scroll suave global
+   ============================================ */
+html { scroll-behavior: smooth; }
+
+/* ============================================
+   TRES CANTARES — Keyframes
+   ============================================ */
+
+@keyframes tc-fade-up {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tc-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ============================================
    TRES CANTARES — Tipografías locales
    ============================================ */
 
@@ -371,26 +390,36 @@
 .btn-menu-vintage {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     font-family: var(--tc-font-display);
-    letter-spacing: 0.2em;
-    font-size: 1rem;
-    color: var(--tc-dark);
-    border: 2px solid var(--tc-dark);
-    padding: 0.5rem 2rem;
-    transition: all 0.2s ease;
+    letter-spacing: 0.28em;
+    font-size: 1.55rem;
+    color: var(--tc-blue);
+    background-color: var(--tc-paper);
+    border: 3px solid var(--tc-pink);
+    padding: 0.6rem 3.2rem;
+    transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
     text-transform: uppercase;
+    border-radius: 4px;
+    box-shadow: 0 3px 12px rgba(219, 52, 101, 0.18);
 }
 .btn-menu-vintage:hover {
     background-color: var(--tc-pink);
     border-color: var(--tc-pink);
     color: white;
+    transform: scale(1.06) translateY(-2px);
+    box-shadow: 0 10px 28px rgba(219, 52, 101, 0.40);
+}
+.btn-menu-vintage:hover::before,
+.btn-menu-vintage:hover::after {
+    color: white;
 }
 .btn-menu-vintage::before,
 .btn-menu-vintage::after {
-    content: '◆';
-    font-size: 0.6em;
-    opacity: 0.6;
+    content: '★';
+    font-size: 0.72em;
+    color: var(--tc-yellow);
+    transition: color 0.28s;
 }
 
 /* =============================================
@@ -410,7 +439,7 @@
 .tc-navbar-paper {
     display: block;
     width: 100%;
-    height: 140px;
+    height: 175px;
     object-fit: fill;
     transform: scaleY(-1);
     /* transform-origin: default 50% 50% — correcto para que quede en sitio */
@@ -432,7 +461,7 @@
     left: 0;
     width: 100%;
     z-index: 50;
-    height: 130px;
+    height: 165px;
     overflow: visible;
 }
 
@@ -442,7 +471,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 155px;
+    height: 200px;
     object-fit: fill;
     transform: scaleY(-1);
     /* transform-origin: default 50% 50% — flip in-place, torn edge queda abajo */
@@ -454,8 +483,8 @@
 .tc-home-hero .tc-navbar-inner {
     position: relative;
     z-index: 2;
-    height: 95px;
-    padding-top: 6px;
+    height: 130px;
+    padding-top: 10px;
 }
 
 /* --- Estilos compartidos --- */
@@ -476,21 +505,31 @@
     text-transform: uppercase;
     letter-spacing: 0.14em;
     color: var(--tc-pink);
-    font-size: 22px;
+    font-size: 31px;
     text-decoration: none;
-    transition: opacity 0.2s;
+    transition: opacity 0.25s, transform 0.25s, color 0.25s;
     white-space: nowrap;
+    text-shadow: 1px 1px 0 rgba(219, 52, 101, 0.18);
 }
 
-.tc-nav-link:hover { opacity: 0.65; }
+.tc-nav-link:hover {
+    opacity: 0.9;
+    transform: translateY(-3px);
+    color: var(--tc-blue);
+}
 
-.tc-nav-link-active { color: var(--tc-blue); }
+.tc-nav-link-active {
+    color: var(--tc-blue);
+    text-shadow: 1px 1px 0 rgba(20, 78, 143, 0.18);
+}
 
 .tc-navbar-logo {
-    width: 128px;
+    width: 198px;
     height: auto;
     object-fit: contain;
+    transition: transform 0.25s ease;
 }
+.tc-navbar-logo:hover { transform: scale(1.06); }
 
 /* =============================================
    HOME PAGE — Composición gráfica
@@ -505,7 +544,7 @@
 
 .tc-home-hero {
     position: relative;
-    height: 680px;
+    height: 980px;
     overflow: hidden;
 }
 
@@ -519,22 +558,28 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 35%;
+    object-position: center 28%;
     display: block;
 }
 
 .tc-home-hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        to bottom,
-        rgba(0,0,0,0.65) 0%,
-        rgba(0,0,0,0.42) 50%,
-        rgba(0,0,0,0.70) 100%
-    );
+    background:
+        /* vignette lateral */
+        radial-gradient(ellipse 55% 70% at 50% 55%, transparent 0%, rgba(0,0,0,0.38) 100%),
+        /* gradiente vertical */
+        linear-gradient(
+            to bottom,
+            rgba(0,0,0,0.68) 0%,
+            rgba(0,0,0,0.28) 38%,
+            rgba(0,0,0,0.22) 55%,
+            rgba(0,0,0,0.60) 78%,
+            rgba(0,0,0,0.82) 100%
+        );
 }
 
-/* Título + texto: centrado debajo de la navbar flotante (130px) */
+/* Título + texto: centrado debajo de la navbar flotante (165px) */
 .tc-hero-content {
     position: absolute;
     inset: 0;
@@ -543,29 +588,33 @@
     align-items: center;
     justify-content: center;
     z-index: 20;
-    padding: 120px 260px 40px;
+    padding: 175px 300px 60px;
 }
 
 .tc-hero-title {
     font-family: var(--tc-font-display);
     color: white;
-    font-size: 100px;
+    font-size: 144px;
     line-height: 1;
     text-transform: uppercase;
     text-align: center;
     letter-spacing: 0.07em;
-    margin-bottom: 22px;
-    text-shadow: 2px 4px 22px rgba(0,0,0,0.72);
+    margin-bottom: 28px;
+    text-shadow:
+        2px 4px 32px rgba(0,0,0,0.90),
+        0 0 80px rgba(0,0,0,0.50);
+    animation: tc-fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .tc-hero-text {
     color: white;
-    font-size: 13.5px;
-    line-height: 1.75;
+    font-size: 19px;
+    line-height: 1.80;
     text-align: center;
-    max-width: 540px;
+    max-width: 600px;
     font-family: var(--tc-font-body);
-    text-shadow: 1px 2px 10px rgba(0,0,0,0.6);
+    text-shadow: 1px 2px 14px rgba(0,0,0,0.75);
+    animation: tc-fade-up 1.05s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Cartas — position absolute, entran desde los bordes del hero */
@@ -575,31 +624,45 @@
     height: auto;
     display: block;
     object-fit: contain;
-    filter: drop-shadow(4px 6px 12px rgba(0,0,0,0.45));
+    filter: drop-shadow(4px 8px 16px rgba(0,0,0,0.50));
+    transition: transform 0.35s ease, filter 0.35s ease;
 }
 
-/* nopal — borde izquierdo superior */
+/* nopal — izquierdo superior: más grande, más girado a la izquierda, saliéndose */
 .tc-hero-card-nopal {
-    width: 180px;
-    left: -55px;
-    top: 105px;
-    transform: rotate(-22deg);
+    width: 350px;
+    left: -132px;
+    top: 118px;
+    transform: rotate(-38deg);
+}
+.tc-hero-card-nopal:hover {
+    transform: rotate(-34deg) scale(1.06);
+    filter: drop-shadow(6px 12px 22px rgba(0,0,0,0.60));
 }
 
-/* cantarito-carta — borde izquierdo inferior */
+/* cantarito-carta hero — más grande, apunta NW ~-38°,
+   top: 610px → parte inferior sale de la página (hero 980px, carta ~370px, borde inferior ~980px) */
 .tc-hero-card-cantarito {
-    width: 172px;
-    left: -50px;
-    top: 290px;
-    transform: rotate(12deg);
+    width: 345px;
+    left: -105px;
+    top: 615px;
+    transform: rotate(-38deg);
+}
+.tc-hero-card-cantarito:hover {
+    transform: rotate(-34deg) scale(1.06);
+    filter: drop-shadow(6px 12px 22px rgba(0,0,0,0.60));
 }
 
-/* borracho — borde derecho */
+/* borracho — más pequeño que nopal/jarra, parte superior muy inclinada a la derecha */
 .tc-hero-card-borracho {
-    width: 220px;
-    right: -62px;
-    top: 235px;
-    transform: rotate(18deg);
+    width: 250px;
+    right: -72px;
+    top: 340px;
+    transform: rotate(46deg);
+}
+.tc-hero-card-borracho:hover {
+    transform: rotate(50deg) scale(1.06);
+    filter: drop-shadow(6px 12px 22px rgba(0,0,0,0.60));
 }
 
 /* ─── NUESTRO CONCEPTO ──────────────────────── */
@@ -607,12 +670,13 @@
 /* z-index: 2 garantiza que los tacos que desbordan queden sobre el divisor y el menú */
 .tc-concept {
     position: relative;
-    height: 545px;
+    height: 820px;
     overflow: visible;
     z-index: 2;
     background-color: var(--tc-paper);
-    background-repeat: repeat;
-    background-size: 400px auto;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center top;
 }
 
 .tc-concept-artboard {
@@ -624,69 +688,84 @@
 
 .tc-concept-title {
     position: absolute;
-    left: 72px;
-    top: 65px;
-    width: 380px;
+    left: 42px;
+    top: 72px;
+    width: 470px;
     z-index: 10;
 }
 
 .tc-concept-text {
     font-family: var(--tc-font-body);
-    font-size: 15px;
+    font-size: 18px;
     color: var(--tc-blue);
-    line-height: 1.55;
-    max-width: 420px;
-    margin-top: 16px;
+    line-height: 1.65;
+    max-width: 490px;
+    margin-top: 28px;
 }
 
-/* card-rose — peeking desde atrás del cantarito, parte superior-izquierda */
+/* La Rosa — incrustada detrás del cantarito, asoma por la parte superior-izquierda.
+   Cantarito left edge ≈ right: 625px (1200-15-600=585px desde izq = right:615px).
+   right: 460px → right edge en x=740px → ~155px dentro del cantarito. */
 .tc-concept-card-rose {
     position: absolute;
-    right: 412px;
-    top: 72px;
-    width: 168px;
+    right: 462px;
+    top: 42px;
+    width: 262px;
     height: auto;
-    transform: rotate(-8deg);
+    transform: rotate(-16deg);
     z-index: 3;
-    filter: drop-shadow(3px 4px 10px rgba(0,0,0,0.35));
+    filter: drop-shadow(3px 5px 14px rgba(0,0,0,0.45));
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+.tc-concept-card-rose:hover {
+    transform: rotate(-12deg) scale(1.05);
+    filter: drop-shadow(5px 8px 20px rgba(0,0,0,0.58));
 }
 
-/* card-cantarito (lotería) — peeking desde atrás, parte inferior */
+/* La Sandía — incrustada detrás del cantarito, inferior-izquierda, acostada ~62°.
+   right: 472px → right edge en x=728px → ~143px dentro del cantarito. */
 .tc-concept-card-cantarito {
     position: absolute;
-    right: 395px;
-    bottom: 65px;
-    width: 165px;
+    right: 475px;
+    bottom: 42px;
+    width: 255px;
     height: auto;
-    transform: rotate(10deg);
+    transform: rotate(62deg);
     z-index: 3;
-    filter: drop-shadow(3px 4px 10px rgba(0,0,0,0.35));
+    filter: drop-shadow(3px 5px 14px rgba(0,0,0,0.45));
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+.tc-concept-card-cantarito:hover {
+    transform: rotate(58deg) scale(1.05);
+    filter: drop-shadow(5px 8px 20px rgba(0,0,0,0.58));
 }
 
-/* cantarito-main — anclado al fondo de la sección
-   AR 0.74: a 400px de ancho → 541px de alto → cabe justo en 545px */
+/* cantarito-main — más grande y más a la derecha */
 .tc-concept-cantarito {
     position: absolute;
-    right: 35px;
+    right: 15px;
     bottom: 0;
-    width: 400px;
+    width: 600px;
     height: auto;
     z-index: 5;
-    filter: drop-shadow(5px 10px 24px rgba(0,0,0,0.28));
+    filter: drop-shadow(6px 12px 30px rgba(0,0,0,0.30));
+    transition: filter 0.3s ease;
+}
+.tc-concept-cantarito:hover {
+    filter: drop-shadow(8px 16px 38px rgba(0,0,0,0.40));
 }
 
-/* tacos — pegados al borde izquierdo, cruzan hacia la sección menú
-   AR 1:1: a 480px CSS → 480px de alto
-   left: -295px → visible ~185px desde el borde izquierdo */
+/* tacos — MUCHO más a la izquierda (left:-290px), gran parte fuera de la página.
+   Cruzan entre concepto y menú como pieza decorativa lateral fuerte. */
 .tc-cross-tacos {
     position: absolute;
-    left: -295px;
-    bottom: -55px;
-    width: 480px;
+    left: -290px;
+    bottom: -240px;
+    width: 640px;
     height: auto;
     z-index: 20;
     pointer-events: none;
-    filter: drop-shadow(4px 8px 16px rgba(0,0,0,0.22));
+    filter: drop-shadow(4px 8px 18px rgba(0,0,0,0.25));
 }
 
 /* ─── DIVISORES REALES ──────────────────────── */
@@ -710,12 +789,13 @@
 
 .tc-menu-preview {
     position: relative;
-    height: 430px;
+    height: 700px;
     overflow: hidden;
     z-index: 1;
     background-color: var(--tc-paper);
-    background-repeat: repeat;
-    background-size: 400px auto;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center top;
 }
 
 .tc-menu-artboard {
@@ -730,14 +810,14 @@
     display: none;
 }
 
-/* menu.png AR 1.83: a 500px de ancho → 273px de alto → ocupa y=50 a y=323 */
+/* menu.png AR 1.83: a 740px de ancho → 404px de alto → ocupa y=65 a y=469 */
 .tc-menu-title {
     position: absolute;
-    top: 50px;
+    top: 65px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
-    width: 500px;
+    width: 740px;
 }
 
 .tc-menu-title img {
@@ -746,47 +826,48 @@
     display: block;
 }
 
-/* Botón MENÚ: 32px debajo del título (50 + 273 + 32 = 355px) */
+/* Botón MENÚ: 36px debajo del título (65 + 404 + 36 = 505px) */
 .tc-menu-button {
     position: absolute;
-    top: 355px;
+    top: 505px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
     white-space: nowrap;
 }
 
-/* limon: decoración izquierda */
+/* limon: izquierda de la tostada, parte baja izquierda */
 .tc-menu-limon {
     position: absolute;
-    left: 60px;
-    bottom: 95px;
-    width: 90px;
+    left: 38px;
+    bottom: 52px;
+    width: 128px;
     height: auto;
-    z-index: 4;
-    filter: drop-shadow(2px 4px 8px rgba(0,0,0,0.2));
+    z-index: 5;
+    filter: drop-shadow(2px 4px 10px rgba(0,0,0,0.25));
 }
 
-/* pozole: inferior izquierda */
-.tc-menu-pozole {
-    position: absolute;
-    left: 90px;
-    bottom: -30px;
-    width: 360px;
-    height: auto;
-    z-index: 2;
-    filter: drop-shadow(4px 8px 16px rgba(0,0,0,0.22));
-}
-
-/* plato derecho: entrando desde el borde derecho */
+/* tostada: inferior izquierda, encima del decorativo mexicano,
+   ligeramente cortada abajo */
 .tc-menu-dish-right {
     position: absolute;
-    right: -80px;
-    bottom: 20px;
-    width: 400px;
+    left: -38px;
+    bottom: -80px;
+    width: 430px;
     height: auto;
     z-index: 3;
-    filter: drop-shadow(4px 8px 16px rgba(0,0,0,0.22));
+    filter: drop-shadow(4px 8px 18px rgba(0,0,0,0.25));
+}
+
+/* pozole: extrema derecha, mitad dentro mitad fuera de la página */
+.tc-menu-pozole {
+    position: absolute;
+    right: -265px;
+    bottom: -35px;
+    width: 580px;
+    height: auto;
+    z-index: 2;
+    filter: drop-shadow(4px 8px 18px rgba(0,0,0,0.25));
 }
 
 /* =============================================
@@ -798,20 +879,20 @@
     background-position: center top;
     background-repeat: no-repeat;
     position: relative;
-    min-height: 210px;
+    min-height: 280px;
 }
 
 .tc-footer-inner {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 28px 80px 0;
+    padding: 38px 80px 0;
 }
 
 .tc-footer-cols {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 28px;
+    gap: 40px;
 }
 
 .tc-footer-col-logo {
@@ -819,18 +900,18 @@
 }
 
 .tc-footer-logo {
-    height: 90px;
+    height: 130px;
     object-fit: contain;
     display: block;
 }
 
 .tc-footer-tagline {
     font-family: var(--tc-font-display);
-    font-size: 10px;
+    font-size: 14px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--tc-pink);
-    margin-top: 7px;
+    margin-top: 8px;
 }
 
 .tc-footer-col-info {
@@ -839,18 +920,18 @@
 }
 
 .tc-footer-label {
-    font-size: 13px;
+    font-size: 17px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: var(--tc-blue);
-    margin-bottom: 3px;
+    margin-bottom: 4px;
 }
 
 .tc-footer-value {
-    font-size: 12px;
+    font-size: 15px;
     color: var(--tc-blue);
-    line-height: 1.55;
+    line-height: 1.60;
 }
 
 .tc-footer-col-links {
@@ -863,40 +944,49 @@
 
 .tc-footer-link {
     font-family: var(--tc-font-display);
-    font-size: 13px;
-    letter-spacing: 0.12em;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--tc-blue);
     text-decoration: none;
-    line-height: 1.8;
-    transition: opacity 0.2s;
+    line-height: 2.0;
+    transition: color 0.22s, transform 0.22s;
+    display: inline-block;
 }
-.tc-footer-link:hover { opacity: 0.65; }
+.tc-footer-link:hover {
+    color: var(--tc-pink);
+    transform: translateX(5px);
+}
 
 .tc-social-icon {
-    width: 28px;
-    height: 28px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.2s;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s;
+    background-color: var(--tc-blue) !important;
 }
-.tc-social-icon:hover { opacity: 0.82; }
+.tc-social-icon:hover {
+    transform: scale(1.18) translateY(-2px);
+    filter: brightness(1.25);
+}
 
 .tc-footer-copyright {
-    margin-top: 20px;
+    margin-top: 24px;
     border-top: 1px solid rgba(0,0,0,0.14);
-    padding: 10px 0 16px;
+    padding: 12px 0 20px;
 }
 
 .tc-footer-copyright p {
     font-family: var(--tc-font-body);
     text-align: center;
-    font-size: 10px;
+    font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    color: rgba(0,0,0,0.42);
+    color: var(--tc-green);
 }
 
 /* =============================================
@@ -904,71 +994,80 @@
    ============================================= */
 
 @media (max-width: 1400px) {
-    .tc-hero-title          { font-size: 88px; }
-    .tc-hero-content        { padding: 115px 220px 40px; }
-    .tc-hero-card-nopal     { width: 162px; left: -50px; }
-    .tc-hero-card-cantarito { width: 154px; left: -46px; }
-    .tc-hero-card-borracho  { width: 198px; right: -56px; }
-    .tc-concept-cantarito   { width: 365px; }
-    .tc-concept-card-rose   { right: 378px; width: 154px; }
-    .tc-concept-card-cantarito { right: 360px; width: 150px; }
-    .tc-cross-tacos         { width: 440px; left: -270px; }
-    .tc-menu-title          { width: 460px; }
-    /* menu.png a 460px → 251px alto → 50+251+32 = 333px */
-    .tc-menu-button         { top: 335px; }
-    .tc-menu-dish-right     { width: 365px; right: -72px; }
+    .tc-hero-title          { font-size: 118px; }
+    .tc-hero-content        { padding: 162px 268px 50px; }
+    .tc-hero-card-nopal     { width: 310px; left: -118px; top: 105px; }
+    .tc-hero-card-cantarito { width: 308px; left: -96px; top: 556px; }
+    .tc-hero-card-borracho  { width: 228px; right: -65px; top: 310px; }
+    .tc-concept             { height: 760px; }
+    .tc-concept-title       { width: 432px; top: 65px; left: 38px; }
+    .tc-concept-cantarito   { width: 548px; right: 14px; }
+    .tc-concept-card-rose   { right: 420px; width: 238px; top: 38px; }
+    .tc-concept-card-cantarito { right: 432px; width: 232px; bottom: 38px; }
+    .tc-cross-tacos         { width: 580px; bottom: -218px; left: -262px; }
+    .tc-menu-preview        { height: 648px; }
+    .tc-menu-title          { width: 678px; top: 60px; }
+    /* menu.png a 678px → 370px → 60+370+36 = 466px */
+    .tc-menu-button         { top: 468px; }
+    .tc-menu-dish-right     { width: 395px; left: -34px; }
+    .tc-menu-pozole         { width: 532px; right: -242px; }
+    .tc-menu-limon          { width: 116px; left: 34px; }
 }
 
 @media (max-width: 1200px) {
-    .tc-navbar-paper        { height: 126px; }
-    .tc-navbar-logo         { width: 118px; }
-    .tc-nav-link            { font-size: 20px; }
-    .tc-hero-title          { font-size: 76px; }
-    .tc-hero-content        { padding: 112px 185px 36px; }
-    .tc-hero-card-nopal     { width: 148px; left: -46px; top: 94px; }
-    .tc-hero-card-cantarito { width: 140px; left: -42px; top: 262px; }
-    .tc-hero-card-borracho  { width: 182px; right: -52px; top: 214px; }
-    .tc-concept             { height: 490px; }
-    .tc-concept-title       { width: 342px; }
-    .tc-concept-cantarito   { width: 356px; }
-    .tc-concept-card-rose   { right: 368px; width: 150px; }
-    .tc-concept-card-cantarito { right: 352px; width: 147px; }
-    .tc-cross-tacos         { width: 430px; left: -264px; bottom: -50px; }
-    .tc-menu-preview        { height: 390px; }
-    .tc-menu-title          { width: 440px; top: 46px; }
-    /* menu.png a 440px → 240px alto → 46+240+30 = 316px */
-    .tc-menu-button         { top: 318px; }
-    .tc-menu-pozole         { width: 320px; left: 75px; }
-    .tc-menu-dish-right     { width: 358px; right: -68px; }
+    .tc-navbar-paper        { height: 158px; }
+    .tc-navbar-logo         { width: 170px; }
+    .tc-nav-link            { font-size: 25px; }
+    .tc-home-hero           { height: 890px; }
+    .tc-hero-title          { font-size: 106px; }
+    .tc-hero-content        { padding: 154px 232px 46px; }
+    .tc-hero-card-nopal     { width: 278px; left: -106px; top: 100px; }
+    .tc-hero-card-cantarito { width: 275px; left: -88px; top: 492px; }
+    .tc-hero-card-borracho  { width: 205px; right: -60px; top: 278px; }
+    .tc-concept             { height: 720px; }
+    .tc-concept-title       { width: 405px; top: 62px; left: 36px; }
+    .tc-concept-text        { font-size: 16px; }
+    .tc-concept-cantarito   { width: 508px; right: 13px; }
+    .tc-concept-card-rose   { right: 370px; width: 218px; top: 36px; }
+    .tc-concept-card-cantarito { right: 382px; width: 208px; bottom: 36px; }
+    .tc-cross-tacos         { width: 520px; bottom: -215px; left: -248px; }
+    .tc-menu-preview        { height: 608px; }
+    .tc-menu-title          { width: 628px; top: 58px; }
+    /* menu.png a 628px → 343px → 58+343+36 = 437px */
+    .tc-menu-button         { top: 439px; }
+    .tc-menu-dish-right     { width: 362px; left: -34px; }
+    .tc-menu-pozole         { width: 500px; right: -228px; }
+    .tc-menu-limon          { width: 110px; left: 32px; }
 }
 
 @media (max-width: 1024px) {
-    .tc-navbar-paper        { height: 108px; }
-    .tc-nav-link            { font-size: 17px; }
-    .tc-navbar-logo         { width: 104px; }
-    .tc-hero-title          { font-size: 62px; }
-    .tc-hero-content        { padding: 104px 145px 32px; }
-    .tc-hero-card-nopal     { width: 128px; left: -38px; top: 86px; }
-    .tc-hero-card-cantarito { width: 120px; left: -34px; top: 236px; }
-    .tc-hero-card-borracho  { width: 158px; right: -44px; top: 190px; }
-    .tc-concept             { height: 430px; }
-    .tc-concept-title       { width: 298px; top: 55px; left: 55px; }
-    .tc-concept-text        { font-size: 13.5px; }
-    .tc-concept-cantarito   { width: 308px; }
-    .tc-concept-card-rose   { right: 320px; width: 132px; }
-    .tc-concept-card-cantarito { right: 306px; width: 128px; }
-    .tc-cross-tacos         { width: 378px; left: -232px; bottom: -46px; }
-    .tc-menu-preview        { height: 350px; }
-    .tc-menu-title          { width: 390px; top: 42px; }
-    /* menu.png a 390px → 213px alto → 42+213+28 = 283px */
-    .tc-menu-button         { top: 285px; }
-    .tc-menu-pozole         { width: 280px; left: 60px; }
-    .tc-menu-dish-right     { width: 316px; right: -64px; }
-    .tc-menu-limon          { width: 72px; left: 46px; bottom: 78px; }
-    .tc-footer-logo         { height: 76px; }
-    .tc-footer-label        { font-size: 11px; }
-    .tc-footer-value        { font-size: 10px; }
-    .tc-footer-link         { font-size: 11px; }
+    .tc-navbar-paper        { height: 145px; }
+    .tc-nav-link            { font-size: 21px; }
+    .tc-navbar-logo         { width: 148px; }
+    .tc-home-hero           { height: 820px; }
+    .tc-hero-title          { font-size: 86px; }
+    .tc-hero-content        { padding: 140px 178px 38px; }
+    .tc-hero-card-nopal     { width: 232px; left: -90px; top: 98px; }
+    .tc-hero-card-cantarito { width: 228px; left: -82px; top: 402px; }
+    .tc-hero-card-borracho  { width: 175px; right: -52px; top: 252px; }
+    .tc-concept             { height: 640px; }
+    .tc-concept-title       { width: 355px; top: 58px; left: 32px; }
+    .tc-concept-text        { font-size: 15px; }
+    .tc-concept-cantarito   { width: 422px; right: 12px; }
+    .tc-concept-card-rose   { right: 298px; width: 175px; top: 30px; }
+    .tc-concept-card-cantarito { right: 308px; width: 165px; bottom: 30px; }
+    .tc-cross-tacos         { width: 432px; bottom: -200px; left: -218px; }
+    .tc-menu-preview        { height: 540px; }
+    .tc-menu-title          { width: 520px; top: 55px; }
+    /* menu.png a 520px → 284px → 55+284+36 = 375px */
+    .tc-menu-button         { top: 377px; }
+    .tc-menu-dish-right     { width: 352px; left: -32px; }
+    .tc-menu-pozole         { width: 420px; right: -198px; }
+    .tc-menu-limon          { width: 100px; left: 28px; bottom: 45px; }
+    .tc-footer-logo         { height: 110px; }
+    .tc-footer-label        { font-size: 15px; }
+    .tc-footer-value        { font-size: 13px; }
+    .tc-footer-link         { font-size: 15px; }
 }
 
 @media (max-width: 768px) {

@@ -24,10 +24,14 @@ import {
 const page = usePage();
 const settings = computed(() => (page.props as any).settings ?? {});
 
+// background-attachment:fixed + cover = las dos secciones comparten
+// exactamente la misma superficie de textura → sin líneas ni repeticiones visibles.
 const paperBg = {
     backgroundImage: `url(${paperWhite})`,
-    backgroundRepeat: 'repeat',
-    backgroundSize: '420px auto',
+    backgroundSize: 'cover',
+    backgroundAttachment: 'fixed',
+    backgroundPosition: 'center top',
+    backgroundRepeat: 'no-repeat',
     backgroundColor: 'var(--tc-paper)',
 };
 </script>
@@ -141,12 +145,13 @@ const paperBg = {
                     </p>
                 </div>
 
-                <!-- Cartas detrás del cantarito (z-index 2) -->
+                <!-- La Rosa — parte superior del cantarito, detrás (z-index 3) -->
                 <img
                     :src="cardRose"
                     class="tc-concept-card-rose hidden md:block"
                     alt=""
                 />
+                <!-- La Sandía — inferior izquierda, acostada ~62°, detrás (z-index 3) -->
                 <img
                     :src="cardCantarito"
                     class="tc-concept-card-cantarito hidden md:block"
@@ -159,14 +164,14 @@ const paperBg = {
                     class="tc-concept-cantarito hidden md:block"
                     alt="Cantarito Tres Cantares"
                 />
-
-                <!-- Tacos cruzando entre concepto y menú (z-index 20) -->
-                <img
-                    :src="tacoLeft"
-                    class="tc-cross-tacos hidden md:block"
-                    alt=""
-                />
             </div>
+
+            <!-- Tacos pegados al borde izquierdo de la sección, cruzan hacia menú -->
+            <img
+                :src="tacoLeft"
+                class="tc-cross-tacos hidden md:block"
+                alt=""
+            />
         </section>
 
         <!-- Divisor entre concepto y menú -->
