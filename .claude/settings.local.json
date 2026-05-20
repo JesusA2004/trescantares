@@ -3,7 +3,21 @@
     "allow": [
       "Bash(php artisan *)",
       "Bash(node -e \"const {default: mod} = require\\('./node_modules/@inertiajs/vite/dist/index.js'\\); console.log\\(Object.keys\\(mod\\)\\)\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\wamp64\\\\www\\\\trescantares\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Sort-Object PSIsContainer -Descending, Name)",
+      "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\fonts\" /s /b)",
+      "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\fonts\\\\western-wonderment\" /b)",
+      "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\fonts\\\\poppins\" /b)",
+      "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\js\\\\img\\\\food\" /b)",
+      "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\js\\\\img\\\\brand\" /b)",
+      "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\js\\\\img\\\\loteria\" /b)",
+      "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\js\\\\img\\\\textures\" /b)",
+      "Bash(dir \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\js\\\\img\\\\decorations\" /b)",
+      "Read(//mnt/c/wamp64/www/**)",
+      "Bash(composer require *)",
+      "Bash(/c/wamp64/bin/mysql/mysql9.1.0/bin/mysql.exe *)"
     ]
   }
 }

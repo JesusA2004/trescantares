@@ -18,6 +18,7 @@ class SettingController extends Controller
     private array $textKeys = [
         'restaurant_name', 'contact_phone', 'whatsapp_phone', 'address',
         'google_maps_embed_url', 'schedule', 'facebook_url', 'instagram_url', 'tiktok_url',
+        'billing_url', 'privacy_policy_url', 'jobs_url',
     ];
 
     public function index(): Response

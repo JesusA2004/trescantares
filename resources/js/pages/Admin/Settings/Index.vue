@@ -17,6 +17,9 @@ const form = useForm({
     facebook_url: props.settings.facebook_url ?? '',
     instagram_url: props.settings.instagram_url ?? '',
     tiktok_url: props.settings.tiktok_url ?? '',
+    billing_url: props.settings.billing_url ?? '',
+    privacy_policy_url: props.settings.privacy_policy_url ?? '',
+    jobs_url: props.settings.jobs_url ?? '',
     logo: null as File | null,
     hero_background: null as File | null,
     location_background: null as File | null,
@@ -115,6 +118,31 @@ const imageLabels: Record<string, string> = {
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">TikTok URL</label>
                         <input v-model="form.tiktok_url" type="url"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- URLs del sitio -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+                <h2 class="font-semibold text-gray-800 text-lg border-b pb-3">URLs del Sitio</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Facturación URL</label>
+                        <input v-model="form.billing_url" type="text"
+                            placeholder="https://..."
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Aviso de Privacidad URL</label>
+                        <input v-model="form.privacy_policy_url" type="text"
+                            placeholder="https://..."
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bolsa de Trabajo URL</label>
+                        <input v-model="form.jobs_url" type="text"
+                            placeholder="https://..."
                             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
                 </div>

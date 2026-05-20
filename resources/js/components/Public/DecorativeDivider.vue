@@ -1,13 +1,26 @@
+<script setup lang="ts">
+import { dividerUp, dividerDown } from '@/lib/tres-cantares-assets';
+
+withDefaults(defineProps<{
+    variant?: 'up' | 'down' | 'both'
+}>(), {
+    variant: 'both',
+});
+</script>
+
 <template>
-    <div class="w-full overflow-hidden">
-        <!-- Línea verde -->
-        <div class="h-2 bg-tc-verde w-full"></div>
-        <!-- Línea roja con patrón -->
-        <div class="h-3 bg-tc-rojo w-full relative flex items-center justify-center overflow-hidden">
-            <div class="flex gap-1 absolute">
-                <span v-for="i in 80" :key="i"
-                    class="inline-block w-2 h-2 rounded-full bg-white/30"></span>
-            </div>
-        </div>
+    <div class="w-full overflow-hidden leading-[0]">
+        <img
+            v-if="variant === 'up' || variant === 'both'"
+            :src="dividerUp"
+            alt=""
+            class="w-full block"
+            style="object-fit: fill;" />
+        <img
+            v-if="variant === 'down' || variant === 'both'"
+            :src="dividerDown"
+            alt=""
+            class="w-full block"
+            style="object-fit: fill;" />
     </div>
 </template>

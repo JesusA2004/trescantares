@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
-import SectionTitle from '@/components/Public/SectionTitle.vue';
-import MenuCard from '@/components/Public/MenuCard.vue';
+import { Head, Link } from '@inertiajs/vue3';
 import DecorativeDivider from '@/components/Public/DecorativeDivider.vue';
+import MenuCard from '@/components/Public/MenuCard.vue';
+import { imgMenu, bgLocation, tornPaperLarge } from '@/lib/tres-cantares-assets';
 
 const props = defineProps<{
     settings: Record<string, any>
@@ -25,67 +25,106 @@ function setCategory(id: number | null) {
 <template>
     <Head title="Menú" />
 
-    <!-- Hero pequeño -->
-    <section class="relative h-64 flex items-center justify-center">
+    <!-- ============================================================
+         HERO DEL MENÚ
+    ============================================================ -->
+    <section class="relative min-h-[340px] lg:min-h-[400px] flex flex-col">
+
+        <!-- Background (location bg reused for menu hero) -->
         <div class="absolute inset-0 overflow-hidden">
-            <div class="w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black"></div>
+            <img :src="bgLocation" alt="Menú Tres Cantares"
+                class="w-full h-full object-cover object-center" />
             <div class="absolute inset-0 hero-overlay"></div>
         </div>
-        <div class="relative z-10 text-center pt-16 pb-8">
-            <h1 class="font-display text-6xl lg:text-8xl text-white tracking-widest drop-shadow-2xl">MENÚ</h1>
+
+        <!-- Content -->
+        <div class="relative z-10 flex-1 flex flex-col items-center justify-center pt-32 pb-16 px-4 text-center">
+            <!-- Menu title image -->
+            <div class="mb-2">
+                <img :src="imgMenu" alt="Menú"
+                    class="max-w-xs sm:max-w-sm lg:max-w-md w-full h-auto drop-shadow-xl mx-auto" />
+            </div>
+        </div>
+
+        <!-- Torn paper bottom -->
+        <div class="absolute bottom-0 left-0 right-0 z-20 leading-[0] pointer-events-none">
+            <img :src="tornPaperLarge" alt="" class="w-full block"
+                style="transform: scaleY(-1); height: 55px; object-fit: fill;" />
         </div>
     </section>
 
+    <!-- ============================================================
+         DIVIDER
+    ============================================================ -->
     <DecorativeDivider />
 
-    <!-- Contenido del menú -->
-    <section class="tc-section bg-papel">
+    <!-- ============================================================
+         FILTROS Y CATEGORÍAS
+    ============================================================ -->
+    <section class="py-16 lg:py-24" style="background-color: var(--tc-paper);">
         <div class="max-w-7xl mx-auto px-6">
-            <!-- Filtros de categorías -->
-            <div class="flex flex-wrap justify-center gap-3 mb-12">
+
+            <!-- Category filter tabs -->
+            <div class="flex flex-wrap justify-center gap-2 sm:gap-3 mb-14">
                 <button
                     @click="setCategory(null)"
-                    class="font-display tracking-wider text-sm px-6 py-2 rounded-full border-2 transition-all uppercase"
+                    class="font-display tracking-[0.15em] text-xs sm:text-sm px-5 sm:px-7 py-2 rounded-full border-2 transition-all uppercase"
                     :class="activeCategory === null
-                        ? 'bg-tc-rojo border-tc-rojo text-white'
-                        : 'border-tc-rojo text-tc-rojo hover:bg-tc-rojo hover:text-white'">
+                        ? 'text-white border-transparent'
+                        : 'text-tc-pink border-tc-pink hover:text-white'"
+                    :style="activeCategory === null
+                        ? 'background-color: var(--tc-pink); border-color: var(--tc-pink);'
+                        : ''">
                     Todos
                 </button>
                 <button
                     v-for="cat in categories"
                     :key="cat.id"
                     @click="setCategory(cat.id)"
-                    class="font-display tracking-wider text-sm px-6 py-2 rounded-full border-2 transition-all uppercase"
+                    class="font-display tracking-[0.15em] text-xs sm:text-sm px-5 sm:px-7 py-2 rounded-full border-2 transition-all uppercase"
                     :class="activeCategory === cat.id
-                        ? 'bg-tc-rojo border-tc-rojo text-white'
-                        : 'border-tc-rojo text-tc-rojo hover:bg-tc-rojo hover:text-white'">
+                        ? 'text-white border-transparent'
+                        : 'border-tc-pink text-tc-pink hover:text-white'"
+                    :style="activeCategory === cat.id
+                        ? 'background-color: var(--tc-pink); border-color: var(--tc-pink);'
+                        : ''">
                     {{ cat.name }}
                 </button>
             </div>
 
-            <!-- Categorías con platillos -->
-            <div v-for="category in filteredCategories" :key="category.id" class="mb-16">
-                <div class="flex items-center gap-4 mb-8">
-                    <div class="flex-1 h-px bg-gray-200"></div>
-                    <h2 class="font-display text-3xl lg:text-4xl text-tc-azul tracking-widest uppercase">
+            <!-- Categories with items -->
+            <div v-for="category in filteredCategories" :key="category.id" class="mb-20">
+
+                <!-- Category header -->
+                <div class="flex items-center gap-4 mb-10">
+                    <div class="flex-1 h-px" style="background-color: var(--tc-yellow);"></div>
+                    <h2 class="font-display text-3xl lg:text-4xl tracking-[0.15em] uppercase text-center"
+                        style="color: var(--tc-blue);">
                         {{ category.name }}
                     </h2>
-                    <div class="flex-1 h-px bg-gray-200"></div>
+                    <div class="flex-1 h-px" style="background-color: var(--tc-yellow);"></div>
                 </div>
-                <p v-if="category.description" class="text-center font-body text-gray-500 text-sm mb-6">
+
+                <!-- Category description -->
+                <p v-if="category.description"
+                    class="text-center font-body text-gray-500 text-sm mb-8 italic max-w-lg mx-auto">
                     {{ category.description }}
                 </p>
+
+                <!-- Items grid -->
                 <div v-if="category.items && category.items.length > 0"
                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <MenuCard v-for="item in category.items" :key="item.id" :item="item" />
                 </div>
-                <div v-else class="text-center py-8 text-gray-400 font-body">
+                <div v-else class="text-center py-10 font-body text-gray-400">
                     No hay platillos disponibles en esta categoría.
                 </div>
             </div>
 
-            <div v-if="filteredCategories.length === 0" class="text-center py-20 text-gray-400 font-body">
-                No hay categorías disponibles.
+            <!-- Empty state -->
+            <div v-if="filteredCategories.length === 0"
+                class="text-center py-24 font-body text-gray-400">
+                No hay categorías disponibles en el menú.
             </div>
         </div>
     </section>

@@ -6,9 +6,61 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================
+   TRES CANTARES — Tipografías locales
+   ============================================ */
+
+@font-face {
+    font-family: 'Western Wonderment';
+    src: url('../fonts/western-wonderment/Western Wonderment.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/poppins/Poppins-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/poppins/Poppins-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/poppins/Poppins-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/poppins/Poppins-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('../fonts/poppins/Poppins-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 @theme inline {
     --font-sans:
-        Instrument Sans, ui-sans-serif, system-ui, sans-serif,
+        'Poppins', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
@@ -18,38 +70,28 @@
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
-
     --color-card: var(--card);
     --color-card-foreground: var(--card-foreground);
-
     --color-popover: var(--popover);
     --color-popover-foreground: var(--popover-foreground);
-
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
-
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
-
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
-
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
-
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
-
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
-
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
-
     --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -60,14 +102,6 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
     *,
     ::after,
@@ -75,16 +109,6 @@
     ::backdrop,
     ::file-selector-button {
         border-color: var(--color-gray-200, currentColor);
-    }
-}
-
-@layer utilities {
-    body,
-    html {
-        --font-sans:
-            'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-            'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-            'Noto Color Emoji';
     }
 }
 
@@ -167,22 +191,40 @@
     }
     body {
         @apply bg-background text-foreground;
+        font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
     }
 }
 
-/* =========================================
-   TRES CANTARES — Estilos públicos
-   ========================================= */
+/* =============================================
+   TRES CANTARES — Variables de marca
+   ============================================= */
 :root {
-    --tc-rojo: #b83a4b;
-    --tc-azul: #1f5f8b;
-    --tc-verde: #1f8a4c;
-    --tc-crema: #f7f3ea;
-    --tc-papel: #fbfaf5;
-    --tc-oscuro: #1f1f1f;
-    --tc-font-display: 'Bebas Neue', sans-serif;
-    --tc-font-body: 'Poppins', sans-serif;
+    /* Paleta oficial */
+    --tc-blue:         #144E8F;
+    --tc-pink:         #DB3465;
+    --tc-green:        #079A4A;
+    --tc-yellow:       #EEC325;
+    --tc-paper:        #F7F3EA;
+    --tc-paper-light:  #FBFAF5;
+    --tc-dark:         #1F1F1F;
+
+    /* Aliases legado (para compatibilidad con código existente) */
+    --tc-rojo:         var(--tc-pink);
+    --tc-azul:         var(--tc-blue);
+    --tc-verde:        var(--tc-green);
+    --tc-amarillo:     var(--tc-yellow);
+    --tc-crema:        var(--tc-paper);
+    --tc-papel:        var(--tc-paper-light);
+    --tc-oscuro:       var(--tc-dark);
+
+    /* Tipografías */
+    --tc-font-display: 'Western Wonderment', serif;
+    --tc-font-body:    'Poppins', ui-sans-serif, system-ui, sans-serif;
 }
+
+/* =============================================
+   TRES CANTARES — Clases utilitarias
+   ============================================= */
 
 .font-display {
     font-family: var(--tc-font-display);
@@ -193,45 +235,164 @@
     font-family: var(--tc-font-body);
 }
 
+/* Color utilities */
+.text-tc-blue    { color: var(--tc-blue); }
+.text-tc-pink    { color: var(--tc-pink); }
+.text-tc-green   { color: var(--tc-green); }
+.text-tc-yellow  { color: var(--tc-yellow); }
+.text-tc-dark    { color: var(--tc-dark); }
+
+/* Legacy color utilities */
+.text-tc-rojo    { color: var(--tc-pink); }
+.text-tc-azul    { color: var(--tc-blue); }
+.text-tc-verde   { color: var(--tc-green); }
+.text-tc-oscuro  { color: var(--tc-dark); }
+
+/* Brand alias classes from spec */
+.text-brand-blue   { color: var(--tc-blue); }
+.text-brand-pink   { color: var(--tc-pink); }
+.text-brand-green  { color: var(--tc-green); }
+.text-brand-yellow { color: var(--tc-yellow); }
+
+/* Background utilities */
+.bg-tc-blue    { background-color: var(--tc-blue); }
+.bg-tc-pink    { background-color: var(--tc-pink); }
+.bg-tc-green   { background-color: var(--tc-green); }
+.bg-tc-yellow  { background-color: var(--tc-yellow); }
+
+/* Legacy */
+.bg-tc-rojo    { background-color: var(--tc-pink); }
+.bg-tc-azul    { background-color: var(--tc-blue); }
+.bg-tc-verde   { background-color: var(--tc-green); }
+
+/* Brand alias backgrounds */
+.bg-brand-blue   { background-color: var(--tc-blue); }
+.bg-brand-pink   { background-color: var(--tc-pink); }
+.bg-brand-green  { background-color: var(--tc-green); }
+.bg-brand-yellow { background-color: var(--tc-yellow); }
+
+/* Paper backgrounds */
+.bg-paper {
+    background-color: var(--tc-paper-light);
+}
+
 .bg-papel {
-    background-color: var(--tc-papel);
-    background-image:
-        radial-gradient(circle at 1px 1px, rgba(0,0,0,0.04) 1px, transparent 0);
-    background-size: 24px 24px;
+    background-color: var(--tc-paper-light);
 }
 
 .bg-crema {
-    background-color: var(--tc-crema);
+    background-color: var(--tc-paper);
 }
 
-.text-tc-rojo { color: var(--tc-rojo); }
-.text-tc-azul { color: var(--tc-azul); }
-.text-tc-verde { color: var(--tc-verde); }
+.paper-texture {
+    background-color: var(--tc-paper);
+    background-image: url('../img/textures/paper-white.png');
+    background-repeat: repeat;
+    background-size: 400px auto;
+}
 
-.bg-tc-rojo { background-color: var(--tc-rojo); }
-.bg-tc-azul { background-color: var(--tc-azul); }
-.bg-tc-verde { background-color: var(--tc-verde); }
-
+/* Hero overlay */
 .hero-overlay {
-    background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.7) 100%);
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.60) 0%,
+        rgba(0, 0, 0, 0.40) 50%,
+        rgba(0, 0, 0, 0.70) 100%
+    );
 }
 
+/* Titles */
 .tc-title {
     font-family: var(--tc-font-display);
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
 }
 
+/* Sections */
 .tc-section {
     padding-top: 5rem;
     padding-bottom: 5rem;
 }
 
+/* Card hover */
 .tc-card-hover {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.tc-card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
 }
 
-.tc-card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+/* Lotería card frame */
+.loteria-card {
+    border: 4px solid var(--tc-yellow);
+    border-radius: 8px;
+    box-shadow: 3px 3px 12px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    background: white;
+}
+
+/* Torn paper bottom edge */
+.torn-paper-bottom {
+    position: relative;
+}
+.torn-paper-bottom::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-image: url('../img/textures/torn-paper-large.png');
+    background-repeat: repeat-x;
+    background-position: bottom center;
+    background-size: auto 60px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Torn paper top edge */
+.torn-paper-top {
+    position: relative;
+}
+.torn-paper-top::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-image: url('../img/textures/torn-paper-small.png');
+    background-repeat: repeat-x;
+    background-position: top center;
+    background-size: auto 60px;
+    pointer-events: none;
+    z-index: 10;
+    transform: rotate(180deg);
+}
+
+/* Menu button vintage style */
+.btn-menu-vintage {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--tc-font-display);
+    letter-spacing: 0.2em;
+    font-size: 1rem;
+    color: var(--tc-dark);
+    border: 2px solid var(--tc-dark);
+    padding: 0.5rem 2rem;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+}
+.btn-menu-vintage:hover {
+    background-color: var(--tc-pink);
+    border-color: var(--tc-pink);
+    color: white;
+}
+.btn-menu-vintage::before,
+.btn-menu-vintage::after {
+    content: '◆';
+    font-size: 0.6em;
+    opacity: 0.6;
 }

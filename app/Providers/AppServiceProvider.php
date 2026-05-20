@@ -14,14 +14,7 @@ class AppServiceProvider extends ServiceProvider {
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
-        // Load Spatie stubs if the real package is not installed yet.
-        // After running `composer require spatie/laravel-permission`, this becomes a no-op.
-        if (!trait_exists('Spatie\Permission\Traits\HasRoles')) {
-            require_once __DIR__ . '/../Support/SpatieStubs.php';
-        }
-    }
+    public function register(): void {}
 
     /**
      * Bootstrap any application services.
@@ -29,7 +22,9 @@ class AppServiceProvider extends ServiceProvider {
     public function boot(): void
     {
         $this->configureDefaults();
-        Schema::defaultStringLength(191);
+        // Use 100 to keep composite unique indexes under MySQL's 1000-byte limit
+        // when using utf8mb4 (4 bytes/char). Two varchar(100) columns = 800 bytes.
+        Schema::defaultStringLength(100);
     }
 
     /**

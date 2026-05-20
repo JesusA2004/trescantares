@@ -1,118 +1,126 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import DecorativeDivider from '@/components/Public/DecorativeDivider.vue';
-import SectionTitle from '@/components/Public/SectionTitle.vue';
-import MenuCard from '@/components/Public/MenuCard.vue';
+import {
+    heroHome,
+    imgConcepto,
+    imgMenu,
+    cantaritoMain,
+    tacoLeft,
+    menuDishRight,
+    limonLeft,
+    cardBorracho,
+    cardCantarito,
+    cardNopal,
+    cardRose,
+    tornPaperLarge,
+    tornPaperSmall,
+} from '@/lib/tres-cantares-assets';
 
-const props = defineProps<{
+defineProps<{
     settings: Record<string, any>
-    featuredItems: any[]
 }>();
-
-const setting = (key: string, fallback = '') => props.settings?.[key] ?? fallback;
 </script>
 
 <template>
     <Head title="Inicio" />
 
-    <!-- ===================== HERO ===================== -->
-    <section class="relative min-h-[480px] lg:min-h-[520px] flex flex-col">
-        <!-- Background -->
-        <div class="absolute inset-0 overflow-hidden">
-            <img v-if="settings.hero_background_url || settings.hero_background"
+    <!-- ============================================================
+         HERO
+    ============================================================ -->
+    <section class="relative overflow-hidden" style="height: 310px;">
+
+        <!-- Background image -->
+        <div class="absolute inset-0">
+            <img
+                v-if="settings.hero_background_url || settings.hero_background"
                 :src="settings.hero_background_url || settings.hero_background"
-                alt="Tres Cantares hero"
+                alt="Tres Cantares"
                 class="w-full h-full object-cover object-center" />
-            <!-- Placeholder pattern if no image -->
-            <div v-else class="w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"></div>
+            <img
+                v-else
+                :src="heroHome"
+                alt="Tres Cantares"
+                class="w-full h-full object-cover object-center" />
             <div class="absolute inset-0 hero-overlay"></div>
         </div>
 
-        <!-- Content -->
-        <div class="relative z-10 flex flex-col items-center justify-center flex-1 pt-28 pb-16 px-4 text-center">
-            <!-- Decorative elements left -->
-            <div class="absolute left-4 top-1/2 -translate-y-1/2 hidden xl:flex flex-col gap-3 opacity-60">
-                <div class="w-16 h-20 border-2 border-yellow-400 rounded-sm flex items-center justify-center">
-                    <span class="font-display text-yellow-400 text-xs text-center px-1">LOTERÍA</span>
-                </div>
-                <div class="w-16 h-20 border-2 border-red-400 rounded-sm flex items-center justify-center">
-                    <span class="font-display text-red-400 text-xs text-center px-1">LOTERÍA</span>
-                </div>
+        <!-- Lotería cards LEFT — partially cut off at edge -->
+        <div class="absolute left-0 top-1/2 -translate-y-1/2 hidden md:flex flex-col gap-4"
+            style="transform: translate(-30%, -50%);">
+            <div class="loteria-card w-[100px] h-[135px] rotate-[-7deg] overflow-hidden shadow-2xl">
+                <img :src="cardNopal" alt="" class="w-full h-full object-cover" />
             </div>
+            <div class="loteria-card w-[100px] h-[135px] rotate-[5deg] overflow-hidden shadow-2xl">
+                <img :src="cardCantarito" alt="" class="w-full h-full object-cover" />
+            </div>
+        </div>
 
-            <h1 class="font-display text-6xl lg:text-8xl text-white tracking-widest drop-shadow-2xl mb-2">
-                TRES CANTARES
-            </h1>
-            <p class="text-white/85 font-body max-w-2xl text-base lg:text-lg leading-relaxed mt-4 drop-shadow">
-                Ven a disfrutar el auténtico sabor de México en un espacio cálido y moderno,
-                donde la tradición, la buena música y los mejores momentos se comparten
-                en familia, con amigos o en pareja.
-            </p>
-            <div class="mt-8 flex gap-4">
-                <Link href="/menu"
-                    class="bg-tc-rojo text-white font-display tracking-widest text-sm px-8 py-3 rounded hover:bg-red-700 transition-colors uppercase">
-                    Ver Menú
-                </Link>
-                <Link href="/ubicacion"
-                    class="border border-white text-white font-display tracking-widest text-sm px-8 py-3 rounded hover:bg-white/10 transition-colors uppercase">
-                    Ubicación
-                </Link>
+        <!-- Lotería cards RIGHT — partially cut off at edge -->
+        <div class="absolute right-0 top-1/2 -translate-y-1/2 hidden md:flex flex-col gap-4"
+            style="transform: translate(30%, -50%);">
+            <div class="loteria-card w-[100px] h-[135px] rotate-[7deg] overflow-hidden shadow-2xl">
+                <img :src="cardBorracho" alt="" class="w-full h-full object-cover" />
             </div>
+            <div class="loteria-card w-[100px] h-[135px] rotate-[-5deg] overflow-hidden shadow-2xl">
+                <img :src="cardRose" alt="" class="w-full h-full object-cover" />
+            </div>
+        </div>
 
-            <!-- Decorative elements right -->
-            <div class="absolute right-4 top-1/2 -translate-y-1/2 hidden xl:flex flex-col gap-3 opacity-60">
-                <div class="w-16 h-20 border-2 border-green-400 rounded-sm flex items-center justify-center">
-                    <span class="font-display text-green-400 text-xs text-center px-1">LOTERÍA</span>
-                </div>
-                <div class="w-16 h-20 border-2 border-blue-400 rounded-sm flex items-center justify-center">
-                    <span class="font-display text-blue-400 text-xs text-center px-1">LOTERÍA</span>
-                </div>
-            </div>
+        <!-- Torn paper bottom -->
+        <div class="absolute bottom-0 left-0 right-0 z-20 leading-[0] pointer-events-none">
+            <img :src="tornPaperLarge" alt="" class="w-full block"
+                style="transform: scaleY(-1); height: 60px; object-fit: fill;" />
         </div>
     </section>
 
-    <!-- ===================== DIVIDER ===================== -->
-    <DecorativeDivider />
+    <!-- ============================================================
+         NUESTRO CONCEPTO
+    ============================================================ -->
+    <section class="relative overflow-hidden" style="background-color: var(--tc-paper);">
 
-    <!-- ===================== NUESTRO CONCEPTO ===================== -->
-    <section class="tc-section bg-papel">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <div>
-                    <SectionTitle title="Nuestro Concepto" color="rojo" />
-                    <p class="font-body text-gray-700 text-base leading-relaxed">
+        <!-- Torn paper top -->
+        <div class="absolute top-0 left-0 right-0 z-10 leading-[0] pointer-events-none">
+            <img :src="tornPaperSmall" alt="" class="w-full block" style="height: 50px; object-fit: fill;" />
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 pt-24 pb-20">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+                <!-- Left: concepto image + text -->
+                <div class="relative z-10">
+                    <div class="mb-6">
+                        <img :src="imgConcepto" alt="Nuestro Concepto"
+                            style="width: 380px; max-width: 100%; height: auto;"
+                            class="drop-shadow-sm" />
+                    </div>
+                    <p class="font-body text-gray-700 text-base sm:text-lg leading-relaxed max-w-lg">
                         En Tres Cantares fusionamos la tradición mexicana con un ambiente moderno y acogedor,
                         creando el lugar perfecto para compartir grandes momentos. Disfruta sabores auténticos,
                         buena música y una experiencia pensada para reunirte con quienes más quieres.
                     </p>
-                    <div class="mt-6 flex gap-4">
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-tc-verde inline-block"></span>
-                            <span class="font-body text-sm text-gray-600">Tradición Auténtica</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-tc-rojo inline-block"></span>
-                            <span class="font-body text-sm text-gray-600">Ambiente Único</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-tc-azul inline-block"></span>
-                            <span class="font-body text-sm text-gray-600">Buena Música</span>
+                </div>
+
+                <!-- Right: cantarito + decorative lotería cards -->
+                <div class="relative flex justify-center items-center min-h-80">
+
+                    <!-- Card behind, rotated left -->
+                    <div class="absolute -left-4 top-4 w-28 h-36 rotate-[-8deg] z-0 hidden sm:block">
+                        <div class="loteria-card w-full h-full overflow-hidden">
+                            <img :src="cardRose" alt="" class="w-full h-full object-cover" />
                         </div>
                     </div>
-                </div>
-                <div class="flex justify-center relative">
-                    <!-- Decorative background cards -->
-                    <div class="absolute -top-4 -left-4 w-32 h-40 border-4 border-tc-rojo/20 rounded-lg rotate-6"></div>
-                    <div class="absolute -bottom-4 -right-4 w-32 h-40 border-4 border-tc-azul/20 rounded-lg -rotate-6"></div>
-                    <!-- Main image placeholder -->
-                    <div class="relative w-72 h-80 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center">
-                        <!-- Replace this div with an actual image when available -->
-                        <div class="text-center">
-                            <svg class="w-24 h-24 text-amber-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-                                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4"/>
-                            </svg>
-                            <p class="font-display text-amber-600 tracking-widest text-lg">CANTARITO</p>
+
+                    <!-- Main cantarito -->
+                    <div class="relative z-10">
+                        <img :src="cantaritoMain" alt="Cantarito Tres Cantares"
+                            class="w-64 sm:w-80 lg:w-96 h-auto drop-shadow-2xl object-contain" />
+                    </div>
+
+                    <!-- Card front-right, rotated -->
+                    <div class="absolute right-0 bottom-4 w-24 h-32 rotate-[7deg] z-20 hidden sm:block">
+                        <div class="loteria-card w-full h-full overflow-hidden">
+                            <img :src="cardCantarito" alt="" class="w-full h-full object-cover" />
                         </div>
                     </div>
                 </div>
@@ -120,29 +128,49 @@ const setting = (key: string, fallback = '') => props.settings?.[key] ?? fallbac
         </div>
     </section>
 
-    <!-- ===================== DIVIDER ===================== -->
+    <!-- ============================================================
+         DIVIDER
+    ============================================================ -->
     <DecorativeDivider />
 
-    <!-- ===================== CONOCE NUESTRO MENÚ ===================== -->
-    <section class="tc-section bg-white">
-        <div class="max-w-7xl mx-auto px-6 text-center">
-            <SectionTitle title="Conoce Nuestro Menú" color="azul" />
-            <p class="font-body text-gray-600 max-w-xl mx-auto mb-8 text-base leading-relaxed">
-                Platillos preparados con ingredientes frescos y recetas que honran la cocina mexicana tradicional.
-            </p>
+    <!-- ============================================================
+         CONOCE NUESTRO MENÚ
+    ============================================================ -->
+    <section class="relative overflow-hidden" style="background-color: var(--tc-paper-light);">
 
-            <!-- Featured items preview -->
-            <div v-if="featuredItems.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
-                <MenuCard v-for="item in featuredItems.slice(0, 4)" :key="item.id" :item="item" />
+        <div class="max-w-7xl mx-auto px-6 py-20 relative">
+
+            <!-- Taco — left edge -->
+            <div class="absolute -left-10 bottom-0 w-44 sm:w-56 lg:w-72 opacity-90 pointer-events-none hidden sm:block">
+                <img :src="tacoLeft" alt="" class="w-full h-auto drop-shadow-xl" />
             </div>
 
-            <Link href="/menu"
-                class="inline-block bg-tc-azul text-white font-display tracking-widest text-sm px-12 py-3 rounded hover:bg-blue-800 transition-colors uppercase">
-                Ver Menú Completo
-            </Link>
+            <!-- Limón — upper left area -->
+            <div class="absolute left-40 top-10 w-16 sm:w-20 opacity-70 pointer-events-none hidden lg:block">
+                <img :src="limonLeft" alt="" class="w-full h-auto" />
+            </div>
+
+            <!-- Dish — right edge -->
+            <div class="absolute -right-10 bottom-0 w-44 sm:w-56 lg:w-72 opacity-90 pointer-events-none hidden sm:block">
+                <img :src="menuDishRight" alt="" class="w-full h-auto drop-shadow-xl" />
+            </div>
+
+            <!-- Center: title image + button -->
+            <div class="relative z-10 text-center">
+                <div class="flex justify-center mb-10">
+                    <img :src="imgMenu" alt="Conoce Nuestro Menú"
+                        class="max-w-sm sm:max-w-md lg:max-w-xl w-full h-auto drop-shadow-sm" />
+                </div>
+
+                <Link href="/menu" class="btn-menu-vintage">
+                    MENÚ
+                </Link>
+            </div>
         </div>
     </section>
 
-    <!-- ===================== DIVIDER ===================== -->
+    <!-- ============================================================
+         DIVIDER
+    ============================================================ -->
     <DecorativeDivider />
 </template>
