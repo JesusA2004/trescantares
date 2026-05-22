@@ -13,9 +13,11 @@ defineProps<{ settings: Record<string, any> }>();
                 <div class="tc-footer-col-logo">
                     <img v-if="settings.logo_url || settings.logo"
                         :src="settings.logo_url || settings.logo"
-                        alt="Tres Cantares" class="tc-footer-logo" />
+                        alt="Tres Cantares" class="tc-footer-logo"
+                        loading="lazy" decoding="async" />
                     <img v-else :src="logoTresCantares"
-                        alt="Tres Cantares" class="tc-footer-logo" />
+                        alt="Tres Cantares" class="tc-footer-logo"
+                        loading="lazy" decoding="async" />
                     <p class="tc-footer-tagline">El sabor auténtico de México</p>
                 </div>
 

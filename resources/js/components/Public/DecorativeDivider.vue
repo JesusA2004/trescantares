@@ -11,7 +11,7 @@ withDefaults(defineProps<{
 <template>
     <!-- Imágenes reales — sin CSS inventado -->
     <div class="tc-real-divider">
-        <img v-if="type === 'up'"   :src="dividerUp"   alt="" />
-        <img v-if="type === 'down'" :src="dividerDown" alt="" />
+        <img v-if="type === 'up'"   :src="dividerUp"   alt="" loading="lazy" decoding="async" />
+        <img v-if="type === 'down'" :src="dividerDown" alt="" loading="lazy" decoding="async" />
     </div>
 </template>

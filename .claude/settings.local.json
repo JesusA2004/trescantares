@@ -24,7 +24,13 @@
       "PowerShell(New-Item *)",
       "PowerShell(Start-Sleep -Seconds 3; Invoke-WebRequest -Uri \"http://127.0.0.1:8000\" -UseBasicParsing -TimeoutSec 5 | Select-Object StatusCode, StatusDescription)",
       "PowerShell(Copy-Item *)",
-      "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\js\\\\img\\\\textures\\\\paper-white.png\"\\); Write-Output \"$\\($img.Width\\) x $\\($img.Height\\)\"; $img.Dispose\\(\\))"
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\js\\\\img\\\\textures\\\\paper-white.png\"\\); Write-Output \"$\\($img.Width\\) x $\\($img.Height\\)\"; $img.Dispose\\(\\))",
+      "PowerShell(Get-ChildItem resources\\\\img -Recurse -File | Sort-Object Length -Descending | ForEach-Object { \"$\\($_.Name\\) — $\\([math]::Round\\($_.Length/1KB, 1\\)\\) KB\" })",
+      "PowerShell(Get-ChildItem \"resources\\\\img\" -Recurse -File | Sort-Object Length -Descending | ForEach-Object { $kb = [math]::Round\\($_.Length / 1024, 1\\); Write-Output \"$kb KB  $\\($_.Name\\)\" })",
+      "Bash(python -c ' *)",
+      "Bash(node *)",
+      "Bash(npm list *)",
+      "Bash(npm install *)"
     ]
   }
 }

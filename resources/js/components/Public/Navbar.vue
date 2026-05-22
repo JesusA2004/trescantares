@@ -13,7 +13,7 @@ const page = usePage();
     <nav class="tc-public-navbar">
 
         <!-- torn-paper-small.png — transform scaleY(-1) en CSS, corte hacia abajo -->
-        <img :src="tornPaperSmall" class="tc-navbar-paper" alt="" />
+        <img :src="tornPaperSmall" class="tc-navbar-paper" alt="" decoding="async" />
 
         <!-- Desktop -->
         <div class="tc-navbar-inner hidden lg:flex items-center">

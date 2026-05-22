@@ -9,20 +9,32 @@
 /* ============================================
    TRES CANTARES — Scroll suave global
    ============================================ */
-html { scroll-behavior: smooth; }
+html {
+    scroll-behavior: smooth;
+}
 
 /* ============================================
    TRES CANTARES — Keyframes
    ============================================ */
 
 @keyframes tc-fade-up {
-    from { opacity: 0; transform: translateY(28px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(28px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes tc-fade-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 /* ============================================
@@ -31,7 +43,8 @@ html { scroll-behavior: smooth; }
 
 @font-face {
     font-family: 'Western Wonderment';
-    src: url('../fonts/western-wonderment/Western Wonderment.ttf') format('truetype');
+    src: url('../fonts/western-wonderment/Western Wonderment.ttf')
+        format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -79,9 +92,8 @@ html { scroll-behavior: smooth; }
 
 @theme inline {
     --font-sans:
-        'Poppins', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+        'Poppins', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -219,26 +231,26 @@ html { scroll-behavior: smooth; }
    ============================================= */
 :root {
     /* Paleta oficial */
-    --tc-blue:         #144E8F;
-    --tc-pink:         #DB3465;
-    --tc-green:        #079A4A;
-    --tc-yellow:       #EEC325;
-    --tc-paper:        #F7F3EA;
-    --tc-paper-light:  #FBFAF5;
-    --tc-dark:         #1F1F1F;
+    --tc-blue: #144e8f;
+    --tc-pink: #db3465;
+    --tc-green: #079a4a;
+    --tc-yellow: #eec325;
+    --tc-paper: #f7f3ea;
+    --tc-paper-light: #fbfaf5;
+    --tc-dark: #1f1f1f;
 
     /* Aliases legado (para compatibilidad con código existente) */
-    --tc-rojo:         var(--tc-pink);
-    --tc-azul:         var(--tc-blue);
-    --tc-verde:        var(--tc-green);
-    --tc-amarillo:     var(--tc-yellow);
-    --tc-crema:        var(--tc-paper);
-    --tc-papel:        var(--tc-paper-light);
-    --tc-oscuro:       var(--tc-dark);
+    --tc-rojo: var(--tc-pink);
+    --tc-azul: var(--tc-blue);
+    --tc-verde: var(--tc-green);
+    --tc-amarillo: var(--tc-yellow);
+    --tc-crema: var(--tc-paper);
+    --tc-papel: var(--tc-paper-light);
+    --tc-oscuro: var(--tc-dark);
 
     /* Tipografías */
     --tc-font-display: 'Western Wonderment', serif;
-    --tc-font-body:    'Poppins', ui-sans-serif, system-ui, sans-serif;
+    --tc-font-body: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* =============================================
@@ -255,40 +267,88 @@ html { scroll-behavior: smooth; }
 }
 
 /* Color utilities */
-.text-tc-blue    { color: var(--tc-blue); }
-.text-tc-pink    { color: var(--tc-pink); }
-.text-tc-green   { color: var(--tc-green); }
-.text-tc-yellow  { color: var(--tc-yellow); }
-.text-tc-dark    { color: var(--tc-dark); }
+.text-tc-blue {
+    color: var(--tc-blue);
+}
+.text-tc-pink {
+    color: var(--tc-pink);
+}
+.text-tc-green {
+    color: var(--tc-green);
+}
+.text-tc-yellow {
+    color: var(--tc-yellow);
+}
+.text-tc-dark {
+    color: var(--tc-dark);
+}
 
 /* Legacy color utilities */
-.text-tc-rojo    { color: var(--tc-pink); }
-.text-tc-azul    { color: var(--tc-blue); }
-.text-tc-verde   { color: var(--tc-green); }
-.text-tc-oscuro  { color: var(--tc-dark); }
+.text-tc-rojo {
+    color: var(--tc-pink);
+}
+.text-tc-azul {
+    color: var(--tc-blue);
+}
+.text-tc-verde {
+    color: var(--tc-green);
+}
+.text-tc-oscuro {
+    color: var(--tc-dark);
+}
 
 /* Brand alias classes from spec */
-.text-brand-blue   { color: var(--tc-blue); }
-.text-brand-pink   { color: var(--tc-pink); }
-.text-brand-green  { color: var(--tc-green); }
-.text-brand-yellow { color: var(--tc-yellow); }
+.text-brand-blue {
+    color: var(--tc-blue);
+}
+.text-brand-pink {
+    color: var(--tc-pink);
+}
+.text-brand-green {
+    color: var(--tc-green);
+}
+.text-brand-yellow {
+    color: var(--tc-yellow);
+}
 
 /* Background utilities */
-.bg-tc-blue    { background-color: var(--tc-blue); }
-.bg-tc-pink    { background-color: var(--tc-pink); }
-.bg-tc-green   { background-color: var(--tc-green); }
-.bg-tc-yellow  { background-color: var(--tc-yellow); }
+.bg-tc-blue {
+    background-color: var(--tc-blue);
+}
+.bg-tc-pink {
+    background-color: var(--tc-pink);
+}
+.bg-tc-green {
+    background-color: var(--tc-green);
+}
+.bg-tc-yellow {
+    background-color: var(--tc-yellow);
+}
 
 /* Legacy */
-.bg-tc-rojo    { background-color: var(--tc-pink); }
-.bg-tc-azul    { background-color: var(--tc-blue); }
-.bg-tc-verde   { background-color: var(--tc-green); }
+.bg-tc-rojo {
+    background-color: var(--tc-pink);
+}
+.bg-tc-azul {
+    background-color: var(--tc-blue);
+}
+.bg-tc-verde {
+    background-color: var(--tc-green);
+}
 
 /* Brand alias backgrounds */
-.bg-brand-blue   { background-color: var(--tc-blue); }
-.bg-brand-pink   { background-color: var(--tc-pink); }
-.bg-brand-green  { background-color: var(--tc-green); }
-.bg-brand-yellow { background-color: var(--tc-yellow); }
+.bg-brand-blue {
+    background-color: var(--tc-blue);
+}
+.bg-brand-pink {
+    background-color: var(--tc-pink);
+}
+.bg-brand-green {
+    background-color: var(--tc-green);
+}
+.bg-brand-yellow {
+    background-color: var(--tc-yellow);
+}
 
 /* Paper backgrounds */
 .bg-paper {
@@ -305,7 +365,7 @@ html { scroll-behavior: smooth; }
 
 .paper-texture {
     background-color: var(--tc-paper);
-    background-image: url('../img/textures/paper-white.png');
+    background-image: url('../js/img/textures/paper-white.webp');
     background-repeat: repeat;
     background-size: 400px auto;
 }
@@ -314,9 +374,9 @@ html { scroll-behavior: smooth; }
 .hero-overlay {
     background: linear-gradient(
         to bottom,
-        rgba(0, 0, 0, 0.60) 0%,
-        rgba(0, 0, 0, 0.40) 50%,
-        rgba(0, 0, 0, 0.70) 100%
+        rgba(0, 0, 0, 0.6) 0%,
+        rgba(0, 0, 0, 0.4) 50%,
+        rgba(0, 0, 0, 0.7) 100%
     );
 }
 
@@ -335,7 +395,9 @@ html { scroll-behavior: smooth; }
 
 /* Card hover */
 .tc-card-hover {
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
 }
 .tc-card-hover:hover {
     transform: translateY(-5px);
@@ -358,7 +420,7 @@ html { scroll-behavior: smooth; }
     left: 0;
     right: 0;
     height: 60px;
-    background-image: url('../img/textures/torn-paper-large.png');
+    background-image: url('../js/img/textures/torn-paper-large.webp');
     background-repeat: repeat-x;
     background-position: bottom center;
     background-size: auto 60px;
@@ -377,7 +439,7 @@ html { scroll-behavior: smooth; }
     left: 0;
     right: 0;
     height: 60px;
-    background-image: url('../img/textures/torn-paper-small.png');
+    background-image: url('../js/img/textures/torn-paper-small.webp');
     background-repeat: repeat-x;
     background-position: top center;
     background-size: auto 60px;
@@ -388,31 +450,36 @@ html { scroll-behavior: smooth; }
 
 /* Menu button vintage style */
 .btn-menu-vintage {
+    position: relative;
     display: inline-flex;
+    right: -680px;
+    top: 560px;
     align-items: center;
-    gap: 14px;
-    font-family: var(--tc-font-display);
-    letter-spacing: 0.28em;
-    font-size: 1.55rem;
-    color: var(--tc-blue);
-    background-color: var(--tc-paper);
-    border: 3px solid var(--tc-pink);
-    padding: 0.6rem 3.2rem;
-    transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-    text-transform: uppercase;
-    border-radius: 4px;
-    box-shadow: 0 3px 12px rgba(219, 52, 101, 0.18);
+    justify-content: center;
+    min-width: 220px;
+    height: 72px;
+    padding: 0 34px;
+    background: transparent;
+    text-decoration: none;
+    isolation: isolate;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transition:
+        transform 0.22s ease,
+        filter 0.22s ease;
 }
+
 .btn-menu-vintage:hover {
-    background-color: var(--tc-pink);
+    background-color: var(--tc-paper-light);
     border-color: var(--tc-pink);
-    color: white;
-    transform: scale(1.06) translateY(-2px);
-    box-shadow: 0 10px 28px rgba(219, 52, 101, 0.40);
+    color: var(--tc-blue);
+    transform: scale(1.07) translateY(-3px);
+    box-shadow: 0 14px 38px rgba(219, 52, 101, 0.45);
 }
 .btn-menu-vintage:hover::before,
 .btn-menu-vintage:hover::after {
-    color: white;
+    color: var(--tc-yellow);
 }
 .btn-menu-vintage::before,
 .btn-menu-vintage::after {
@@ -461,7 +528,7 @@ html { scroll-behavior: smooth; }
     left: 0;
     width: 100%;
     z-index: 50;
-    height: 165px;
+    height: 195px;
     overflow: visible;
 }
 
@@ -471,7 +538,7 @@ html { scroll-behavior: smooth; }
     top: 0;
     left: 0;
     width: 100%;
-    height: 200px;
+    height: 235px;
     object-fit: fill;
     transform: scaleY(-1);
     /* transform-origin: default 50% 50% — flip in-place, torn edge queda abajo */
@@ -483,8 +550,8 @@ html { scroll-behavior: smooth; }
 .tc-home-hero .tc-navbar-inner {
     position: relative;
     z-index: 2;
-    height: 130px;
-    padding-top: 10px;
+    height: 160px;
+    padding-top: 12px;
 }
 
 /* --- Estilos compartidos --- */
@@ -505,11 +572,15 @@ html { scroll-behavior: smooth; }
     text-transform: uppercase;
     letter-spacing: 0.14em;
     color: var(--tc-pink);
-    font-size: 31px;
+    font-size: 38px;
+    font-weight: 700;
     text-decoration: none;
-    transition: opacity 0.25s, transform 0.25s, color 0.25s;
+    transition:
+        opacity 0.25s,
+        transform 0.25s,
+        color 0.25s;
     white-space: nowrap;
-    text-shadow: 1px 1px 0 rgba(219, 52, 101, 0.18);
+    text-shadow: 1px 2px 0 rgba(219, 52, 101, 0.22);
 }
 
 .tc-nav-link:hover {
@@ -524,12 +595,14 @@ html { scroll-behavior: smooth; }
 }
 
 .tc-navbar-logo {
-    width: 198px;
+    width: 238px;
     height: auto;
     object-fit: contain;
     transition: transform 0.25s ease;
 }
-.tc-navbar-logo:hover { transform: scale(1.06); }
+.tc-navbar-logo:hover {
+    transform: scale(1.06);
+}
 
 /* =============================================
    HOME PAGE — Composición gráfica
@@ -545,7 +618,7 @@ html { scroll-behavior: smooth; }
 .tc-home-hero {
     position: relative;
     height: 980px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .tc-home-hero-bg {
@@ -567,19 +640,23 @@ html { scroll-behavior: smooth; }
     inset: 0;
     background:
         /* vignette lateral */
-        radial-gradient(ellipse 55% 70% at 50% 55%, transparent 0%, rgba(0,0,0,0.38) 100%),
+        radial-gradient(
+            ellipse 55% 70% at 50% 55%,
+            transparent 0%,
+            rgba(0, 0, 0, 0.38) 100%
+        ),
         /* gradiente vertical */
         linear-gradient(
-            to bottom,
-            rgba(0,0,0,0.68) 0%,
-            rgba(0,0,0,0.28) 38%,
-            rgba(0,0,0,0.22) 55%,
-            rgba(0,0,0,0.60) 78%,
-            rgba(0,0,0,0.82) 100%
-        );
+                to bottom,
+                rgba(0, 0, 0, 0.68) 0%,
+                rgba(0, 0, 0, 0.28) 38%,
+                rgba(0, 0, 0, 0.22) 55%,
+                rgba(0, 0, 0, 0.6) 78%,
+                rgba(0, 0, 0, 0.82) 100%
+            );
 }
 
-/* Título + texto: centrado debajo de la navbar flotante (165px) */
+/* Título + texto: centrado debajo de la navbar flotante (195px) */
 .tc-hero-content {
     position: absolute;
     inset: 0;
@@ -588,7 +665,7 @@ html { scroll-behavior: smooth; }
     align-items: center;
     justify-content: center;
     z-index: 20;
-    padding: 175px 300px 60px;
+    padding: 200px 300px 60px;
 }
 
 .tc-hero-title {
@@ -601,68 +678,77 @@ html { scroll-behavior: smooth; }
     letter-spacing: 0.07em;
     margin-bottom: 28px;
     text-shadow:
-        2px 4px 32px rgba(0,0,0,0.90),
-        0 0 80px rgba(0,0,0,0.50);
+        2px 4px 32px rgba(0, 0, 0, 0.9),
+        0 0 80px rgba(0, 0, 0, 0.5);
     animation: tc-fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .tc-hero-text {
-    color: white;
-    font-size: 19px;
-    line-height: 1.80;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 20px;
+    line-height: 1.12;
     text-align: center;
-    max-width: 600px;
+    max-width: 1180px;
+    width: 100%;
     font-family: var(--tc-font-body);
-    text-shadow: 1px 2px 14px rgba(0,0,0,0.75);
+    font-weight: 500;
+    text-shadow: 1px 2px 14px rgba(0, 0, 0, 0.85);
     animation: tc-fade-up 1.05s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tc-hero-text strong {
+    color: #ffffff;
+    font-weight: 900;
 }
 
 /* Cartas — position absolute, entran desde los bordes del hero */
 .tc-hero-card {
     position: absolute;
-    z-index: 12;
+    z-index: 52;
     height: auto;
     display: block;
     object-fit: contain;
-    filter: drop-shadow(4px 8px 16px rgba(0,0,0,0.50));
-    transition: transform 0.35s ease, filter 0.35s ease;
+    filter: drop-shadow(4px 8px 16px rgba(0, 0, 0, 0.5));
+    transition:
+        transform 0.35s ease,
+        filter 0.35s ease;
+    will-change: transform; /* capa GPU propia → no repinta el hero en hover */
 }
 
-/* nopal — izquierdo superior: más grande, más girado a la izquierda, saliéndose */
+/* nopal — grande, muy girado a la izquierda, saliéndose del borde */
 .tc-hero-card-nopal {
-    width: 350px;
-    left: -132px;
-    top: 118px;
-    transform: rotate(-38deg);
+    width: 650px;
+    left: -278px;
+    top: -120px;
+    transform: rotate(-30deg);
 }
 .tc-hero-card-nopal:hover {
-    transform: rotate(-34deg) scale(1.06);
-    filter: drop-shadow(6px 12px 22px rgba(0,0,0,0.60));
+    transform: rotate(44deg) scale(1.06);
+    filter: drop-shadow(6px 12px 22px rgba(0, 0, 0, 0.6));
 }
 
-/* cantarito-carta hero — más grande, apunta NW ~-38°,
-   top: 610px → parte inferior sale de la página (hero 980px, carta ~370px, borde inferior ~980px) */
+/* jarra/cantarito hero — grande, parte inferior fuera de página */
 .tc-hero-card-cantarito {
-    width: 345px;
-    left: -105px;
-    top: 615px;
-    transform: rotate(-38deg);
+    width: 650px;
+    left: -208px;
+    top: 440px;
+    transform: rotate(25deg);
 }
 .tc-hero-card-cantarito:hover {
-    transform: rotate(-34deg) scale(1.06);
-    filter: drop-shadow(6px 12px 22px rgba(0,0,0,0.60));
+    transform: rotate(-32deg) scale(1.06);
+    filter: drop-shadow(6px 12px 22px rgba(0, 0, 0, 0.6));
 }
 
-/* borracho — más pequeño que nopal/jarra, parte superior muy inclinada a la derecha */
+/* borracho — más pequeño, muy inclinado a la derecha (acostado) */
 .tc-hero-card-borracho {
-    width: 250px;
-    right: -72px;
-    top: 340px;
-    transform: rotate(46deg);
+    width: 345px;
+    right: 20px;
+    top: 530px;
+    transform: rotate(62deg);
 }
 .tc-hero-card-borracho:hover {
-    transform: rotate(50deg) scale(1.06);
-    filter: drop-shadow(6px 12px 22px rgba(0,0,0,0.60));
+    transform: rotate(-6deg) scale(1.02);
+    filter: drop-shadow(6px 12px 22px rgba(0, 0, 0, 0.6));
 }
 
 /* ─── NUESTRO CONCEPTO ──────────────────────── */
@@ -670,13 +756,10 @@ html { scroll-behavior: smooth; }
 /* z-index: 2 garantiza que los tacos que desbordan queden sobre el divisor y el menú */
 .tc-concept {
     position: relative;
-    height: 820px;
+    height: 840px;
     overflow: visible;
     z-index: 2;
-    background-color: var(--tc-paper);
-    background-size: cover;
-    background-attachment: fixed;
-    background-position: center top;
+    /* fondo: el wrapper padre maneja texture + color */
 }
 
 .tc-concept-artboard {
@@ -688,9 +771,9 @@ html { scroll-behavior: smooth; }
 
 .tc-concept-title {
     position: absolute;
-    left: 42px;
-    top: 72px;
-    width: 470px;
+    left: 20px;
+    top: 48px;
+    width: 480px;
     z-index: 10;
 }
 
@@ -698,81 +781,85 @@ html { scroll-behavior: smooth; }
     font-family: var(--tc-font-body);
     font-size: 18px;
     color: var(--tc-blue);
-    line-height: 1.65;
-    max-width: 490px;
-    margin-top: 28px;
+    line-height: 1.15;
+    max-width: 620px;
+    margin-top: 34px;
+    font-weight: 500;
+    text-align: justify;
 }
 
-/* La Rosa — incrustada detrás del cantarito, asoma por la parte superior-izquierda.
-   Cantarito left edge ≈ right: 625px (1200-15-600=585px desde izq = right:615px).
-   right: 460px → right edge en x=740px → ~155px dentro del cantarito. */
+/* La Rosa — parte superior del cantarito, grande, asoma desde atrás (z-index 3) */
 .tc-concept-card-rose {
     position: absolute;
-    right: 462px;
-    top: 42px;
-    width: 262px;
+    left: 660px;
+    top: -40px;
+    width: 620px;
     height: auto;
-    transform: rotate(-16deg);
+    transform: rotate(2deg);
     z-index: 3;
-    filter: drop-shadow(3px 5px 14px rgba(0,0,0,0.45));
-    transition: transform 0.3s ease, filter 0.3s ease;
+    filter: drop-shadow(3px 5px 14px rgba(0, 0, 0, 0.45));
+    transition:
+        transform 0.3s ease,
+        filter 0.3s ease;
 }
 .tc-concept-card-rose:hover {
-    transform: rotate(-12deg) scale(1.05);
-    filter: drop-shadow(5px 8px 20px rgba(0,0,0,0.58));
+    transform: rotate(-10deg) scale(1.05);
+    filter: drop-shadow(5px 8px 20px rgba(0, 0, 0, 0.58));
 }
 
-/* La Sandía — incrustada detrás del cantarito, inferior-izquierda, acostada ~62°.
-   right: 472px → right edge en x=728px → ~143px dentro del cantarito. */
+/* La Sandía — inferior izquierda del cantarito, grande, acostada ~62°, asoma desde atrás */
 .tc-concept-card-cantarito {
     position: absolute;
-    right: 475px;
-    bottom: 42px;
-    width: 255px;
+    right: 448px;
+    bottom: 30px;
+    width: 300px;
     height: auto;
     transform: rotate(62deg);
     z-index: 3;
-    filter: drop-shadow(3px 5px 14px rgba(0,0,0,0.45));
-    transition: transform 0.3s ease, filter 0.3s ease;
+    filter: drop-shadow(3px 5px 14px rgba(0, 0, 0, 0.45));
+    transition:
+        transform 0.3s ease,
+        filter 0.3s ease;
 }
 .tc-concept-card-cantarito:hover {
     transform: rotate(58deg) scale(1.05);
-    filter: drop-shadow(5px 8px 20px rgba(0,0,0,0.58));
+    filter: drop-shadow(5px 8px 20px rgba(0, 0, 0, 0.58));
 }
 
-/* cantarito-main — más grande y más a la derecha */
+/* cantarito-main — grande, desplazado hacia la derecha, protagonista */
 .tc-concept-cantarito {
     position: absolute;
-    right: 15px;
+    right: -220px;
     bottom: 0;
-    width: 600px;
+    width: 620px;
     height: auto;
     z-index: 5;
-    filter: drop-shadow(6px 12px 30px rgba(0,0,0,0.30));
+    filter: drop-shadow(6px 12px 30px rgba(0, 0, 0, 0.3));
     transition: filter 0.3s ease;
+    will-change: transform;
 }
 .tc-concept-cantarito:hover {
-    filter: drop-shadow(8px 16px 38px rgba(0,0,0,0.40));
+    filter: drop-shadow(8px 16px 38px rgba(0, 0, 0, 0.4));
 }
 
-/* tacos — MUCHO más a la izquierda (left:-290px), gran parte fuera de la página.
-   Cruzan entre concepto y menú como pieza decorativa lateral fuerte. */
+/* tacos — gran parte fuera del borde izquierdo, cruzan como decorativo lateral fuerte */
 .tc-cross-tacos {
     position: absolute;
-    left: -290px;
-    bottom: -240px;
-    width: 640px;
+    left: -135px;
+    top: 580px;
+    bottom: -265px;
+    width: 700px;
     height: auto;
     z-index: 20;
     pointer-events: none;
-    filter: drop-shadow(4px 8px 18px rgba(0,0,0,0.25));
+    filter: drop-shadow(4px 8px 18px rgba(0, 0, 0, 0.25));
 }
 
 /* ─── DIVISORES REALES ──────────────────────── */
 
 .tc-real-divider {
     position: relative;
-    z-index: 1;
+    z-index: 5;
     width: 100%;
     overflow: hidden;
     line-height: 0;
@@ -789,13 +876,9 @@ html { scroll-behavior: smooth; }
 
 .tc-menu-preview {
     position: relative;
-    height: 700px;
+    height: 720px;
     overflow: hidden;
-    z-index: 1;
-    background-color: var(--tc-paper);
-    background-size: cover;
-    background-attachment: fixed;
-    background-position: center top;
+    z-index: 20;
 }
 
 .tc-menu-artboard {
@@ -810,14 +893,14 @@ html { scroll-behavior: smooth; }
     display: none;
 }
 
-/* menu.png AR 1.83: a 740px de ancho → 404px de alto → ocupa y=65 a y=469 */
+/* menu.png AR 1.83: a 830px de ancho → 453px de alto → ocupa y=60 a y=513 */
 .tc-menu-title {
     position: absolute;
-    top: 65px;
+    top: 60px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
-    width: 740px;
+    width: 830px;
 }
 
 .tc-menu-title img {
@@ -826,48 +909,100 @@ html { scroll-behavior: smooth; }
     display: block;
 }
 
-/* Botón MENÚ: 36px debajo del título (65 + 404 + 36 = 505px) */
-.tc-menu-button {
-    position: absolute;
-    top: 505px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-    white-space: nowrap;
+.btn-menu-vintage {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 165px;
+    height: 58px;
+    padding: 0 22px;
+    background: transparent;
+    text-decoration: none;
+    isolation: isolate;
+    transition:
+        transform 0.22s ease,
+        filter 0.22s ease;
 }
 
-/* limon: izquierda de la tostada, parte baja izquierda */
+/* Forma exterior rosa */
+.btn-menu-vintage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 58' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 3 H177 L166 29 L177 55 H3 L14 29 L3 3' fill='none' stroke='%23db3465' stroke-width='4' stroke-linejoin='miter' stroke-linecap='square'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+
+.btn-menu-vintage::after {
+    display: none;
+}
+
+.btn-menu-vintage span {
+    position: relative;
+    z-index: 2;
+    font-family: var(--tc-font-display);
+    font-size: 2.5rem;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    color: var(--tc-blue);
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.btn-menu-vintage span::before,
+.btn-menu-vintage span::after {
+    content: '★';
+    color: var(--tc-yellow);
+    font-size: 0.42em;
+    line-height: 1;
+}
+
+.btn-menu-vintage:hover {
+    transform: translateY(-2px) scale(1.04);
+    filter: drop-shadow(0 7px 12px rgba(219, 52, 101, 0.25));
+    background-color: transparent;
+}
+
+/* limon: a la izquierda de la tostada, parte baja izquierda */
 .tc-menu-limon {
     position: absolute;
-    left: 38px;
-    bottom: 52px;
-    width: 128px;
+    left: -272px;
+    bottom: 22px;
+    width: 148px;
+    top: 420px;
     height: auto;
-    z-index: 5;
-    filter: drop-shadow(2px 4px 10px rgba(0,0,0,0.25));
+    z-index: 40;
+    filter: drop-shadow(2px 4px 10px rgba(0, 0, 0, 0.25));
 }
 
-/* tostada: inferior izquierda, encima del decorativo mexicano,
-   ligeramente cortada abajo */
+/* tostada: inferior izquierda, encima del decorativo mexicano, parcialmente cortada */
 .tc-menu-dish-right {
     position: absolute;
-    left: -38px;
-    bottom: -80px;
-    width: 430px;
+    left: -88px;
+    bottom: -115px;
+    width: 465px;
     height: auto;
-    z-index: 3;
-    filter: drop-shadow(4px 8px 18px rgba(0,0,0,0.25));
+    z-index: 40;
+    filter: drop-shadow(4px 8px 18px rgba(0, 0, 0, 0.25));
 }
 
-/* pozole: extrema derecha, mitad dentro mitad fuera de la página */
+/* pozole: extrema derecha, grande, mitad dentro mitad fuera — presencia lateral fuerte */
 .tc-menu-pozole {
     position: absolute;
-    right: -265px;
-    bottom: -35px;
-    width: 580px;
+    right: -720px;
+    top: 180px;
+    bottom: -55px;
+    width: 690px;
     height: auto;
-    z-index: 2;
-    filter: drop-shadow(4px 8px 18px rgba(0,0,0,0.25));
+    z-index: 40;
+    filter: drop-shadow(4px 8px 18px rgba(0, 0, 0, 0.25));
 }
 
 /* =============================================
@@ -879,13 +1014,13 @@ html { scroll-behavior: smooth; }
     background-position: center top;
     background-repeat: no-repeat;
     position: relative;
-    min-height: 280px;
+    min-height: 360px;
 }
 
 .tc-footer-inner {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 38px 80px 0;
+    padding: 56px 80px 0;
 }
 
 .tc-footer-cols {
@@ -897,21 +1032,22 @@ html { scroll-behavior: smooth; }
 
 .tc-footer-col-logo {
     flex: 0 0 auto;
+    transform: translateX(-200px);
 }
 
 .tc-footer-logo {
-    height: 130px;
+    height: 158px;
     object-fit: contain;
     display: block;
 }
 
 .tc-footer-tagline {
     font-family: var(--tc-font-display);
-    font-size: 14px;
+    font-size: 17px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--tc-pink);
-    margin-top: 8px;
+    margin-top: 10px;
 }
 
 .tc-footer-col-info {
@@ -920,7 +1056,7 @@ html { scroll-behavior: smooth; }
 }
 
 .tc-footer-label {
-    font-size: 17px;
+    font-size: 21px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -929,61 +1065,64 @@ html { scroll-behavior: smooth; }
 }
 
 .tc-footer-value {
-    font-size: 15px;
+    font-size: 17px;
     color: var(--tc-blue);
-    line-height: 1.60;
+    line-height: 1.65;
 }
 
 .tc-footer-col-links {
     flex: 0 0 auto;
-    text-align: right;
+    text-align: left;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
+    transform: translateX(140px);
 }
 
 .tc-footer-link {
-    font-family: var(--tc-font-display);
-    font-size: 18px;
+    font-family: var(--tc-font-body);
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--tc-blue);
     text-decoration: none;
-    line-height: 2.0;
-    transition: color 0.22s, transform 0.22s;
-    display: inline-block;
+    line-height: 2.15;
 }
+
 .tc-footer-link:hover {
     color: var(--tc-pink);
-    transform: translateX(5px);
+    transform: translateX(7px);
 }
 
 .tc-social-icon {
-    width: 40px;
-    height: 40px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s;
+    transition:
+        transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.25s;
     background-color: var(--tc-blue) !important;
 }
 .tc-social-icon:hover {
-    transform: scale(1.18) translateY(-2px);
-    filter: brightness(1.25);
+    transform: scale(1.2) translateY(-3px);
+    box-shadow: 0 8px 20px rgba(20, 78, 143, 0.4);
 }
 
 .tc-footer-copyright {
-    margin-top: 24px;
-    border-top: 1px solid rgba(0,0,0,0.14);
-    padding: 12px 0 20px;
+    margin-top: 28px;
+    border-top: 1px solid rgba(0, 0, 0, 0.14);
+    padding: 16px 0 28px;
 }
 
 .tc-footer-copyright p {
     font-family: var(--tc-font-body);
     text-align: center;
-    font-size: 14px;
+    font-size: 17px;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.14em;
     color: var(--tc-green);
@@ -994,88 +1133,285 @@ html { scroll-behavior: smooth; }
    ============================================= */
 
 @media (max-width: 1400px) {
-    .tc-hero-title          { font-size: 118px; }
-    .tc-hero-content        { padding: 162px 268px 50px; }
-    .tc-hero-card-nopal     { width: 310px; left: -118px; top: 105px; }
-    .tc-hero-card-cantarito { width: 308px; left: -96px; top: 556px; }
-    .tc-hero-card-borracho  { width: 228px; right: -65px; top: 310px; }
-    .tc-concept             { height: 760px; }
-    .tc-concept-title       { width: 432px; top: 65px; left: 38px; }
-    .tc-concept-cantarito   { width: 548px; right: 14px; }
-    .tc-concept-card-rose   { right: 420px; width: 238px; top: 38px; }
-    .tc-concept-card-cantarito { right: 432px; width: 232px; bottom: 38px; }
-    .tc-cross-tacos         { width: 580px; bottom: -218px; left: -262px; }
-    .tc-menu-preview        { height: 648px; }
-    .tc-menu-title          { width: 678px; top: 60px; }
+    .tc-hero-title {
+        font-size: 118px;
+    }
+    .tc-hero-content {
+        padding: 162px 268px 50px;
+    }
+    .tc-hero-card-nopal {
+        width: 310px;
+        left: -118px;
+        top: 105px;
+    }
+    .tc-hero-card-cantarito {
+        width: 308px;
+        left: -96px;
+        top: 556px;
+    }
+    .tc-hero-card-borracho {
+        width: 228px;
+        right: -65px;
+        top: 310px;
+    }
+    .tc-concept {
+        height: 760px;
+    }
+    .tc-concept-title {
+        width: 432px;
+        top: 65px;
+        left: 38px;
+    }
+    .tc-concept-cantarito {
+        width: 548px;
+        right: 14px;
+    }
+    .tc-concept-card-rose {
+        right: 420px;
+        width: 238px;
+        top: 38px;
+    }
+    .tc-concept-card-cantarito {
+        right: 432px;
+        width: 232px;
+        bottom: 38px;
+    }
+    .tc-cross-tacos {
+        width: 580px;
+        bottom: -218px;
+        left: -262px;
+    }
+    .tc-menu-preview {
+        height: 648px;
+    }
+    .tc-menu-title {
+        width: 678px;
+        top: 60px;
+    }
     /* menu.png a 678px → 370px → 60+370+36 = 466px */
-    .tc-menu-button         { top: 468px; }
-    .tc-menu-dish-right     { width: 395px; left: -34px; }
-    .tc-menu-pozole         { width: 532px; right: -242px; }
-    .tc-menu-limon          { width: 116px; left: 34px; }
+    .tc-menu-button {
+        top: 468px;
+    }
+    .tc-menu-dish-right {
+        width: 395px;
+        left: -34px;
+    }
+    .tc-menu-pozole {
+        width: 532px;
+        right: -242px;
+    }
+    .tc-menu-limon {
+        width: 116px;
+        left: 34px;
+    }
 }
 
 @media (max-width: 1200px) {
-    .tc-navbar-paper        { height: 158px; }
-    .tc-navbar-logo         { width: 170px; }
-    .tc-nav-link            { font-size: 25px; }
-    .tc-home-hero           { height: 890px; }
-    .tc-hero-title          { font-size: 106px; }
-    .tc-hero-content        { padding: 154px 232px 46px; }
-    .tc-hero-card-nopal     { width: 278px; left: -106px; top: 100px; }
-    .tc-hero-card-cantarito { width: 275px; left: -88px; top: 492px; }
-    .tc-hero-card-borracho  { width: 205px; right: -60px; top: 278px; }
-    .tc-concept             { height: 720px; }
-    .tc-concept-title       { width: 405px; top: 62px; left: 36px; }
-    .tc-concept-text        { font-size: 16px; }
-    .tc-concept-cantarito   { width: 508px; right: 13px; }
-    .tc-concept-card-rose   { right: 370px; width: 218px; top: 36px; }
-    .tc-concept-card-cantarito { right: 382px; width: 208px; bottom: 36px; }
-    .tc-cross-tacos         { width: 520px; bottom: -215px; left: -248px; }
-    .tc-menu-preview        { height: 608px; }
-    .tc-menu-title          { width: 628px; top: 58px; }
+    .tc-navbar-paper {
+        height: 158px;
+    }
+    .tc-navbar-logo {
+        width: 170px;
+    }
+    .tc-nav-link {
+        font-size: 25px;
+    }
+    .tc-home-hero {
+        height: 890px;
+    }
+    .tc-hero-title {
+        font-size: 106px;
+    }
+    .tc-hero-content {
+        padding: 154px 232px 46px;
+    }
+    .tc-hero-card-nopal {
+        width: 278px;
+        left: -106px;
+        top: 100px;
+    }
+    .tc-hero-card-cantarito {
+        width: 275px;
+        left: -88px;
+        top: 492px;
+    }
+    .tc-hero-card-borracho {
+        width: 205px;
+        right: -60px;
+        top: 278px;
+    }
+    .tc-concept {
+        height: 720px;
+    }
+    .tc-concept-title {
+        width: 405px;
+        top: 62px;
+        left: 36px;
+    }
+    .tc-concept-text {
+        font-size: 16px;
+    }
+    .tc-concept-cantarito {
+        width: 508px;
+        right: 13px;
+    }
+    .tc-concept-card-rose {
+        right: 370px;
+        width: 218px;
+        top: 36px;
+    }
+    .tc-concept-card-cantarito {
+        right: 382px;
+        width: 208px;
+        bottom: 36px;
+    }
+    .tc-cross-tacos {
+        width: 520px;
+        bottom: -215px;
+        left: -248px;
+    }
+    .tc-menu-preview {
+        height: 608px;
+    }
+    .tc-menu-title {
+        width: 628px;
+        top: 58px;
+    }
     /* menu.png a 628px → 343px → 58+343+36 = 437px */
-    .tc-menu-button         { top: 439px; }
-    .tc-menu-dish-right     { width: 362px; left: -34px; }
-    .tc-menu-pozole         { width: 500px; right: -228px; }
-    .tc-menu-limon          { width: 110px; left: 32px; }
+    .tc-menu-button {
+        top: 439px;
+    }
+    .tc-menu-dish-right {
+        width: 362px;
+        left: -34px;
+    }
+    .tc-menu-pozole {
+        width: 500px;
+        right: -228px;
+    }
+    .tc-menu-limon {
+        width: 110px;
+        left: 32px;
+    }
 }
 
 @media (max-width: 1024px) {
-    .tc-navbar-paper        { height: 145px; }
-    .tc-nav-link            { font-size: 21px; }
-    .tc-navbar-logo         { width: 148px; }
-    .tc-home-hero           { height: 820px; }
-    .tc-hero-title          { font-size: 86px; }
-    .tc-hero-content        { padding: 140px 178px 38px; }
-    .tc-hero-card-nopal     { width: 232px; left: -90px; top: 98px; }
-    .tc-hero-card-cantarito { width: 228px; left: -82px; top: 402px; }
-    .tc-hero-card-borracho  { width: 175px; right: -52px; top: 252px; }
-    .tc-concept             { height: 640px; }
-    .tc-concept-title       { width: 355px; top: 58px; left: 32px; }
-    .tc-concept-text        { font-size: 15px; }
-    .tc-concept-cantarito   { width: 422px; right: 12px; }
-    .tc-concept-card-rose   { right: 298px; width: 175px; top: 30px; }
-    .tc-concept-card-cantarito { right: 308px; width: 165px; bottom: 30px; }
-    .tc-cross-tacos         { width: 432px; bottom: -200px; left: -218px; }
-    .tc-menu-preview        { height: 540px; }
-    .tc-menu-title          { width: 520px; top: 55px; }
+    .tc-navbar-paper {
+        height: 145px;
+    }
+    .tc-nav-link {
+        font-size: 21px;
+    }
+    .tc-navbar-logo {
+        width: 148px;
+    }
+    .tc-home-hero {
+        height: 820px;
+    }
+    .tc-hero-title {
+        font-size: 86px;
+    }
+    .tc-hero-content {
+        padding: 140px 178px 38px;
+    }
+    .tc-hero-card-nopal {
+        width: 232px;
+        left: -90px;
+        top: 98px;
+    }
+    .tc-hero-card-cantarito {
+        width: 228px;
+        left: -82px;
+        top: 402px;
+    }
+    .tc-hero-card-borracho {
+        width: 175px;
+        right: -52px;
+        top: 252px;
+    }
+    .tc-concept {
+        height: 640px;
+    }
+    .tc-concept-title {
+        width: 355px;
+        top: 58px;
+        left: 32px;
+    }
+    .tc-concept-text {
+        font-size: 15px;
+    }
+    .tc-concept-cantarito {
+        width: 422px;
+        right: 12px;
+    }
+    .tc-concept-card-rose {
+        right: 298px;
+        width: 175px;
+        top: 30px;
+    }
+    .tc-concept-card-cantarito {
+        right: 308px;
+        width: 165px;
+        bottom: 30px;
+    }
+    .tc-cross-tacos {
+        width: 432px;
+        bottom: -200px;
+        left: -218px;
+    }
+    .tc-menu-preview {
+        height: 540px;
+    }
+    .tc-menu-title {
+        width: 520px;
+        top: 55px;
+    }
     /* menu.png a 520px → 284px → 55+284+36 = 375px */
-    .tc-menu-button         { top: 377px; }
-    .tc-menu-dish-right     { width: 352px; left: -32px; }
-    .tc-menu-pozole         { width: 420px; right: -198px; }
-    .tc-menu-limon          { width: 100px; left: 28px; bottom: 45px; }
-    .tc-footer-logo         { height: 110px; }
-    .tc-footer-label        { font-size: 15px; }
-    .tc-footer-value        { font-size: 13px; }
-    .tc-footer-link         { font-size: 15px; }
+    .tc-menu-button {
+        top: 377px;
+    }
+    .tc-menu-dish-right {
+        width: 352px;
+        left: -32px;
+    }
+    .tc-menu-pozole {
+        width: 420px;
+        right: -198px;
+    }
+    .tc-menu-limon {
+        width: 100px;
+        left: 28px;
+        bottom: 45px;
+    }
+    .tc-footer-logo {
+        height: 110px;
+    }
+    .tc-footer-label {
+        font-size: 15px;
+    }
+    .tc-footer-value {
+        font-size: 13px;
+    }
+    .tc-footer-link {
+        font-size: 15px;
+    }
 }
 
 @media (max-width: 768px) {
-    .tc-home-hero { height: 500px; }
+    .tc-home-hero {
+        height: 500px;
+    }
 
-    .tc-hero-title { font-size: 52px; margin-bottom: 14px; }
-    .tc-hero-text  { font-size: 12px; }
-    .tc-hero-content { padding: 92px 28px 24px; }
+    .tc-hero-title {
+        font-size: 52px;
+        margin-bottom: 14px;
+    }
+    .tc-hero-text {
+        font-size: 12px;
+    }
+    .tc-hero-content {
+        padding: 92px 28px 24px;
+    }
 
     .tc-concept {
         height: auto;
@@ -1100,9 +1436,14 @@ html { scroll-behavior: smooth; }
     .tc-concept-card-rose,
     .tc-concept-card-cantarito,
     .tc-concept-cantarito,
-    .tc-cross-tacos { display: none; }
+    .tc-cross-tacos {
+        display: none;
+    }
 
-    .tc-menu-preview { height: 320px; overflow: hidden; }
+    .tc-menu-preview {
+        height: 320px;
+        overflow: hidden;
+    }
     .tc-menu-title {
         width: 80vw;
         left: 50%;
@@ -1117,13 +1458,54 @@ html { scroll-behavior: smooth; }
     }
     .tc-menu-pozole,
     .tc-menu-dish-right,
-    .tc-menu-limon { display: none; }
+    .tc-menu-limon {
+        display: none;
+    }
 
-    .tc-footer-inner { padding: 22px 20px 0; }
-    .tc-footer-cols  { flex-direction: column; gap: 18px; align-items: flex-start; }
-    .tc-footer-col-links { text-align: left; align-items: flex-start; }
-    .tc-footer-logo  { height: 68px; }
-    .tc-footer-label { font-size: 12px; }
-    .tc-footer-value { font-size: 11px; }
-    .tc-footer-link  { font-size: 11px; }
+    .tc-footer-inner {
+        padding: 22px 20px 0;
+    }
+    .tc-footer-cols {
+        flex-direction: column;
+        gap: 18px;
+        align-items: flex-start;
+    }
+    .tc-footer-col-links {
+        text-align: left;
+        align-items: flex-start;
+    }
+    .tc-footer-logo {
+        height: 68px;
+    }
+    .tc-footer-label {
+        font-size: 12px;
+    }
+    .tc-footer-value {
+        font-size: 11px;
+    }
+    .tc-footer-link {
+        font-size: 11px;
+    }
+}
+
+.tc-menu-preview {
+    overflow: visible !important;
+    z-index: 20 !important;
+}
+
+.tc-real-divider {
+    position: relative;
+    z-index: 10 !important;
+}
+
+.tc-menu-limon,
+.tc-menu-dish-right,
+.tc-menu-pozole {
+    z-index: 40 !important;
+}
+
+/* La siguiente sección/footer debe tapar lo que se desborde del menú */
+.tc-footer-public {
+    position: relative;
+    z-index: 80 !important;
 }

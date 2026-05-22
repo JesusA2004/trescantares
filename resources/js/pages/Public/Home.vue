@@ -24,14 +24,13 @@ import {
 const page = usePage();
 const settings = computed(() => (page.props as any).settings ?? {});
 
-// background-attachment:fixed + cover = las dos secciones comparten
-// exactamente la misma superficie de textura → sin líneas ni repeticiones visibles.
+// Fondo de papel: tiling repeat 400px — evita background-attachment:fixed
+// que causa repintado completo en cada evento de scroll.
+// Se aplica UNA sola vez en el wrapper padre que contiene concepto + menú.
 const paperBg = {
     backgroundImage: `url(${paperWhite})`,
-    backgroundSize: 'cover',
-    backgroundAttachment: 'fixed',
-    backgroundPosition: 'center top',
-    backgroundRepeat: 'no-repeat',
+    backgroundSize: '700px auto',
+    backgroundRepeat: 'repeat',
     backgroundColor: 'var(--tc-paper)',
 };
 </script>
@@ -82,7 +81,7 @@ const paperBg = {
             <!-- Navbar absolutamente posicionado encima del hero -->
             <Navbar :settings="settings" />
 
-            <!-- Fondo -->
+            <!-- Fondo: fetchpriority high — imagen principal del hero -->
             <div class="tc-home-hero-bg">
                 <img
                     :src="
@@ -91,25 +90,30 @@ const paperBg = {
                         heroHome
                     "
                     alt="Tres Cantares"
+                    fetchpriority="high"
+                    decoding="async"
                 />
                 <div class="tc-home-hero-overlay"></div>
             </div>
 
-            <!-- Cartas: position absolute sobre el hero -->
+            <!-- Cartas: position absolute sobre el hero — decoding async, no bloquean render -->
             <img
                 :src="cardNopal"
                 class="tc-hero-card tc-hero-card-nopal hidden md:block"
                 alt=""
+                decoding="async"
             />
             <img
                 :src="cardCantarito"
                 class="tc-hero-card tc-hero-card-cantarito hidden md:block"
                 alt=""
+                decoding="async"
             />
             <img
                 :src="cardBorracho"
                 class="tc-hero-card tc-hero-card-borracho hidden md:block"
                 alt=""
+                decoding="async"
             />
 
             <!-- Título + texto centrado -->
@@ -117,103 +121,119 @@ const paperBg = {
                 <h1 class="tc-hero-title">TRES CANTARES</h1>
                 <p class="tc-hero-text">
                     ¡Ven a disfrutar el auténtico sabor de México en un espacio
-                    cálido y moderno, donde la tradición, la buena música y los
-                    mejores momentos se comparten en familia, con amigos o en
-                    pareja! Vive la experiencia Tres Cantares.
+                    cálido y moderno, donde la tradición,<br />
+                    la buena música y los mejores momentos se comparten en
+                    familia, con amigos o en pareja!<br />
+                    <strong>Vive la experiencia Tres Cantares.</strong>
                 </p>
             </div>
         </section>
 
         <!-- ============================================================
-             NUESTRO CONCEPTO
+             WRAPPER PAPEL — fondo aplicado UNA sola vez para ambas secciones.
+             Sin background-attachment:fixed → sin repintado en cada scroll.
         ============================================================ -->
-        <section class="tc-concept" :style="paperBg">
-            <div class="tc-concept-artboard">
-                <!-- Izquierda: título gráfico + texto azul -->
-                <div class="tc-concept-title">
+        <div :style="paperBg">
+            <!-- NUESTRO CONCEPTO -->
+            <section class="tc-concept">
+                <div class="tc-concept-artboard">
+                    <!-- Izquierda: título gráfico + texto azul -->
+                    <div class="tc-concept-title">
+                        <img
+                            :src="imgConcepto"
+                            alt="Nuestro Concepto"
+                            loading="lazy"
+                            decoding="async"
+                            style="width: 100%; height: auto; display: block"
+                        />
+                        <p class="tc-concept-text">
+                            En Tres Cantares fusionamos la tradición mexicana
+                            con un ambiente moderno y acogedor, creando el lugar
+                            perfecto para compartir grandes momentos. Disfruta
+                            sabores auténticos, buena música y una experiencia
+                            pensada para reunirte con quienes más quieres.
+                        </p>
+                    </div>
+
+                    <!-- La Rosa — parte superior del cantarito, detrás (z-index 3) -->
                     <img
-                        :src="imgConcepto"
-                        alt="Nuestro Concepto"
-                        style="width: 100%; height: auto; display: block"
+                        :src="cardRose"
+                        class="tc-concept-card-rose hidden md:block"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
                     />
-                    <p class="tc-concept-text">
-                        En Tres Cantares fusionamos la tradición mexicana con un
-                        ambiente moderno y acogedor, creando el lugar perfecto
-                        para compartir grandes momentos. Disfruta sabores
-                        auténticos, buena música y una experiencia pensada para
-                        reunirte con quienes más quieres.
-                    </p>
-                </div>
 
-                <!-- La Rosa — parte superior del cantarito, detrás (z-index 3) -->
-                <img
-                    :src="cardRose"
-                    class="tc-concept-card-rose hidden md:block"
-                    alt=""
-                />
-                <!-- La Sandía — inferior izquierda, acostada ~62°, detrás (z-index 3) -->
-                <img
-                    :src="cardCantarito"
-                    class="tc-concept-card-cantarito hidden md:block"
-                    alt=""
-                />
-
-                <!-- Cantarito principal — encima de las cartas (z-index 5) -->
-                <img
-                    :src="cantaritoMain"
-                    class="tc-concept-cantarito hidden md:block"
-                    alt="Cantarito Tres Cantares"
-                />
-            </div>
-
-            <!-- Tacos pegados al borde izquierdo de la sección, cruzan hacia menú -->
-            <img
-                :src="tacoLeft"
-                class="tc-cross-tacos hidden md:block"
-                alt=""
-            />
-        </section>
-
-        <!-- Divisor entre concepto y menú -->
-        <DecorativeDivider type="up" />
-
-        <!-- ============================================================
-             CONOCE NUESTRO MENÚ
-        ============================================================ -->
-        <section class="tc-menu-preview" :style="paperBg">
-            <div class="tc-menu-artboard">
-                <!-- Comidas decorativas — sin taco (viene del cross-tacos de arriba) -->
-                <img
-                    :src="limonLeft"
-                    class="tc-menu-limon hidden lg:block"
-                    alt=""
-                />
-                <img
-                    :src="pozoleLeft"
-                    class="tc-menu-pozole hidden md:block"
-                    alt=""
-                />
-                <img
-                    :src="menuDishRight"
-                    class="tc-menu-dish-right hidden md:block"
-                    alt=""
-                />
-
-                <!-- menu.png título gráfico -->
-                <div class="tc-menu-title">
+                    <!-- Cantarito principal — encima de las cartas (z-index 5) -->
                     <img
-                        :src="imgMenu"
-                        alt="Conoce Nuestro Menú"
-                        style="width: 100%; height: auto; display: block"
+                        :src="cantaritoMain"
+                        class="tc-concept-cantarito hidden md:block"
+                        alt="Cantarito Tres Cantares"
+                        loading="lazy"
+                        decoding="async"
                     />
                 </div>
 
-                <!-- Botón MENÚ — siempre debajo del título -->
-                <div class="tc-menu-button">
-                    <Link href="/menu" class="btn-menu-vintage">MENÚ</Link>
+                <!-- Tacos pegados al borde izquierdo de la sección, cruzan hacia menú -->
+                <img
+                    :src="tacoLeft"
+                    class="tc-cross-tacos hidden md:block"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                />
+            </section>
+
+            <!-- Divisor entre concepto y menú -->
+            <DecorativeDivider type="up" />
+
+            <!-- CONOCE NUESTRO MENÚ -->
+            <section class="tc-menu-preview">
+                <div class="tc-menu-artboard">
+                    <!-- Comidas decorativas — sin taco (viene del cross-tacos de arriba) -->
+                    <img
+                        :src="limonLeft"
+                        class="tc-menu-limon hidden lg:block"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                    />
+                    <img
+                        :src="pozoleLeft"
+                        class="tc-menu-pozole hidden md:block"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                    />
+                    <img
+                        :src="menuDishRight"
+                        class="tc-menu-dish-right hidden md:block"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                    />
+
+                    <!-- menu.png título gráfico -->
+                    <div class="tc-menu-title">
+                        <img
+                            :src="imgMenu"
+                            alt="Conoce Nuestro Menú"
+                            loading="lazy"
+                            decoding="async"
+                            style="width: 100%; height: auto; display: block"
+                        />
+                    </div>
+
+                    <!-- Botón MENÚ — siempre debajo del título -->
+                    <div class="tc-menu-button">
+                        <a href="/menu" class="btn-menu-vintage">
+                            <span>MENÚ</span>
+                        </a>
+                    </div>
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
+        <!-- /wrapper papel -->
 
         <!-- Divisor entre menú y footer -->
         <DecorativeDivider type="down" />
