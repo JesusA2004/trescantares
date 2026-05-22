@@ -753,13 +753,11 @@ html {
 
 /* ─── NUESTRO CONCEPTO ──────────────────────── */
 
-/* z-index: 2 garantiza que los tacos que desbordan queden sobre el divisor y el menú */
 .tc-concept {
     position: relative;
     height: 840px;
     overflow: visible;
-    z-index: 2;
-    /* fondo: el wrapper padre maneja texture + color */
+    z-index: 30;
 }
 
 .tc-concept-artboard {
@@ -859,7 +857,6 @@ html {
 
 .tc-real-divider {
     position: relative;
-    z-index: 5;
     width: 100%;
     overflow: hidden;
     line-height: 0;
@@ -870,6 +867,16 @@ html {
     width: 100%;
     height: 38px;
     object-fit: fill;
+}
+
+/* UP queda debajo de tacos/cartas/alimentos */
+.tc-divider-up {
+    z-index: 3 !important;
+}
+
+/* DOWN queda sobre fondo, pero debajo de alimentos */
+.tc-divider-down {
+    z-index: 10 !important;
 }
 
 /* ─── CONOCE NUESTRO MENÚ ───────────────────── */
@@ -1491,11 +1498,6 @@ html {
 .tc-menu-preview {
     overflow: visible !important;
     z-index: 20 !important;
-}
-
-.tc-real-divider {
-    position: relative;
-    z-index: 10 !important;
 }
 
 .tc-menu-limon,
