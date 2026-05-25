@@ -631,29 +631,16 @@ html {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 28%;
+    object-position: center 55%;
+    transform: scale(1);
     display: block;
 }
 
 .tc-home-hero-overlay {
     position: absolute;
     inset: 0;
-    background:
-        /* vignette lateral */
-        radial-gradient(
-            ellipse 55% 70% at 50% 55%,
-            transparent 0%,
-            rgba(0, 0, 0, 0.38) 100%
-        ),
-        /* gradiente vertical */
-        linear-gradient(
-                to bottom,
-                rgba(0, 0, 0, 0.68) 0%,
-                rgba(0, 0, 0, 0.28) 38%,
-                rgba(0, 0, 0, 0.22) 55%,
-                rgba(0, 0, 0, 0.6) 78%,
-                rgba(0, 0, 0, 0.82) 100%
-            );
+    background: rgba(0, 0, 0, 0.58);
+    backdrop-filter: brightness(0.92) contrast(1.12);
 }
 
 /* Título + texto: centrado debajo de la navbar flotante (195px) */
@@ -1050,11 +1037,13 @@ html {
 .tc-footer-torn-top {
     position: absolute;
     top: -55px;
-    left: 0;
-    width: 100%;
-    height: 150px;
+    left: -15vw;
+    width: 130vw;
+    max-width: none;
+    height: 170px;
     object-fit: fill;
-    z-index: 2;
+    transform: none;
+    z-index: 90;
     pointer-events: none;
 }
 
@@ -1555,7 +1544,7 @@ html {
 
 .tc-location-page {
     background-color: #000;
-    overflow-x: hidden;
+    overflow-x: visible;
 }
 
 .tc-location-bg {

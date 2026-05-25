@@ -24,13 +24,11 @@ import {
 const page = usePage();
 const settings = computed(() => (page.props as any).settings ?? {});
 
-// Fondo de papel: tiling repeat 400px — evita background-attachment:fixed
-// que causa repintado completo en cada evento de scroll.
-// Se aplica UNA sola vez en el wrapper padre que contiene concepto + menú.
 const paperBg = {
     backgroundImage: `url(${paperWhite})`,
-    backgroundSize: '700px auto',
-    backgroundRepeat: 'repeat',
+    backgroundSize: '100% auto',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center top',
     backgroundColor: 'var(--tc-paper)',
 };
 </script>
