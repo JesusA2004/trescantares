@@ -14,12 +14,19 @@ createInertiaApp({
         switch (true) {
             case name === 'Welcome':
                 return null;
+
+            case name === 'Public/Location':
+                return null;
+
             case name.startsWith('Public/'):
                 return PublicLayout;
+
             case name.startsWith('auth/'):
                 return AuthLayout;
+
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
+
             default:
                 return AppLayout;
         }
