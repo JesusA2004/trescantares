@@ -1283,6 +1283,8 @@ html {
     }
     .tc-concept-text {
         font-size: 16px;
+        width: 100%;
+        max-width: 100%;
     }
     .tc-concept-cantarito {
         width: 508px;
@@ -1372,6 +1374,8 @@ html {
     }
     .tc-concept-text {
         font-size: 15px;
+        width: 100%;
+        max-width: 100%;
     }
     .tc-concept-cantarito {
         width: 422px;
@@ -1428,97 +1432,265 @@ html {
     .tc-footer-link {
         font-size: 15px;
     }
-}
 
-@media (max-width: 768px) {
-    .tc-home-hero {
-        height: 500px;
+    /* Footer: reset transforms for tablet — columns still in row but transforms cause overflow */
+    .tc-footer-col-logo {
+        transform: none;
     }
-
-    .tc-hero-title {
-        font-size: 52px;
-        margin-bottom: 14px;
-    }
-    .tc-hero-text {
-        font-size: 12px;
-    }
-    .tc-hero-content {
-        padding: 92px 28px 24px;
-    }
-
-    .tc-concept {
-        height: auto;
-        min-height: 320px;
-        padding-bottom: 40px;
-        overflow: visible;
-    }
-    .tc-concept-artboard {
-        height: auto;
-        padding: 32px 22px 24px;
-    }
-    .tc-concept-title {
-        position: static;
-        width: 100%;
-        top: auto;
-        left: auto;
-    }
-    .tc-concept-text {
-        font-size: 14px;
-        max-width: 100%;
-    }
-    .tc-concept-card-rose,
-    .tc-concept-card-cantarito,
-    .tc-concept-cantarito,
-    .tc-cross-tacos {
-        display: none;
-    }
-
-    .tc-menu-preview {
-        height: 320px;
-        overflow: hidden;
-    }
-    .tc-menu-title {
-        width: 80vw;
-        left: 50%;
-        transform: translateX(-50%);
-        top: 28px;
-    }
-    .tc-menu-button {
-        top: auto;
-        bottom: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    .tc-menu-pozole,
-    .tc-menu-dish-right,
-    .tc-menu-limon {
-        display: none;
-    }
-
-    .tc-footer-inner {
-        padding: 22px 20px 0;
-    }
-    .tc-footer-cols {
-        flex-direction: column;
-        gap: 18px;
-        align-items: flex-start;
+    .tc-footer-col-info {
+        transform: none;
     }
     .tc-footer-col-links {
-        text-align: left;
-        align-items: flex-start;
+        transform: none;
     }
-    .tc-footer-logo {
-        height: 68px;
+    .tc-footer-inner {
+        padding: 40px 40px 0;
     }
-    .tc-footer-label {
-        font-size: 12px;
+    .tc-footer-copyright {
+        margin-top: 48px;
     }
-    .tc-footer-value {
-        font-size: 11px;
+}
+
+/* =======================================================================
+   RESPONSIVE MOBILE — md ≤ 768px  /  sm ≤ 640px  /  xs ≤ 480px
+   ─ Texto NUNCA encima de imágenes (zonas verticales separadas)
+   ─ Botón menú: artboard en flex-column (100% confiable, sin cálculos)
+   ─ Limón derecha, tostada izquierda (sin amontonamiento)
+   ─ Footer centrado
+   ─ Desktop intacto
+   ======================================================================= */
+
+/* ──────────────────────────────────────────── md  max-width: 768px */
+@media (max-width: 768px) {
+
+    /* NAVBAR */
+    .tc-navbar-paper                { height: 95px; }
+    .tc-home-hero .tc-navbar-paper  { height: 122px; }
+    .tc-home-hero .tc-public-navbar { height: 122px; }
+    .tc-home-hero .tc-navbar-inner  { height: 90px; padding-top: 8px; }
+
+    /* ── HERO ─────────────────────────────────────────────────────
+       Zona A (superior): título + párrafo  →  arranca en y=148px
+       Zona B (inferior): cards decorativos →  desde y≈450px
+       Separación garantizada ≥ 140px sin ningún solapamiento.
+    ────────────────────────────────────────────────────────────── */
+    .tc-home-hero   { height: 620px; }
+    .tc-hero-content {
+        padding: 148px 40px 0;
+        justify-content: flex-start;
     }
-    .tc-footer-link {
-        font-size: 11px;
+    .tc-hero-title  { font-size: 42px; letter-spacing: 0.06em; margin-bottom: 14px; }
+    .tc-hero-text   { font-size: 13px; line-height: 1.45; max-width: 520px; }
+    .tc-hero-text br { display: none; }
+
+    /* Cards — zona inferior: los tres en la franja bottom 8-16px */
+    .tc-hero-card-nopal {
+        display: block !important;
+        width: 155px; left: 4px; top: auto; bottom: 8px;
+        transform: rotate(-18deg);
     }
+    .tc-hero-card-cantarito {
+        display: block !important;
+        width: 138px; left: 50%; top: auto; bottom: 8px;
+        transform: translateX(-50%) rotate(12deg);
+    }
+    .tc-hero-card-borracho {
+        display: block !important;
+        width: 112px; right: 4px; top: auto; bottom: 12px;
+        transform: rotate(52deg);
+    }
+
+    /* ── CONCEPTO ─────────────────────────────────────────────────
+       padding-right exacto = cantarito_width − |right_overflow|
+       162 − 20 = 142px  →  texto termina donde comienza cantarito.
+    ────────────────────────────────────────────────────────────── */
+    .tc-concept {
+        height: auto; min-height: 430px;
+        padding-bottom: 125px; overflow: visible;
+    }
+    .tc-concept-artboard {
+        height: auto; padding: 36px 142px 36px 24px; min-height: 350px;
+    }
+    .tc-concept-title { position: static; width: 100%; }
+    .tc-concept-text  { font-size: 14px; width: 100%; max-width: 100%; }
+
+    .tc-concept-cantarito {
+        display: block !important;
+        width: 162px; right: -20px; bottom: 0; left: auto;
+    }
+    .tc-concept-card-rose {
+        display: block !important;
+        width: 130px; right: 2px; top: -16px; left: auto;
+    }
+    .tc-cross-tacos {
+        display: block !important;
+        width: 248px; left: -72px; top: auto; bottom: -118px;
+    }
+
+    /* ── CONOCE NUESTRO MENÚ ──────────────────────────────────────
+       Artboard en FLEX-COLUMN con justify-content: space-between.
+       El título va arriba y el botón abajo — sin cálculos de bottom.
+       Los decorativos siguen absolute (no participan en el flex).
+    ────────────────────────────────────────────────────────────── */
+    .tc-menu-preview { height: 430px; }
+
+    .tc-menu-artboard {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: 32px 0 34px;
+    }
+    /* Título: flex item — saca del absolute */
+    .tc-menu-title {
+        position: relative;
+        width: 62vw;
+        left: auto; top: auto;
+        transform: none;
+        z-index: 15;
+    }
+    /* Botón: flex item — saca del absolute, siempre visible */
+    .tc-menu-button {
+        position: relative;
+        left: auto; top: auto; bottom: auto;
+        transform: none;
+        z-index: 15;
+        white-space: nowrap;
+    }
+    .btn-menu-vintage      { min-width: 190px; height: 78px; padding: 0 36px; }
+    .btn-menu-vintage span { font-size: 2.25rem; }
+
+    /* Decorativos: bordes opuestos — limón DERECHA, tostada IZQUIERDA */
+    .tc-menu-pozole {
+        display: block !important;
+        width: 250px; right: -155px; bottom: -42px; top: auto;
+    }
+    .tc-menu-dish-right {
+        display: block !important;
+        width: 165px; left: -95px; bottom: -28px;
+    }
+    .tc-menu-limon {
+        display: block !important;
+        width: 70px; left: auto; right: 8px; bottom: 118px; top: auto;
+    }
+
+    /* ── FOOTER — columna centrada ──────────────────────────────── */
+    .tc-footer-inner { padding: 32px 28px 0; }
+    .tc-footer-cols  { flex-direction: column; gap: 26px; align-items: center; }
+
+    .tc-footer-col-logo {
+        transform: none;
+        display: flex; flex-direction: column; align-items: center;
+    }
+    .tc-footer-col-info {
+        transform: none; text-align: center;
+        width: 100%; max-width: 340px;
+    }
+    .tc-footer-col-links {
+        transform: none;
+        display: flex; flex-direction: column;
+        align-items: center; text-align: center; width: 100%;
+    }
+    .tc-footer-col-links .tc-footer-label { text-align: center !important; }
+    .tc-footer-col-links > div            { justify-content: center !important; }
+
+    .tc-footer-logo  { height: 82px; }
+    .tc-footer-label { font-size: 14px; }
+    .tc-footer-value { font-size: 13px; line-height: 1.65; }
+    .tc-footer-link  { font-size: 14px; line-height: 2.1; }
+    .tc-footer-copyright   { margin-top: 28px; }
+    .tc-footer-copyright p { font-size: 11px; text-align: center; }
+}
+
+/* ──────────────────────────────────────────── sm  max-width: 640px */
+@media (max-width: 640px) {
+
+    /* NAVBAR */
+    .tc-navbar-paper                { height: 90px; }
+    .tc-home-hero .tc-navbar-paper  { height: 115px; }
+    .tc-home-hero .tc-public-navbar { height: 115px; }
+    .tc-home-hero .tc-navbar-inner  { height: 85px; padding-top: 6px; }
+
+    /* HERO */
+    .tc-home-hero    { height: 585px; }
+    .tc-hero-content { padding: 140px 36px 0; }
+    .tc-hero-title   { font-size: 36px; letter-spacing: 0.05em; margin-bottom: 12px; }
+    .tc-hero-text    { font-size: 12px; }
+
+    .tc-hero-card-nopal     { width: 132px; left: 3px;  bottom: 7px; }
+    .tc-hero-card-cantarito { width: 118px;              bottom: 7px; }
+    .tc-hero-card-borracho  { width: 96px;  right: 3px; bottom: 10px; }
+
+    /* CONCEPTO  (130 − 18 = 112px visible → right_pad = 112) */
+    .tc-concept          { padding-bottom: 115px; }
+    .tc-concept-artboard { padding: 32px 130px 32px 20px; min-height: 318px; }
+    .tc-concept-cantarito { width: 148px; right: -18px; }
+    .tc-concept-card-rose { width: 116px; right: 2px; top: -13px; }
+    .tc-cross-tacos       { width: 218px; left: -64px; bottom: -105px; }
+
+    /* MENÚ */
+    .tc-menu-preview { height: 400px; }
+    .tc-menu-artboard { padding: 28px 0 30px; }
+    .tc-menu-title   { width: 60vw; }
+    .btn-menu-vintage      { min-width: 172px; height: 72px; padding: 0 28px; }
+    .btn-menu-vintage span { font-size: 2.05rem; }
+    .tc-menu-pozole    { width: 228px; right: -142px; bottom: -38px; }
+    .tc-menu-dish-right { width: 148px; left: -85px; bottom: -25px; }
+    .tc-menu-limon     { width: 64px; right: 7px; bottom: 106px; }
+
+    /* FOOTER */
+    .tc-footer-inner { padding: 26px 22px 0; }
+    .tc-footer-label { font-size: 13px; }
+    .tc-footer-value { font-size: 12px; }
+    .tc-footer-link  { font-size: 13px; }
+}
+
+/* ──────────────────────────────────────────── xs  max-width: 480px */
+@media (max-width: 480px) {
+
+    /* NAVBAR */
+    .tc-navbar-paper                { height: 85px; }
+    .tc-home-hero .tc-navbar-paper  { height: 108px; }
+    .tc-home-hero .tc-public-navbar { height: 108px; }
+    .tc-home-hero .tc-navbar-inner  { height: 78px; padding-top: 5px; }
+
+    /* HERO */
+    .tc-home-hero    { height: 545px; }
+    .tc-hero-content { padding: 130px 30px 0; }
+    .tc-hero-title   { font-size: 30px; letter-spacing: 0.04em; margin-bottom: 10px; }
+    .tc-hero-text    { font-size: 11.5px; line-height: 1.42; }
+
+    .tc-hero-card-nopal     { width: 112px; left: 2px;  bottom: 6px; }
+    .tc-hero-card-cantarito { width: 100px;              bottom: 6px; }
+    .tc-hero-card-borracho  { width: 80px;  right: 2px; bottom: 9px; }
+
+    /* CONCEPTO  (116 − 14 = 102px visible → right_pad = 102) */
+    .tc-concept          { padding-bottom: 106px; }
+    .tc-concept-artboard { padding: 28px 116px 28px 16px; min-height: 285px; }
+    .tc-concept-text     { font-size: 13px; }
+    .tc-concept-cantarito { width: 130px; right: -14px; }
+    .tc-concept-card-rose { width: 104px; right: 2px; top: -11px; }
+    .tc-cross-tacos       { width: 190px; left: -55px; bottom: -94px; }
+
+    /* MENÚ */
+    .tc-menu-preview { height: 365px; }
+    .tc-menu-artboard { padding: 24px 0 26px; }
+    .tc-menu-title   { width: 58vw; }
+    .btn-menu-vintage      { min-width: 156px; height: 66px; padding: 0 22px; }
+    .btn-menu-vintage span { font-size: 1.88rem; }
+    .tc-menu-pozole    { width: 204px; right: -128px; bottom: -34px; }
+    .tc-menu-dish-right { width: 136px; left: -76px; bottom: -22px; }
+    .tc-menu-limon     { width: 54px; right: 5px; bottom: 94px; }
+
+    /* FOOTER */
+    .tc-footer-inner { padding: 22px 16px 0; }
+    .tc-footer-cols  { gap: 20px; }
+    .tc-footer-logo  { height: 66px; }
+    .tc-footer-label { font-size: 12px; }
+    .tc-footer-value { font-size: 11px; }
+    .tc-footer-link  { font-size: 11px; line-height: 1.95; }
+    .tc-footer-copyright   { margin-top: 20px; }
+    .tc-footer-copyright p { font-size: 10px; }
 }
 
 .tc-menu-preview {
