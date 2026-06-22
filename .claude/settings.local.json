@@ -30,7 +30,8 @@
       "Bash(python -c ' *)",
       "Bash(node *)",
       "Bash(npm list *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(grep -E \"GET.*/\\(bolsa|aviso|menu|ubicacion|$\\)\")"
     ]
   }
 }

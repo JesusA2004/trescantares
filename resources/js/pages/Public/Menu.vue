@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import DecorativeDivider from '@/components/Public/DecorativeDivider.vue';
 import MenuCard from '@/components/Public/MenuCard.vue';
 import { imgMenu, bgLocation, tornPaperLarge } from '@/lib/tres-cantares-assets';
@@ -41,107 +41,104 @@ function setCategory(id: number | null) {
         <link head-key="canonical" rel="canonical" href="/menu" />
     </Head>
 
-    <!-- ============================================================
-         HERO DEL MENÚ
-    ============================================================ -->
-    <section class="relative min-h-[340px] lg:min-h-[400px] flex flex-col">
-
-        <!-- Background (location bg reused for menu hero) -->
-        <div class="absolute inset-0 overflow-hidden">
+    <!-- HERO -->
+    <section class="tc-menu-page-hero">
+        <div class="tc-menu-page-hero-bg">
             <img :src="bgLocation" alt="Menú Tres Cantares"
-                class="w-full h-full object-cover object-center" />
-            <div class="absolute inset-0 hero-overlay"></div>
+                class="w-full h-full object-cover object-center" loading="eager" />
+            <div class="tc-menu-page-hero-overlay"></div>
         </div>
 
-        <!-- Content -->
-        <div class="relative z-10 flex-1 flex flex-col items-center justify-center pt-32 pb-16 px-4 text-center">
-            <!-- Menu title image -->
-            <div class="mb-2">
-                <img :src="imgMenu" alt="Menú"
-                    class="max-w-xs sm:max-w-sm lg:max-w-md w-full h-auto drop-shadow-xl mx-auto" />
+        <div class="tc-menu-page-hero-content">
+            <div class="tc-menu-page-star-row">
+                <span class="tc-menu-page-star">✦</span>
+                <span class="tc-menu-page-hero-eyebrow font-display">Tres Cantares</span>
+                <span class="tc-menu-page-star">✦</span>
             </div>
+            <div class="tc-menu-page-title-wrap">
+                <img :src="imgMenu" alt="Nuestro Menú"
+                    class="tc-menu-page-title-img" />
+            </div>
+            <p class="tc-menu-page-hero-sub font-body">
+                Sabores auténticos de México, preparados con ingredientes frescos cada día
+            </p>
         </div>
 
         <!-- Torn paper bottom -->
-        <div class="absolute bottom-0 left-0 right-0 z-20 leading-[0] pointer-events-none">
-            <img :src="tornPaperLarge" alt="" class="w-full block"
-                style="transform: scaleY(-1); height: 55px; object-fit: fill;" />
+        <div class="tc-menu-page-torn-bottom">
+            <img :src="tornPaperLarge" alt=""
+                style="transform: scaleY(-1); width:100%; height:55px; object-fit:fill; display:block;" />
         </div>
     </section>
 
-    <!-- ============================================================
-         DIVIDER
-    ============================================================ -->
-    <DecorativeDivider />
+    <!-- CONTENT -->
+    <section class="tc-menu-page-body">
+        <div class="tc-menu-page-inner">
 
-    <!-- ============================================================
-         FILTROS Y CATEGORÍAS
-    ============================================================ -->
-    <section class="py-16 lg:py-24" style="background-color: var(--tc-paper);">
-        <div class="max-w-7xl mx-auto px-6">
-
-            <!-- Category filter tabs -->
-            <div class="flex flex-wrap justify-center gap-2 sm:gap-3 mb-14">
+            <!-- Category filter -->
+            <div v-if="categories.length > 0" class="tc-menu-page-filters">
                 <button
                     @click="setCategory(null)"
-                    class="font-display tracking-[0.15em] text-xs sm:text-sm px-5 sm:px-7 py-2 rounded-full border-2 transition-all uppercase"
-                    :class="activeCategory === null
-                        ? 'text-white border-transparent'
-                        : 'text-tc-pink border-tc-pink hover:text-white'"
-                    :style="activeCategory === null
-                        ? 'background-color: var(--tc-pink); border-color: var(--tc-pink);'
-                        : ''">
+                    class="tc-menu-filter-btn font-display"
+                    :class="{ 'tc-menu-filter-btn--active': activeCategory === null }">
                     Todos
                 </button>
                 <button
                     v-for="cat in categories"
                     :key="cat.id"
                     @click="setCategory(cat.id)"
-                    class="font-display tracking-[0.15em] text-xs sm:text-sm px-5 sm:px-7 py-2 rounded-full border-2 transition-all uppercase"
-                    :class="activeCategory === cat.id
-                        ? 'text-white border-transparent'
-                        : 'border-tc-pink text-tc-pink hover:text-white'"
-                    :style="activeCategory === cat.id
-                        ? 'background-color: var(--tc-pink); border-color: var(--tc-pink);'
-                        : ''">
+                    class="tc-menu-filter-btn font-display"
+                    :class="{ 'tc-menu-filter-btn--active': activeCategory === cat.id }">
                     {{ cat.name }}
                 </button>
             </div>
 
-            <!-- Categories with items -->
-            <div v-for="category in filteredCategories" :key="category.id" class="mb-20">
+            <!-- Category sections -->
+            <template v-if="filteredCategories.length > 0">
+                <div v-for="category in filteredCategories" :key="category.id" class="tc-menu-page-category">
 
-                <!-- Category header -->
-                <div class="flex items-center gap-4 mb-10">
-                    <div class="flex-1 h-px" style="background-color: var(--tc-yellow);"></div>
-                    <h2 class="font-display text-3xl lg:text-4xl tracking-[0.15em] uppercase text-center"
-                        style="color: var(--tc-blue);">
-                        {{ category.name }}
-                    </h2>
-                    <div class="flex-1 h-px" style="background-color: var(--tc-yellow);"></div>
+                    <!-- Category header -->
+                    <div class="tc-menu-page-cat-header">
+                        <div class="tc-menu-page-cat-line"></div>
+                        <div class="tc-menu-page-cat-title-wrap">
+                            <span class="tc-menu-page-cat-star">✦</span>
+                            <h2 class="tc-menu-page-cat-name font-display">{{ category.name }}</h2>
+                            <span class="tc-menu-page-cat-star">✦</span>
+                        </div>
+                        <div class="tc-menu-page-cat-line"></div>
+                    </div>
+
+                    <p v-if="category.description"
+                        class="tc-menu-page-cat-desc font-body">
+                        {{ category.description }}
+                    </p>
+
+                    <!-- Items grid -->
+                    <div v-if="category.items && category.items.length > 0"
+                        class="tc-menu-page-grid">
+                        <MenuCard v-for="item in category.items" :key="item.id" :item="item" />
+                    </div>
+
+                    <!-- Empty category -->
+                    <div v-else class="tc-menu-page-cat-empty">
+                        <span class="font-display" style="color: var(--tc-blue); opacity:.4; font-size:2rem;">✦</span>
+                        <p class="font-body" style="color: var(--tc-blue); opacity:.5; margin-top:8px;">
+                            Próximamente platillos en esta categoría
+                        </p>
+                    </div>
                 </div>
+            </template>
 
-                <!-- Category description -->
-                <p v-if="category.description"
-                    class="text-center font-body text-gray-500 text-sm mb-8 italic max-w-lg mx-auto">
-                    {{ category.description }}
+            <!-- Empty menu state -->
+            <div v-else class="tc-menu-page-empty">
+                <img :src="imgMenu" alt="Menú"
+                    style="max-width:260px; width:100%; opacity:.18; margin:0 auto 24px; display:block;" />
+                <p class="font-display tc-menu-page-empty-title">Pronto disponible</p>
+                <p class="font-body tc-menu-page-empty-sub">
+                    Estamos preparando algo delicioso. Vuelve pronto para descubrir nuestro menú.
                 </p>
-
-                <!-- Items grid -->
-                <div v-if="category.items && category.items.length > 0"
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <MenuCard v-for="item in category.items" :key="item.id" :item="item" />
-                </div>
-                <div v-else class="text-center py-10 font-body text-gray-400">
-                    No hay platillos disponibles en esta categoría.
-                </div>
             </div>
 
-            <!-- Empty state -->
-            <div v-if="filteredCategories.length === 0"
-                class="text-center py-24 font-body text-gray-400">
-                No hay categorías disponibles en el menú.
-            </div>
         </div>
     </section>
 </template>

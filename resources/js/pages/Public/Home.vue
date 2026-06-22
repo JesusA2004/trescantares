@@ -39,7 +39,7 @@ const paperBg = {
         <meta
             head-key="description"
             name="description"
-            content="Ven a disfrutar el auténtico sabor de México en Tres Cantares, Tepoztlán. Comida mexicana tradicional, buena música y los mejores momentos para compartir en familia o con amigos. Abiertos todos los días de 08:00 a 22:00 hrs."
+            content="Ven a disfrutar el auténtico sabor de México en Tres Cantares, Tepoztlán. Comida mexicana tradicional, buena música y los mejores momentos para compartir en familia o con amigos. Lun, mié y dom: 9–20 hrs. Jue–sáb: 9–22 hrs."
         />
         <meta
             head-key="keywords"
@@ -54,7 +54,7 @@ const paperBg = {
         <meta
             head-key="og:description"
             property="og:description"
-            content="Ven a vivir la experiencia Tres Cantares: sabores auténticos de México, buena música y momentos únicos en Tepoztlán. Abiertos todos los días de 08:00 a 22:00 hrs."
+            content="Ven a vivir la experiencia Tres Cantares: sabores auténticos de México, buena música y momentos únicos en Tepoztlán, Morelos. Lun, mié y dom: 9–20 hrs. Jue–sáb: 9–22 hrs."
         />
         <meta head-key="og:url" property="og:url" content="/" />
         <meta head-key="og:type" property="og:type" content="website" />
@@ -66,7 +66,7 @@ const paperBg = {
         <meta
             head-key="twitter:description"
             name="twitter:description"
-            content="Ven a vivir la experiencia Tres Cantares: sabores auténticos de México, buena música y momentos únicos en Tepoztlán. Abiertos todos los días."
+            content="Ven a vivir la experiencia Tres Cantares: sabores auténticos de México, buena música y momentos únicos en Tepoztlán, Morelos."
         />
         <link head-key="canonical" rel="canonical" href="/" />
     </Head>

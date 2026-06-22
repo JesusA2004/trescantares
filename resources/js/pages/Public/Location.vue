@@ -33,7 +33,7 @@ const mapSrc = computed(() => {
         <meta
             head-key="description"
             name="description"
-            content="Encuéntranos en Arq. Pablo González 1, La Santísima, Tepoztlán, Morelos. Abiertos todos los días de 08:00 a 22:00 hrs. ¡Te esperamos en Tres Cantares!"
+            content="Encuéntranos en Arq. Pablo González 1, La Santísima, 62520 Tepoztlán, Morelos. Abiertos lunes, miércoles y domingo de 9:00 a 20:00; jueves a sábado de 9:00 a 22:00. Martes cerrado."
         />
 
         <meta
@@ -51,7 +51,7 @@ const mapSrc = computed(() => {
         <meta
             head-key="og:description"
             property="og:description"
-            content="Nos encontramos en Arq. Pablo González 1, La Santísima, Tepoztlán, Morelos. Abiertos todos los días de 08:00 a 22:00 hrs."
+            content="Nos encontramos en Arq. Pablo González 1, La Santísima, 62520 Tepoztlán, Morelos. Lunes, miércoles y domingo de 9:00 a 20:00; jueves a sábado de 9:00 a 22:00. Martes cerrado."
         />
 
         <meta head-key="og:url" property="og:url" content="/ubicacion" />
@@ -66,7 +66,7 @@ const mapSrc = computed(() => {
         <meta
             head-key="twitter:description"
             name="twitter:description"
-            content="Nos encontramos en Tepoztlán, Morelos. Abiertos todos los días de 08:00 a 22:00 hrs. ¡Ven a Tres Cantares!"
+            content="Nos encontramos en Arq. Pablo González 1, Tepoztlán, Morelos. Lun, mié y dom: 9–20 hrs. Jue, vie y sáb: 9–22 hrs. Martes cerrado. ¡Ven a Tres Cantares!"
         />
 
         <link head-key="canonical" rel="canonical" href="/ubicacion" />
@@ -132,7 +132,7 @@ const mapSrc = computed(() => {
                             <h3>TELÉFONO</h3>
                             <p>
                                 {{
-                                    setting('contact_phone', '+52 777 153 1475')
+                                    setting('contact_phone', '777 447 5431')
                                 }}
                             </p>
                         </div>
@@ -193,11 +193,11 @@ const mapSrc = computed(() => {
 
                         <div class="tc-location-info-text">
                             <h3>HORARIO</h3>
-                            <p>
+                            <p style="white-space: pre-line">
                                 {{
                                     setting(
                                         'schedule',
-                                        'Lunes a Domingo, 08:00 a 22:00 hrs.',
+                                        "Lunes, miércoles y domingo: 9:00–20:00 hrs.\nJueves, viernes y sábado: 9:00–22:00 hrs.\nMartes: cerrado",
                                     )
                                 }}
                             </p>
