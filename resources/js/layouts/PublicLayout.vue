@@ -10,7 +10,9 @@ const isHome = computed(() => page.component === 'Public/Home');
 </script>
 
 <template>
-    <div class="min-h-screen font-body" style="font-family: var(--tc-font-body)">
+    <div class="min-h-screen font-body tc-public-shell"
+         :class="{ 'tc-public-shell--paper': !isHome }"
+         style="font-family: var(--tc-font-body)">
         <template v-if="isHome">
             <slot />
         </template>
