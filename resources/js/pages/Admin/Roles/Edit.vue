@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { CheckSquare, Search, ShieldCheck, Square } from 'lucide-vue-next';
@@ -95,7 +95,7 @@ function submit() {
 
         <div
             v-if="isProtected"
-            class="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/30 text-amber-800 dark:text-amber-300 text-sm"
         >
             <ShieldCheck class="w-4 h-4 flex-shrink-0" />
             El rol <strong>super-admin</strong> tiene todos los permisos del sistema y no puede modificarse.
@@ -107,7 +107,7 @@ function submit() {
                 <!-- Left: name + summary -->
                 <div class="xl:col-span-1 space-y-4">
                     <div class="tc-admin-card p-5">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-[#fff7e6] mb-4 flex items-center gap-2">
                             <ShieldCheck class="w-4 h-4 text-[var(--tc-blue)]" />
                             Nombre del rol
                         </h3>
@@ -122,10 +122,10 @@ function submit() {
                     </div>
 
                     <div class="tc-admin-card p-5">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Permisos activos</p>
+                        <p class="text-xs font-semibold text-gray-500 dark:text-white/50 uppercase tracking-wide mb-3">Permisos activos</p>
                         <div class="flex items-end gap-1">
                             <span class="text-3xl font-extrabold text-[var(--tc-blue)]">{{ totalSelected }}</span>
-                            <span class="text-sm text-gray-400 pb-1">/ {{ totalPermissions }}</span>
+                            <span class="text-sm text-gray-400 dark:text-white/40 pb-1">/ {{ totalPermissions }}</span>
                         </div>
                         <div class="mt-3 h-2 bg-amber-100 rounded-full overflow-hidden">
                             <div
@@ -176,7 +176,7 @@ function submit() {
                         class="tc-admin-card overflow-hidden"
                     >
                         <div
-                            class="px-5 py-3 border-b border-amber-100/60 flex items-center justify-between bg-gradient-to-r from-amber-50/60 to-transparent"
+                            class="px-5 py-3 border-b border-amber-100/60 dark:border-amber-400/15 flex items-center justify-between bg-gradient-to-r from-amber-50/60 dark:from-amber-400/8 to-transparent"
                             :class="{ 'cursor-pointer': !isProtected }"
                             @click="!isProtected && toggleGroup(String(group), perms)"
                         >
@@ -184,9 +184,9 @@ function submit() {
                                 <component
                                     :is="groupAllSelected(perms) ? CheckSquare : Square"
                                     class="w-4 h-4 flex-shrink-0 transition-colors"
-                                    :class="groupAllSelected(perms) ? 'text-[var(--tc-blue)]' : groupSomeSelected(perms) ? 'text-amber-500' : 'text-gray-300'"
+                                    :class="groupAllSelected(perms) ? 'text-[var(--tc-blue)]' : groupSomeSelected(perms) ? 'text-amber-500' : 'text-gray-300 dark:text-white/25'"
                                 />
-                                <span class="font-semibold text-sm text-gray-800">
+                                <span class="font-semibold text-sm text-gray-800 dark:text-[#fff7e6]">
                                     {{ permissionGroupLabel(String(group)) }}
                                 </span>
                                 <span class="tc-badge tc-badge-blue text-[10px]">
@@ -227,7 +227,7 @@ function submit() {
                                     class="sr-only"
                                     @change="togglePermission(perm.name)"
                                 />
-                                <span class="text-sm text-gray-700">{{ permissionLabel(perm.name) }}</span>
+                                <span class="text-sm text-gray-700 dark:text-[#fff7e6]/85">{{ permissionLabel(perm.name) }}</span>
                             </label>
                         </div>
                     </div>

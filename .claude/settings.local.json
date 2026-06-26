@@ -35,7 +35,13 @@
       "Bash(git checkout *)",
       "Bash(grep -E \"\\\\.php$\")",
       "Bash(composer show *)",
-      "Bash(php -l app/Http/Controllers/Admin/ReportsController.php app/Http/Middleware/EnsureModuleEnabled.php app/Exports/MenuReportExport.php app/Http/Controllers/Public/JobsController.php)"
+      "Bash(php -l app/Http/Controllers/Admin/ReportsController.php app/Http/Middleware/EnsureModuleEnabled.php app/Exports/MenuReportExport.php app/Http/Controllers/Public/JobsController.php)",
+      "Bash(New-Item *)",
+      "Bash(grep -v \"//\\\\s*\")",
+      "PowerShell(\\(Get-Content \"C:\\\\wamp64\\\\www\\\\trescantares\\\\.claude\\\\worktrees\\\\agent-a3252bf9dd7a27985\\\\resources\\\\css\\\\app.css\"\\).Count)",
+      "PowerShell(git *)",
+      "PowerShell(\\(Get-Content \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\css\\\\app.css\"\\).Count)",
+      "Bash(grep -n \"^/\\\\* ═\\\\|^/\\\\* --\\\\|^\\\\/\\\\* DARK\\\\|dark mode\\\\|DARK MODE\\\\|Dark Mode\" \"C:\\\\wamp64\\\\www\\\\trescantares\\\\resources\\\\css\\\\app.css\")"
     ]
   }
 }

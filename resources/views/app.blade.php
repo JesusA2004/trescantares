@@ -1,25 +1,29 @@
 <!DOCTYPE html>
-<html lang="es" class="{{ ($appearance ?? 'system') === 'dark' ? 'dark' : '' }}">
+<html lang="es" data-appearance="{{ $appearance ?? 'system' }}" class="{{ ($appearance ?? 'system') === 'dark' ? 'dark' : '' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Detección de modo oscuro --}}
+    {{-- Apariencia: localStorage es fuente de verdad en cliente; cookie PHP es fallback --}}
     <script>
         (function() {
-            const appearance = '{{ $appearance ?? "system" }}';
-            if (appearance === 'system') {
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.documentElement.classList.add('dark');
-                }
-            }
+            try {
+                var local = localStorage.getItem('appearance');
+                var server = '{{ $appearance ?? "system" }}';
+                var a = local || server || 'system';
+                if (a !== 'light' && a !== 'dark' && a !== 'system') a = 'system';
+                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var shouldBeDark = (a === 'dark') || (a === 'system' && prefersDark);
+                document.documentElement.classList.toggle('dark', shouldBeDark);
+                document.documentElement.setAttribute('data-appearance', a);
+            } catch(e) {}
         })();
     </script>
 
     {{-- Fondo base para evitar flash --}}
     <style>
-        html { background-color: oklch(1 0 0); }
-        html.dark { background-color: oklch(0.145 0 0); }
+        html { background-color: #F4F4F5; }
+        html.dark { background-color: #151515; }
     </style>
 
     {{-- Favicons --}}

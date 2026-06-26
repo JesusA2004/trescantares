@@ -15,8 +15,8 @@ onMounted(() => {
 });
 
 const max = computed(() => Math.max(...props.data.map((d) => d.value), 1));
-const from = computed(() => props.colorFrom ?? '#144e8f');
-const to = computed(() => props.colorTo ?? '#db3465');
+const from = computed(() => props.colorFrom ?? '#6D4CFF');
+const to = computed(() => props.colorTo ?? '#5B8CFF');
 
 const hoveredIdx = ref<number | null>(null);
 
@@ -118,11 +118,11 @@ function subPct(item: { value: number; subValue?: number }) {
 .bar-track {
     flex: 1;
     height: 26px;
-    background: rgba(243,237,224,.9);
+    background: rgba(228,228,231,.8);
     border-radius: 999px;
     overflow: visible;
     position: relative;
-    border: 1px solid rgba(210,175,100,.22);
+    border: 1px solid rgba(0,0,0,.06);
 }
 .bar-fill {
     height: 100%;
@@ -151,7 +151,7 @@ function subPct(item: { value: number; subValue?: number }) {
     bottom: calc(100% + 10px);
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #103f75, #0c315c);
+    background: #1D1D1F;
     color: white;
     padding: 6px 12px;
     border-radius: 10px;
@@ -160,12 +160,12 @@ function subPct(item: { value: number; subValue?: number }) {
     pointer-events: none;
     z-index: 20;
     font-family: var(--tc-font-body, sans-serif);
-    box-shadow: 0 8px 24px rgba(12,49,92,.3);
+    box-shadow: 0 8px 24px rgba(0,0,0,.28);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1px;
-    border: 1px solid rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.10);
 }
 .bar-tip::after {
     content: '';
@@ -174,7 +174,7 @@ function subPct(item: { value: number; subValue?: number }) {
     left: 50%;
     transform: translateX(-50%);
     border: 5px solid transparent;
-    border-top-color: #0c315c;
+    border-top-color: #1D1D1F;
 }
 .bar-tip-val {
     font-weight: 800;
@@ -205,5 +205,30 @@ function subPct(item: { value: number; subValue?: number }) {
 .bar-tip-enter-from, .bar-tip-leave-to {
     opacity: 0;
     transform: translateX(-50%) translateY(4px);
+}
+
+/* ── Dark mode overrides ── */
+:global(.dark) .bar-label {
+    color: #8E8E8E;
+}
+:global(.dark) .bar-row:hover .bar-label {
+    color: #F5F5F5;
+}
+:global(.dark) .bar-track {
+    background: rgba(109,76,255,.08);
+    border-color: rgba(109,76,255,.14);
+}
+:global(.dark) .bar-num {
+    color: #8E8E8E;
+}
+:global(.dark) .bar-num-active {
+    color: #F5F5F5;
+}
+:global(.dark) .bar-tip {
+    background: #262626;
+    border-color: #313131;
+}
+:global(.dark) .bar-tip::after {
+    border-top-color: #262626;
 }
 </style>

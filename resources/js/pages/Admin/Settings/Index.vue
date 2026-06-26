@@ -194,10 +194,28 @@ function submit() {
 
             <!-- TAB: URLs -->
             <template v-if="activeTab === 'urls'">
-                <AdminFormSection title="URLs del sitio">
-                    <TcInput id="billing_url" v-model="form.billing_url" label="Facturación URL" placeholder="https://…" />
-                    <TcInput id="privacy_policy_url" v-model="form.privacy_policy_url" label="Aviso de Privacidad URL" />
-                    <TcInput id="jobs_url" v-model="form.jobs_url" label="Bolsa de Trabajo URL" />
+                <AdminFormSection title="URLs del sitio" description="Solo la URL de facturación es personalizable. Las demás son rutas fijas del sistema.">
+                    <TcInput id="billing_url" v-model="form.billing_url" label="Facturación URL" placeholder="https://…" hint="URL externa donde los clientes pueden solicitar factura" />
+
+                    <!-- Readonly URLs -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="tc-field">
+                            <label class="tc-label">Aviso de Privacidad</label>
+                            <div class="flex items-center gap-2 tc-input bg-gray-50 cursor-default select-text text-gray-500">
+                                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">Fija</span>
+                                <span class="font-mono text-sm">/aviso-de-privacidad</span>
+                            </div>
+                            <p class="tc-help-text">Ruta interna del sistema, no editable</p>
+                        </div>
+                        <div class="tc-field">
+                            <label class="tc-label">Bolsa de Trabajo</label>
+                            <div class="flex items-center gap-2 tc-input bg-gray-50 cursor-default select-text text-gray-500">
+                                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">Fija</span>
+                                <span class="font-mono text-sm">/bolsa-de-trabajo</span>
+                            </div>
+                            <p class="tc-help-text">Ruta interna del sistema, no editable</p>
+                        </div>
+                    </div>
                 </AdminFormSection>
             </template>
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useAppearance } from '@/composables/useAppearance';
 
 const props = defineProps<{
     segments: {
@@ -12,6 +13,9 @@ const props = defineProps<{
     size?: number;
     strokeWidth?: number;
 }>();
+
+const { resolvedAppearance } = useAppearance();
+const isDark = computed(() => resolvedAppearance.value === 'dark');
 
 const mounted = ref(false);
 onMounted(() => {
@@ -84,14 +88,14 @@ const hoveredIdx = ref<number | null>(null);
                 <circle
                     :cx="cx" :cy="cy" :r="r"
                     fill="none"
-                    stroke="#f3ede0"
+                    :stroke="isDark ? 'rgba(109,76,255,.12)' : '#E8E8EC'"
                     :stroke-width="sw"
                 />
                 <!-- Inner glow ring -->
                 <circle
                     :cx="cx" :cy="cy" :r="r"
                     fill="none"
-                    stroke="rgba(255,255,255,.4)"
+                    :stroke="isDark ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.5)'"
                     :stroke-width="sw - 6"
                 />
 
@@ -116,8 +120,8 @@ const hoveredIdx = ref<number | null>(null);
                 <!-- Center background circle -->
                 <circle
                     :cx="cx" :cy="cy" :r="r - sw / 2 - 2"
-                    fill="white"
-                    fill-opacity="0.92"
+                    :fill="isDark ? '#202020' : 'white'"
+                    fill-opacity="0.97"
                 />
 
                 <!-- Center text -->
@@ -126,7 +130,7 @@ const hoveredIdx = ref<number | null>(null);
                     text-anchor="middle"
                     :font-size="sz * 0.148"
                     font-weight="800"
-                    fill="#1a2e44"
+                    :fill="isDark ? '#F5F5F5' : '#1D1D1F'"
                     font-family="sans-serif"
                     letter-spacing="-1"
                 >{{ total }}</text>
@@ -134,7 +138,7 @@ const hoveredIdx = ref<number | null>(null);
                     :x="cx" :y="cy + 10"
                     text-anchor="middle"
                     :font-size="sz * 0.074"
-                    fill="#9ca3af"
+                    :fill="isDark ? '#8E8E8E' : '#8B9097'"
                     font-family="sans-serif"
                     font-weight="500"
                 >{{ centerLabel ?? 'total' }}</text>
@@ -263,5 +267,24 @@ const hoveredIdx = ref<number | null>(null);
 }
 .donut-center-enter-from, .donut-center-leave-to {
     opacity: 0;
+}
+
+/* ── Dark mode overrides ── */
+:global(.dark) .donut-legend-row.is-hovered {
+    background: rgba(109,76,255,.10);
+    border-color: rgba(109,76,255,.26);
+    transform: translateX(3px);
+}
+:global(.dark) .donut-legend-label {
+    color: #8E8E8E;
+}
+:global(.dark) .donut-legend-row.is-hovered .donut-legend-label {
+    color: #F5F5F5;
+}
+:global(.dark) .donut-legend-val {
+    color: #F5F5F5;
+}
+:global(.dark) .donut-legend-pct {
+    color: #8E8E8E;
 }
 </style>

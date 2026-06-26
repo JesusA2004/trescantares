@@ -1,9 +1,11 @@
-<script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { router } from '@inertiajs/vue3';
+﻿<script setup lang="ts">
+import { Head, router } from '@inertiajs/vue3';
 import { Boxes, Lock } from 'lucide-vue-next';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
+import { useNotify } from '@/composables/useNotify';
+
+const { confirm, warning } = useNotify();
 
 const props = defineProps<{
     modules: {
@@ -18,8 +20,23 @@ const props = defineProps<{
     }[];
 }>();
 
-function toggleModule(module: typeof props.modules[0]) {
-    if (module.is_core) return;
+async function toggleModule(module: typeof props.modules[0]) {
+    if (module.is_core) {
+        warning(`"${module.name}" es un módulo esencial y no puede desactivarse.`);
+        return;
+    }
+
+    const action = module.is_enabled ? 'desactivar' : 'activar';
+    const confirmed = await confirm(
+        `¿${action.charAt(0).toUpperCase() + action.slice(1)} "${module.name}"?`,
+        module.is_enabled
+            ? 'Este módulo quedará oculto en el sidebar y sus rutas quedarán bloqueadas.'
+            : 'Este módulo volverá a ser visible y sus rutas estarán disponibles.',
+        { icon: module.is_enabled ? 'warning' : 'question' }
+    );
+
+    if (!confirmed) return;
+
     router.patch(
         `/admin/modules/${module.id}`,
         { is_enabled: !module.is_enabled },
@@ -41,11 +58,11 @@ function toggleModule(module: typeof props.modules[0]) {
             <div
                 v-for="mod in modules"
                 :key="mod.id"
-                class="tc-admin-card p-4 flex items-start gap-4"
-                :class="{ 'opacity-60': !mod.is_enabled && !mod.is_core }"
+                class="tc-admin-card p-4 flex items-start gap-4 transition-opacity duration-200"
+                :class="{ 'opacity-55': !mod.is_enabled && !mod.is_core }"
             >
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    :class="mod.is_enabled ? 'bg-blue-50 text-[var(--tc-blue)]' : 'bg-gray-100 text-gray-400'"
+                    :class="mod.is_enabled ? 'bg-blue-50 text-[var(--tc-blue)] dark:bg-blue-500/15 dark:text-blue-300' : 'bg-gray-100 text-gray-400 dark:bg-white/8 dark:text-white/50'"
                 >
                     <Boxes class="w-5 h-5" />
                 </div>
@@ -57,6 +74,9 @@ function toggleModule(module: typeof props.modules[0]) {
                         </span>
                     </div>
                     <p v-if="mod.description" class="text-xs text-gray-500 mt-0.5">{{ mod.description }}</p>
+                    <p class="text-xs mt-1" :class="mod.is_enabled ? 'text-[var(--tc-green)]' : 'text-gray-400'">
+                        {{ mod.is_enabled ? '● Activo' : '○ Inactivo' }}
+                    </p>
                 </div>
                 <div class="flex-shrink-0">
                     <TcSwitch

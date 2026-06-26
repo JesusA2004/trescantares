@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     BarChart3,
@@ -166,8 +166,8 @@ function handleLogout() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="right" :side-offset="10" align="end" class="min-w-52">
                     <div class="px-3 py-2 text-sm">
-                        <p class="font-semibold text-gray-800">{{ user?.name }}</p>
-                        <p class="text-xs text-gray-400 truncate">{{ user?.email }}</p>
+                        <p class="font-semibold text-gray-800 dark:text-[#fff7e6]">{{ user?.name }}</p>
+                        <p class="text-xs text-gray-400 dark:text-white/55 truncate">{{ user?.email }}</p>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem :as-child="true">

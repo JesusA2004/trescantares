@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 defineProps<{
     label?: string;
     error?: string;
@@ -36,6 +36,6 @@ const model = defineModel<string | number>();
             </option>
         </select>
         <p v-if="error" class="text-xs text-[var(--tc-pink)] mt-0.5">{{ error }}</p>
-        <p v-else-if="hint" class="text-xs text-gray-400 mt-0.5">{{ hint }}</p>
+        <p v-else-if="hint" class="text-xs text-gray-400 dark:text-white/55 mt-0.5">{{ hint }}</p>
     </div>
 </template>

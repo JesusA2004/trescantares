@@ -72,7 +72,7 @@ const roleActiveColors: Record<string, string> = {
                         v-for="role in roles"
                         :key="role.id"
                         type="button"
-                        class="px-3.5 py-1.5 rounded-full text-sm border-2 font-medium transition-all"
+                        class="tc-role-pill px-3.5 py-1.5 rounded-full text-sm border-2 font-medium transition-all"
                         :class="form.roles.includes(role.name)
                             ? (roleActiveColors[role.name] ?? 'bg-gray-500 border-gray-500 text-white')
                             : (roleColors[role.name] ?? 'border-gray-300 text-gray-600 hover:border-blue-300')"

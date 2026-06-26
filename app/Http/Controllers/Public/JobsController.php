@@ -14,7 +14,10 @@ class JobsController extends Controller
         $enabled = SiteSetting::get('jobs_enabled', '0');
 
         if ($enabled !== '1') {
-            abort(404);
+            return \Inertia\Inertia::render('Public/Maintenance', [
+                'title' => 'Bolsa de Trabajo',
+                'message' => 'La sección de bolsa de trabajo no está disponible en este momento. Próximamente estaremos de vuelta.',
+            ])->toResponse($request)->setStatusCode(404);
         }
 
         $settings = SiteSetting::allAsArray();

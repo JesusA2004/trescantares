@@ -66,6 +66,22 @@ class DashboardController extends Controller
         $activeModules = Module::where('is_enabled', true)->count();
         $totalModules = Module::count();
 
+        $rawActivity = MenuItem::selectRaw('DATE(updated_at) as date, COUNT(*) as count')
+            ->where('updated_at', '>=', now()->subDays(13)->startOfDay())
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $dailyActivity = [];
+        for ($i = 13; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $dailyActivity[] = [
+                'label' => now()->subDays($i)->format('d/m'),
+                'count' => (int) ($rawActivity->get($date)?->count ?? 0),
+            ];
+        }
+
         return Inertia::render('Dashboard', [
             'stats' => [
                 'totalItems' => $totalItems,
@@ -86,6 +102,7 @@ class DashboardController extends Controller
             'byCategory' => $byCategory,
             'recentItems' => $recentItems,
             'recentUsers' => $recentUsers,
+            'dailyActivity' => $dailyActivity,
         ]);
     }
 }

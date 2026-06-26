@@ -106,9 +106,6 @@ defineProps<{
             </Button>
         </div>
 
-        <div class="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta?
-            <TextLink :href="register()" :tabindex="5">Regístrate</TextLink>
-        </div>
+        <!-- registro público deshabilitado -->
     </Form>
 </template>

@@ -1,17 +1,21 @@
 import { router } from '@inertiajs/vue3';
-import { toast } from 'vue-sonner';
-import type { FlashToast } from '@/types/ui';
+import { useNotify } from '@/composables/useNotify';
 
 export function initializeFlashToast(): void {
     router.on('navigate', (event) => {
         const props = (event as CustomEvent).detail?.page?.props as Record<string, unknown> | undefined;
-        const flash = props?.flash as { toast?: FlashToast } | undefined;
+        const flash = props?.flash as { toast?: { type: string; message: string } } | null;
         const data = flash?.toast;
 
-        if (!data?.type || !data?.message) {
-            return;
-        }
+        if (!data?.type || !data?.message) return;
 
-        toast[data.type](data.message);
+        const { success, error, warning, info } = useNotify();
+
+        switch (data.type) {
+            case 'success': success(data.message); break;
+            case 'error': error(data.message); break;
+            case 'warning': warning(data.message); break;
+            case 'info': info(data.message); break;
+        }
     });
 }

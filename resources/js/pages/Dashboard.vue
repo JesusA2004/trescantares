@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import {
     AlertTriangle,
@@ -11,6 +11,7 @@ import {
     Search,
     Star,
     Tag,
+    TrendingUp,
     Users,
     UtensilsCrossed,
     X,
@@ -18,6 +19,7 @@ import {
 import { computed, ref } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import AdminStatCard from '@/components/admin/AdminStatCard.vue';
+import AdminAreaChart from '@/components/admin/charts/AdminAreaChart.vue';
 import AdminBarChart from '@/components/admin/charts/AdminBarChart.vue';
 import AdminDonutChart from '@/components/admin/charts/AdminDonutChart.vue';
 import { dashboard } from '@/routes';
@@ -63,6 +65,7 @@ const props = defineProps<{
         roles: string[];
         created_at: string;
     }[];
+    dailyActivity: { label: string; count: number }[];
 }>();
 
 // ── Filtros reactivos ─────────────────────────────
@@ -100,8 +103,8 @@ const donutSegments = computed(() => {
     const active = filterStatus.value === 'inactive' ? 0 : props.stats.activeItems;
     const inactive = filterStatus.value === 'active' ? 0 : props.stats.inactiveItems;
     return [
-        { label: 'Activos', value: active, color: '#22c55e' },
-        { label: 'Inactivos', value: inactive, color: '#db3465' },
+        { label: 'Activos', value: active, color: '#6D4CFF' },
+        { label: 'Inactivos', value: inactive, color: '#F87171' },
     ].filter((s) => s.value > 0);
 });
 
@@ -171,6 +174,18 @@ const hasAlerts = computed(
             <AdminStatCard label="Sin imagen" :value="alerts.itemsWithoutImage" :icon="AlertTriangle" color="yellow" href="/admin/menu-items" />
         </div>
 
+        <!-- Activity area chart -->
+        <div class="tc-admin-card p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-gray-700 text-sm flex items-center gap-2">
+                    <TrendingUp class="w-4 h-4" style="color:#6D4CFF" />
+                    Actividad del menú — últimos 14 días
+                </h3>
+                <span class="text-xs text-gray-400">actualizaciones</span>
+            </div>
+            <AdminAreaChart :data="dailyActivity" color="#6D4CFF" gradient-from="#6D4CFF" />
+        </div>
+
         <!-- Filtros -->
         <div class="tc-admin-card p-4">
             <div class="flex flex-wrap items-center gap-3">
@@ -219,8 +234,8 @@ const hasAlerts = computed(
                 </div>
                 <AdminBarChart
                     :data="barData"
-                    color-from="var(--tc-blue)"
-                    color-to="var(--tc-pink)"
+                    color-from="#6D4CFF"
+                    color-to="#5B8CFF"
                     :show-sub-value="true"
                     sub-label="activos"
                 >
@@ -271,11 +286,11 @@ const hasAlerts = computed(
                     </h3>
                     <Link href="/admin/menu-items" class="text-xs text-[var(--tc-blue)] hover:underline font-medium">Ver todos →</Link>
                 </div>
-                <div class="divide-y divide-[#f3ede0] mt-3">
+                <div class="divide-y divide-[#f3ede0] dark:divide-white/[0.08] mt-3">
                     <div
                         v-for="item in filteredItems"
                         :key="item.id"
-                        class="flex items-center gap-3 px-5 py-3 hover:bg-[#fdf8f2] transition-colors group"
+                        class="flex items-center gap-3 px-5 py-3 hover:bg-[#f7f7f8] dark:hover:bg-[#262626] transition-colors group"
                     >
                         <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-[#f0e8d8] flex-shrink-0">
                             <img v-if="item.image_url" :src="item.image_url" :alt="item.name"
@@ -314,15 +329,15 @@ const hasAlerts = computed(
                     </h3>
                     <Link href="/admin/users" class="text-xs text-[var(--tc-blue)] hover:underline font-medium">Ver todos →</Link>
                 </div>
-                <div class="divide-y divide-[#f3ede0] mt-3">
+                <div class="divide-y divide-[#f3ede0] dark:divide-white/[0.08] mt-3">
                     <div
                         v-for="user in recentUsers"
                         :key="user.id"
-                        class="flex items-center gap-3 px-5 py-3 hover:bg-[#fdf8f2] transition-colors"
+                        class="flex items-center gap-3 px-5 py-3 hover:bg-[#f7f7f8] dark:hover:bg-[#262626] transition-colors"
                     >
                         <div
                             class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
-                            style="background: linear-gradient(135deg, var(--tc-blue), var(--tc-pink))"
+                            style="background: linear-gradient(135deg, #6D4CFF, #5B8CFF)"
                         >
                             {{ user.name.charAt(0).toUpperCase() }}
                         </div>

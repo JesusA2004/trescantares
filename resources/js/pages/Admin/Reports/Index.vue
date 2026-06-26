@@ -100,20 +100,20 @@ function priceFormat(p: string | number): string {
         <div class="tc-admin-card p-4">
             <div class="tc-report-filters">
                 <div class="tc-report-filter">
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Mes</label>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-white/50 uppercase tracking-wide mb-1.5">Mes</label>
                     <select v-model="filterMonth" class="tc-report-select" @change="applyFilters">
                         <option v-for="m in availableMonths" :key="m" :value="m">{{ monthLabel(m) }}</option>
                     </select>
                 </div>
                 <div class="tc-report-filter">
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Categoría</label>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-white/50 uppercase tracking-wide mb-1.5">Categoría</label>
                     <select v-model="filterCategory" class="tc-report-select" @change="applyFilters">
                         <option value="">Todas las categorías</option>
                         <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                     </select>
                 </div>
                 <div class="tc-report-filter">
-                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Estado</label>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-white/50 uppercase tracking-wide mb-1.5">Estado</label>
                     <select v-model="filterStatus" class="tc-report-select" @change="applyFilters">
                         <option value="all">Todos los estados</option>
                         <option value="active">Solo activos</option>
@@ -141,8 +141,8 @@ function priceFormat(p: string | number): string {
         <!-- Charts -->
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <div class="tc-admin-card p-5 xl:col-span-2">
-                <h3 class="text-sm font-semibold text-gray-700 mb-1">Platillos por categoría</h3>
-                <p class="text-xs text-gray-400 mb-4">Barras muestran total · La barra interna = activos</p>
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-[#fff7e6] mb-1">Platillos por categoría</h3>
+                <p class="text-xs text-gray-400 dark:text-white/45 mb-4">Barras muestran total · La barra interna = activos</p>
                 <AdminBarChart
                     :data="barData"
                     :show-sub-value="true"
@@ -151,7 +151,7 @@ function priceFormat(p: string | number): string {
             </div>
 
             <div class="tc-admin-card p-5">
-                <h3 class="text-sm font-semibold text-gray-700 mb-4">Estado del menú</h3>
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-[#fff7e6] mb-4">Estado del menú</h3>
                 <AdminDonutChart
                     :segments="donutSegments"
                     :total="stats.total_items"
@@ -162,8 +162,8 @@ function priceFormat(p: string | number): string {
 
         <!-- Category breakdown table -->
         <div class="tc-admin-card overflow-hidden">
-            <div class="px-5 py-4 border-b border-amber-100/60 bg-gradient-to-r from-amber-50/40 to-transparent">
-                <h3 class="text-sm font-semibold text-gray-700">Desglose por categoría</h3>
+            <div class="px-5 py-4 border-b border-amber-100/60 dark:border-amber-400/15 bg-gradient-to-r from-amber-50/40 dark:from-amber-400/8 to-transparent">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-[#fff7e6]">Desglose por categoría</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="tc-admin-table">
@@ -196,7 +196,7 @@ function priceFormat(p: string | number): string {
                             </td>
                             <td class="text-center">
                                 <div class="flex items-center justify-center gap-1.5">
-                                    <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div class="w-16 h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
                                         <div
                                             class="h-full rounded-full bg-green-400"
                                             :style="{ width: cat.total > 0 ? `${Math.round((cat.active / cat.total) * 100)}%` : '0%' }"
@@ -216,8 +216,8 @@ function priceFormat(p: string | number): string {
 
         <!-- Recent activity -->
         <div class="tc-admin-card overflow-hidden">
-            <div class="px-5 py-4 border-b border-amber-100/60 bg-gradient-to-r from-amber-50/40 to-transparent flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-gray-700">Actividad reciente del menú</h3>
+            <div class="px-5 py-4 border-b border-amber-100/60 dark:border-amber-400/15 bg-gradient-to-r from-amber-50/40 dark:from-amber-400/8 to-transparent flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-[#fff7e6]">Actividad reciente del menú</h3>
                 <span class="tc-badge tc-badge-gray">{{ recentActivity.length }} registros</span>
             </div>
             <div class="overflow-x-auto">

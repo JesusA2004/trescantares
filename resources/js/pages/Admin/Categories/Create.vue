@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AdminFormSection from '@/components/admin/AdminFormSection.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
@@ -73,7 +73,7 @@ function submit() {
                                 id="color"
                                 v-model="form.color"
                                 type="color"
-                                class="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
+                                class="w-10 h-10 rounded-lg border border-gray-200 dark:border-amber-400/30 cursor-pointer"
                             />
                             <span class="tc-input flex-1 text-gray-500 text-sm">{{ form.color }}</span>
                         </div>

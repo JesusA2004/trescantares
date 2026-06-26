@@ -16,6 +16,9 @@ use App\Http\Controllers\Public\MenuController;
 use App\Http\Controllers\Public\PrivacyController;
 use Illuminate\Support\Facades\Route;
 
+// Registro público deshabilitado
+Route::get('/register', fn () => redirect()->route('login'))->name('register');
+
 // Public routes with no-cache
 Route::middleware(['prevent-cache'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
