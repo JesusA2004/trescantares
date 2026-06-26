@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-    <div class="tc-maintenance-page">
+    <div class="tc-maintenance-page tc-public-layout">
 
         <!-- Decorative top border -->
         <div class="tc-maintenance-border-top" />

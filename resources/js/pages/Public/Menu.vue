@@ -94,7 +94,7 @@ function isActive(catId: number): boolean {
         <link head-key="canonical" rel="canonical" href="/menu" />
     </Head>
 
-    <div class="tc-menu-wrap">
+    <div class="tc-menu-wrap tc-public-layout">
 
         <!-- ── IMÁGENES DECORATIVAS FLOTANTES ─────────── -->
 

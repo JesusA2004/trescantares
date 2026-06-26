@@ -17,7 +17,7 @@ const currentYear = new Date().getFullYear();
         <link head-key="canonical" rel="canonical" href="/aviso-de-privacidad" />
     </Head>
 
-    <div class="tc-privacy-page">
+    <div class="tc-privacy-page tc-public-layout">
 
         <!-- ── IMÁGENES DECORATIVAS FLOTANTES ─────────────────── -->
 

@@ -71,7 +71,7 @@ const paperBg = {
         <link head-key="canonical" rel="canonical" href="/" />
     </Head>
 
-    <div class="tc-home-page">
+    <div class="tc-home-page tc-public-layout">
         <!-- ============================================================
              HERO — Navbar flota encima como papel rasgado
         ============================================================ -->

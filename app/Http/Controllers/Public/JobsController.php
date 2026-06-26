@@ -4,20 +4,24 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\SiteSetting;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class JobsController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request)
     {
         $enabled = SiteSetting::get('jobs_enabled', '0');
 
         if ($enabled !== '1') {
-            return \Inertia\Inertia::render('Public/Maintenance', [
+            $response = Inertia::render('Public/Maintenance', [
                 'title' => 'Bolsa de Trabajo',
                 'message' => 'La sección de bolsa de trabajo no está disponible en este momento. Próximamente estaremos de vuelta.',
-            ])->toResponse($request)->setStatusCode(404);
+            ])->toResponse($request);
+
+            $response->setStatusCode(404);
+
+            return $response;
         }
 
         $settings = SiteSetting::allAsArray();

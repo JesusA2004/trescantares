@@ -78,7 +78,7 @@ function sendViaWhatsApp() {
         <link head-key="canonical" rel="canonical" href="/bolsa-de-trabajo" />
     </Head>
 
-    <div class="tc-privacy-page">
+    <div class="tc-privacy-page tc-public-layout">
 
         <!-- ── IMÁGENES DECORATIVAS FLOTANTES ───────────────── -->
 

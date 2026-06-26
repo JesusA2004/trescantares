@@ -72,7 +72,7 @@ const mapSrc = computed(() => {
         <link head-key="canonical" rel="canonical" href="/ubicacion" />
     </Head>
 
-    <main class="tc-location-page">
+    <main class="tc-location-page tc-public-layout">
         <section
             class="tc-location-bg"
             :style="{

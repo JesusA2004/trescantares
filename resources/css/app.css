@@ -5755,9 +5755,9 @@ body,
    DARK MODE — Tres Cantares Violet / Indigo Premium
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Layout ── */
-.dark,
-.dark body {
+/* ── Layout (admin only — public pages are protected by .tc-public-layout shield) ── */
+.dark .tc-admin-layout,
+.dark .tc-auth-shell {
     background: #151515;
     color: #F5F5F5;
 }
@@ -5819,12 +5819,24 @@ body,
     border-color: #313131 !important;
 }
 
-/* ── Typography ── */
-.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+/* ── Typography (admin/auth only) ── */
+.dark .tc-admin-layout h1,
+.dark .tc-admin-layout h2,
+.dark .tc-admin-layout h3,
+.dark .tc-admin-layout h4,
+.dark .tc-admin-layout h5,
+.dark .tc-admin-layout h6,
+.dark .tc-auth-shell h1,
+.dark .tc-auth-shell h2,
+.dark .tc-auth-shell h3,
+.dark .tc-auth-shell h4,
+.dark .tc-auth-shell h5,
+.dark .tc-auth-shell h6 {
     color: #F5F5F5 !important;
 }
 
-.dark label {
+.dark .tc-admin-layout label,
+.dark .tc-auth-shell label {
     color: #F5F5F5 !important;
 }
 
@@ -6000,22 +6012,30 @@ body,
         0 0 20px rgba(109,76,255,.08) !important;
 }
 
-.dark input:not([type=checkbox]):not([type=radio]):not([type=color]),
-.dark select,
-.dark textarea {
+.dark .tc-admin-layout input:not([type=checkbox]):not([type=radio]):not([type=color]),
+.dark .tc-admin-layout select,
+.dark .tc-admin-layout textarea,
+.dark .tc-auth-shell input:not([type=checkbox]):not([type=radio]):not([type=color]),
+.dark .tc-auth-shell select,
+.dark .tc-auth-shell textarea {
     background: #1B1B1B !important;
     border: 1.5px solid #313131 !important;
     color: #F5F5F5 !important;
 }
 
-.dark input::placeholder,
-.dark textarea::placeholder {
+.dark .tc-admin-layout input::placeholder,
+.dark .tc-admin-layout textarea::placeholder,
+.dark .tc-auth-shell input::placeholder,
+.dark .tc-auth-shell textarea::placeholder {
     color: rgba(142,142,142,.60) !important;
 }
 
-.dark input:not([type=checkbox]):not([type=radio]):focus,
-.dark select:focus,
-.dark textarea:focus {
+.dark .tc-admin-layout input:not([type=checkbox]):not([type=radio]):focus,
+.dark .tc-admin-layout select:focus,
+.dark .tc-admin-layout textarea:focus,
+.dark .tc-auth-shell input:not([type=checkbox]):not([type=radio]):focus,
+.dark .tc-auth-shell select:focus,
+.dark .tc-auth-shell textarea:focus {
     border-color: #6D4CFF !important;
     outline: none !important;
     box-shadow:
@@ -6023,8 +6043,10 @@ body,
         0 0 20px rgba(109,76,255,.08) !important;
 }
 
-.dark select option,
-.dark select optgroup {
+.dark .tc-admin-layout select option,
+.dark .tc-admin-layout select optgroup,
+.dark .tc-auth-shell select option,
+.dark .tc-auth-shell select optgroup {
     background: #1B1B1B !important;
     color: #F5F5F5 !important;
 }
@@ -6535,35 +6557,50 @@ body,
     background: #313131 !important;
 }
 
-/* ── shadcn Input / PasswordInput in dark ── */
-.dark [data-slot="input"],
-.dark input[type="text"],
-.dark input[type="email"],
-.dark input[type="password"],
-.dark input[type="number"],
-.dark input[type="tel"],
-.dark input[type="url"],
-.dark input[type="search"] {
+/* ── shadcn Input / PasswordInput in dark (admin/auth only) ── */
+.dark .tc-admin-layout [data-slot="input"],
+.dark .tc-admin-layout input[type="text"],
+.dark .tc-admin-layout input[type="email"],
+.dark .tc-admin-layout input[type="password"],
+.dark .tc-admin-layout input[type="number"],
+.dark .tc-admin-layout input[type="tel"],
+.dark .tc-admin-layout input[type="url"],
+.dark .tc-admin-layout input[type="search"],
+.dark .tc-auth-shell [data-slot="input"],
+.dark .tc-auth-shell input[type="text"],
+.dark .tc-auth-shell input[type="email"],
+.dark .tc-auth-shell input[type="password"],
+.dark .tc-auth-shell input[type="number"],
+.dark .tc-auth-shell input[type="tel"],
+.dark .tc-auth-shell input[type="url"],
+.dark .tc-auth-shell input[type="search"] {
     background: #1B1B1B !important;
     border-color: #313131 !important;
     color: #F5F5F5 !important;
     --tw-ring-color: rgba(109,76,255,.22) !important;
 }
 
-.dark [data-slot="input"]:focus,
-.dark input[type="text"]:focus,
-.dark input[type="email"]:focus,
-.dark input[type="password"]:focus,
-.dark input[type="number"]:focus {
+.dark .tc-admin-layout [data-slot="input"]:focus,
+.dark .tc-admin-layout input[type="text"]:focus,
+.dark .tc-admin-layout input[type="email"]:focus,
+.dark .tc-admin-layout input[type="password"]:focus,
+.dark .tc-admin-layout input[type="number"]:focus,
+.dark .tc-auth-shell [data-slot="input"]:focus,
+.dark .tc-auth-shell input[type="text"]:focus,
+.dark .tc-auth-shell input[type="email"]:focus,
+.dark .tc-auth-shell input[type="password"]:focus,
+.dark .tc-auth-shell input[type="number"]:focus {
     border-color: #6D4CFF !important;
     box-shadow:
         0 0 0 4px rgba(109,76,255,.16),
         0 0 20px rgba(109,76,255,.08) !important;
 }
 
-/* ── shadcn Label in dark ── */
-.dark [data-slot="label"],
-.dark label[class*="text-sm"] {
+/* ── shadcn Label in dark (admin/auth only) ── */
+.dark .tc-admin-layout [data-slot="label"],
+.dark .tc-admin-layout label[class*="text-sm"],
+.dark .tc-auth-shell [data-slot="label"],
+.dark .tc-auth-shell label[class*="text-sm"] {
     color: #B8B8B8 !important;
 }
 
@@ -6990,4 +7027,97 @@ body,
 /* ── User avatar gradient (dashboard) ── */
 .dark [style*="tc-blue"][style*="tc-pink"] {
     background: linear-gradient(135deg, #6D4CFF, #5B8CFF) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ESCUDO PÚBLICO — Dark mode NO debe afectar páginas del cliente
+   Aplica a cualquier div con clase .tc-public-layout
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Forzar color-scheme light en todo el árbol público */
+.tc-public-layout {
+    color-scheme: light;
+}
+
+/* Contrarrestar cualquier body/html dark bleeding */
+.dark .tc-public-layout {
+    background: var(--tc-paper, #fdf8f2) !important;
+    color: var(--tc-brown, #3d2f1e) !important;
+}
+
+/* Headings: anular la regla global de dark */
+.dark .tc-public-layout h1,
+.dark .tc-public-layout h2,
+.dark .tc-public-layout h3,
+.dark .tc-public-layout h4,
+.dark .tc-public-layout h5,
+.dark .tc-public-layout h6 {
+    color: inherit !important;
+}
+
+/* Labels */
+.dark .tc-public-layout label {
+    color: inherit !important;
+}
+
+/* Inputs / selects / textareas (formulario bolsa de trabajo, etc.) */
+.dark .tc-public-layout input:not([type=checkbox]):not([type=radio]),
+.dark .tc-public-layout select,
+.dark .tc-public-layout textarea {
+    background: #ffffff !important;
+    border-color: #d0c4b0 !important;
+    color: #3d2f1e !important;
+}
+
+.dark .tc-public-layout input::placeholder,
+.dark .tc-public-layout textarea::placeholder {
+    color: #a0967e !important;
+}
+
+.dark .tc-public-layout input:focus,
+.dark .tc-public-layout select:focus,
+.dark .tc-public-layout textarea:focus {
+    border-color: var(--tc-blue, #144e8f) !important;
+    box-shadow: 0 0 0 3px rgba(20, 78, 143, 0.14) !important;
+}
+
+/* Tailwind text utilities en páginas públicas */
+.dark .tc-public-layout .text-gray-900,
+.dark .tc-public-layout .text-gray-800,
+.dark .tc-public-layout .text-gray-700,
+.dark .tc-public-layout .text-gray-600,
+.dark .tc-public-layout .text-gray-500,
+.dark .tc-public-layout .text-gray-400,
+.dark .tc-public-layout .text-gray-300,
+.dark .tc-public-layout .text-slate-900,
+.dark .tc-public-layout .text-slate-800,
+.dark .tc-public-layout .text-slate-700,
+.dark .tc-public-layout .text-slate-600,
+.dark .tc-public-layout .text-slate-500 {
+    color: inherit !important;
+}
+
+/* Tailwind bg utilities en páginas públicas */
+.dark .tc-public-layout .bg-white {
+    background-color: #ffffff !important;
+}
+
+.dark .tc-public-layout .bg-gray-50,
+.dark .tc-public-layout .bg-gray-100 {
+    background-color: initial !important;
+}
+
+/* Borders */
+.dark .tc-public-layout .border-gray-100,
+.dark .tc-public-layout .border-gray-200,
+.dark .tc-public-layout .border-gray-300 {
+    border-color: initial !important;
+}
+
+/* shadcn data-slot dentro del público (si aplica) */
+.dark .tc-public-layout [data-slot="input"],
+.dark .tc-public-layout [data-slot="label"] {
+    background: #ffffff !important;
+    border-color: #d0c4b0 !important;
+    color: #3d2f1e !important;
 }
