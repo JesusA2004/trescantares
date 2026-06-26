@@ -3,11 +3,12 @@ import { toast } from 'vue-sonner';
 import type { FlashToast } from '@/types/ui';
 
 export function initializeFlashToast(): void {
-    router.on('flash', (event) => {
-        const flash = (event as CustomEvent).detail?.flash;
-        const data = flash?.toast as FlashToast | undefined;
+    router.on('navigate', (event) => {
+        const props = (event as CustomEvent).detail?.page?.props as Record<string, unknown> | undefined;
+        const flash = props?.flash as { toast?: FlashToast } | undefined;
+        const data = flash?.toast;
 
-        if (!data) {
+        if (!data?.type || !data?.message) {
             return;
         }
 

@@ -14,34 +14,29 @@ import { store } from '@/routes/password/confirm';
 
 defineOptions({
     layout: {
-        title: 'Confirm your password',
-        description:
-            'This is a secure area of the application. Please confirm your password before continuing.',
+        title: 'Confirmar contraseña',
+        description: 'Esta es un área segura. Confirma tu contraseña para continuar.',
     },
 });
 </script>
 
 <template>
-    <Head title="Confirm password" />
+    <Head title="Confirmar contraseña" />
 
     <PasskeyVerify
         :routes="{
             options: confirmOptions(),
             submit: confirmStore(),
         }"
-        label="Confirm with passkey"
-        loading-label="Confirming..."
-        separator="Or confirm with password"
+        label="Confirmar con llave de acceso"
+        loading-label="Confirmando..."
+        separator="O confirma con contraseña"
     />
 
-    <Form
-        v-bind="store.form()"
-        reset-on-success
-        v-slot="{ errors, processing }"
-    >
+    <Form v-bind="store.form()" reset-on-success v-slot="{ errors, processing }">
         <div class="space-y-6">
             <div class="grid gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Contraseña</Label>
                 <PasswordInput
                     id="password"
                     name="password"
@@ -50,18 +45,17 @@ defineOptions({
                     autocomplete="current-password"
                     autofocus
                 />
-
                 <InputError :message="errors.password" />
             </div>
 
             <div class="flex items-center">
                 <Button
-                    class="w-full"
+                    class="w-full tc-auth-submit-btn"
                     :disabled="processing"
                     data-test="confirm-password-button"
                 >
                     <Spinner v-if="processing" />
-                    Confirm password
+                    Confirmar
                 </Button>
             </div>
         </div>

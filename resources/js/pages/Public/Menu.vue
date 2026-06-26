@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import MenuCard from '@/components/Public/MenuCard.vue';
 import {
@@ -8,19 +8,78 @@ import {
 } from '@/lib/tres-cantares-assets';
 
 const props = defineProps<{
-    settings: Record<string, any>
-    categories: any[]
+    settings: Record<string, any>;
+    categories: any[];
 }>();
 
-const activeCategory = ref<number | null>(null);
+// Active section tracked by IntersectionObserver
+const activeSectionId = ref<string | null>(null);
+const searchQuery = ref('');
+const showScrollTop = ref(false);
 
+// All categories shown (no hiding) — scroll-based navigation
 const filteredCategories = computed(() => {
-    if (activeCategory.value === null) return props.categories;
-    return props.categories.filter(c => c.id === activeCategory.value);
+    const q = searchQuery.value.trim().toLowerCase();
+    if (!q) return props.categories;
+    return props.categories.map((cat) => ({
+        ...cat,
+        items: (cat.items ?? []).filter((item: any) =>
+            item.name.toLowerCase().includes(q) ||
+            (item.description ?? '').toLowerCase().includes(q),
+        ),
+    })).filter((cat) => cat.items.length > 0);
 });
 
-function setCategory(id: number | null) {
-    activeCategory.value = id;
+function categoryAnchor(cat: any): string {
+    return `cat-${cat.id}`;
+}
+
+function scrollTo(catId: number | null) {
+    if (catId === null) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
+    const el = document.getElementById(`cat-${catId}`);
+    if (el) {
+        const offset = 90; // sticky nav height
+        const top = el.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top, behavior: 'smooth' });
+    }
+}
+
+let observer: IntersectionObserver | null = null;
+
+onMounted(() => {
+    observer = new IntersectionObserver(
+        (entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    activeSectionId.value = entry.target.id;
+                }
+            }
+        },
+        { rootMargin: '-30% 0px -60% 0px', threshold: 0 },
+    );
+
+    props.categories.forEach((cat) => {
+        const el = document.getElementById(`cat-${cat.id}`);
+        if (el) observer!.observe(el);
+    });
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+});
+
+onUnmounted(() => {
+    observer?.disconnect();
+    window.removeEventListener('scroll', onScroll);
+});
+
+function onScroll() {
+    showScrollTop.value = window.scrollY > 400;
+}
+
+function isActive(catId: number): boolean {
+    return activeSectionId.value === `cat-${catId}`;
 }
 </script>
 
@@ -96,24 +155,42 @@ function setCategory(id: number | null) {
             </div>
         </header>
 
-        <!-- ── FILTROS DE CATEGORÍA ─────────────────── -->
-        <div v-if="categories.length > 0" class="tc-menu-filters-wrap" style="position:relative; z-index:30;">
-            <div class="tc-menu-filters">
-                <button
-                    class="tc-menu-tab font-display"
-                    :class="{ 'tc-menu-tab--active': activeCategory === null }"
-                    @click="setCategory(null)">
-                    <span class="tc-menu-tab-star">✦</span>
-                    Todos
-                </button>
-                <button
-                    v-for="cat in categories" :key="cat.id"
-                    class="tc-menu-tab font-display"
-                    :class="{ 'tc-menu-tab--active': activeCategory === cat.id }"
-                    @click="setCategory(cat.id)">
-                    <span class="tc-menu-tab-star">✦</span>
-                    {{ cat.name }}
-                </button>
+        <!-- ── NAVEGACIÓN RÁPIDA STICKY ───────────────── -->
+        <div v-if="categories.length > 0" class="tc-menu-quicknav-wrap">
+            <div class="tc-menu-quicknav">
+                <!-- Search -->
+                <div class="tc-menu-quicknav-search">
+                    <svg class="tc-menu-quicknav-search-icon" viewBox="0 0 20 20" fill="none">
+                        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    <input
+                        v-model="searchQuery"
+                        type="search"
+                        placeholder="Buscar platillo…"
+                        class="tc-menu-quicknav-input"
+                    />
+                </div>
+
+                <!-- Category pills -->
+                <div class="tc-menu-quicknav-pills">
+                    <button
+                        class="tc-menu-quicknav-pill font-display"
+                        :class="{ 'tc-menu-quicknav-pill--active': !activeSectionId }"
+                        @click="scrollTo(null)"
+                    >
+                        <span>✦</span> Inicio
+                    </button>
+                    <button
+                        v-for="cat in categories"
+                        :key="cat.id"
+                        class="tc-menu-quicknav-pill font-display"
+                        :class="{ 'tc-menu-quicknav-pill--active': isActive(cat.id) }"
+                        @click="scrollTo(cat.id)"
+                    >
+                        {{ cat.name }}
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -125,6 +202,7 @@ function setCategory(id: number | null) {
                     <section
                         v-for="category in filteredCategories"
                         :key="category.id"
+                        :id="categoryAnchor(category)"
                         class="tc-menu-section"
                     >
                         <!-- Encabezado de sección -->
@@ -173,6 +251,20 @@ function setCategory(id: number | null) {
 
             </div>
         </main>
+
+        <!-- Botón subir -->
+        <Transition name="tc-scroll-top">
+            <button
+                v-if="showScrollTop"
+                class="tc-scroll-top-btn"
+                aria-label="Subir al inicio"
+                @click="scrollTo(null)"
+            >
+                <svg viewBox="0 0 20 20" fill="none" class="w-5 h-5">
+                    <path d="M10 15V5M5 10l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </Transition>
 
     </div>
 </template>

@@ -1,29 +1,79 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ImagePlus, Star, Trash2, X } from 'lucide-vue-next';
+import AdminFormSection from '@/components/admin/AdminFormSection.vue';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import TcInput from '@/components/tc/TcInput.vue';
+import TcSelect from '@/components/tc/TcSelect.vue';
+import TcSwitch from '@/components/tc/TcSwitch.vue';
+import TcTextarea from '@/components/tc/TcTextarea.vue';
 
-defineProps<{ categories: any[] }>();
+const props = defineProps<{
+    categories: { id: number; name: string }[];
+}>();
+
+const categoryOptions = props.categories.map((c) => ({ value: c.id, label: c.name }));
 
 const form = useForm({
-    menu_category_id: '',
+    menu_category_id: '' as string | number,
     name: '',
     description: '',
-    price: '',
-    image: null as File | null,
+    badge: '',
+    price: '' as string | number,
     ingredients: '',
     is_featured: false,
     is_active: true,
     sort_order: 0,
+    images: [] as File[],
+    primary_image_index: 0,
 });
 
-const imagePreview = ref<string | null>(null);
+interface Preview {
+    url: string;
+    file: File;
+    isPrimary: boolean;
+}
 
-function handleImage(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-        form.image = file;
-        imagePreview.value = URL.createObjectURL(file);
+const previews = ref<Preview[]>([]);
+const dropzone = ref<HTMLDivElement>();
+
+function handleFiles(files: FileList | File[]) {
+    const arr = Array.from(files);
+    arr.forEach((file) => {
+        if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) return;
+        const url = URL.createObjectURL(file);
+        previews.value.push({ url, file, isPrimary: previews.value.length === 0 });
+        form.images.push(file);
+    });
+    form.primary_image_index = previews.value.findIndex((p) => p.isPrimary);
+}
+
+function onFileInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (input.files) handleFiles(input.files);
+    input.value = '';
+}
+
+function onDrop(e: DragEvent) {
+    e.preventDefault();
+    if (e.dataTransfer?.files) handleFiles(e.dataTransfer.files);
+}
+
+function removeImage(idx: number) {
+    URL.revokeObjectURL(previews.value[idx].url);
+    const wasPrimary = previews.value[idx].isPrimary;
+    previews.value.splice(idx, 1);
+    form.images.splice(idx, 1);
+    if (wasPrimary && previews.value.length > 0) {
+        previews.value[0].isPrimary = true;
     }
+    form.primary_image_index = previews.value.findIndex((p) => p.isPrimary);
+}
+
+function setPrimary(idx: number) {
+    previews.value.forEach((p, i) => { p.isPrimary = i === idx; });
+    form.primary_image_index = idx;
 }
 
 function submit() {
@@ -34,109 +84,184 @@ function submit() {
 <template>
     <Head title="Nuevo Platillo" />
 
-    <div class="max-w-2xl space-y-6">
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-semibold">Nuevo Platillo</h1>
-            <Link href="/admin/menu-items" class="text-sm text-gray-500 hover:text-gray-700">← Volver</Link>
-        </div>
+    <div class="tc-admin-page space-y-5">
 
-        <form @submit.prevent="submit" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
-            <!-- Categoría -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
-                <select v-model="form.menu_category_id" required
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="">Seleccionar categoría</option>
-                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                </select>
-                <p v-if="form.errors.menu_category_id" class="mt-1 text-xs text-red-600">{{ form.errors.menu_category_id }}</p>
-            </div>
+        <AdminPageHeader title="Nuevo Platillo" description="Agrega un platillo al menú">
+            <template #label>Platillos</template>
+            <template #actions>
+                <Link href="/admin/menu-items" class="tc-btn-secondary">← Volver</Link>
+            </template>
+        </AdminPageHeader>
 
-            <!-- Nombre -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                <input v-model="form.name" type="text" required
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                <p v-if="form.errors.name" class="mt-1 text-xs text-red-600">{{ form.errors.name }}</p>
-            </div>
+        <form @submit.prevent="submit">
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
-            <!-- Descripción -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                <textarea v-model="form.description" rows="2"
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
-            </div>
+                <!-- Left: images -->
+                <div class="xl:col-span-1 space-y-4">
+                    <div class="tc-admin-card p-5">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <ImagePlus class="w-4 h-4 text-[var(--tc-blue)]" />
+                            Imágenes del platillo
+                        </h3>
 
-            <!-- Precio -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Precio *</label>
-                <div class="relative">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                    <input v-model="form.price" type="number" min="0" step="0.01" required
-                        class="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <p v-if="form.errors.price" class="mt-1 text-xs text-red-600">{{ form.errors.price }}</p>
-            </div>
+                        <!-- Dropzone -->
+                        <div
+                            ref="dropzone"
+                            class="border-2 border-dashed border-amber-200 rounded-xl p-6 text-center cursor-pointer hover:border-[var(--tc-blue)] hover:bg-blue-50/30 transition-colors"
+                            @dragover.prevent
+                            @drop="onDrop"
+                            @click="($refs.fileInput as HTMLInputElement).click()"
+                        >
+                            <ImagePlus class="w-8 h-8 text-amber-300 mx-auto mb-2" />
+                            <p class="text-sm text-gray-500">Arrastra imágenes o haz clic</p>
+                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, WEBP · máx 4 MB por imagen</p>
+                        </div>
+                        <input
+                            ref="fileInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            class="hidden"
+                            @change="onFileInput"
+                        />
 
-            <!-- Imagen -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Imagen</label>
-                <div class="flex items-start gap-4">
-                    <div class="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <img v-if="imagePreview" :src="imagePreview" class="w-full h-full object-cover" />
-                        <svg v-else class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
+                        <!-- Preview grid -->
+                        <div v-if="previews.length" class="mt-4 grid grid-cols-2 gap-2">
+                            <div
+                                v-for="(preview, idx) in previews"
+                                :key="preview.url"
+                                class="relative group rounded-xl overflow-hidden border-2 transition-colors"
+                                :class="preview.isPrimary ? 'border-[var(--tc-blue)]' : 'border-transparent'"
+                            >
+                                <img :src="preview.url" :alt="`Imagen ${idx + 1}`" class="w-full aspect-square object-cover" />
+                                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                                <!-- Primary badge -->
+                                <div v-if="preview.isPrimary" class="absolute top-1.5 left-1.5">
+                                    <span class="tc-badge tc-badge-blue text-[10px] flex items-center gap-1">
+                                        <Star class="w-2.5 h-2.5" fill="currentColor" /> Principal
+                                    </span>
+                                </div>
+                                <!-- Actions -->
+                                <div class="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        v-if="!preview.isPrimary"
+                                        type="button"
+                                        class="w-6 h-6 rounded-lg bg-amber-400 text-white flex items-center justify-center"
+                                        title="Marcar como principal"
+                                        @click.stop="setPrimary(idx)"
+                                    >
+                                        <Star class="w-3 h-3" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="w-6 h-6 rounded-lg bg-red-500 text-white flex items-center justify-center"
+                                        title="Eliminar"
+                                        @click.stop="removeImage(idx)"
+                                    >
+                                        <X class="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-gray-400 mt-2">
+                            La imagen marcada con ⭐ se mostrará en el menú público.
+                        </p>
                     </div>
-                    <div class="flex-1">
-                        <input type="file" accept="image/*" @change="handleImage"
-                            class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
-                        <p class="mt-1 text-xs text-gray-400">JPG, PNG, WEBP. Máx. 4MB</p>
-                        <p v-if="form.errors.image" class="mt-1 text-xs text-red-600">{{ form.errors.image }}</p>
+                </div>
+
+                <!-- Right: form fields -->
+                <div class="xl:col-span-2 space-y-4">
+                    <AdminFormSection title="Información básica">
+                        <TcSelect
+                            id="category"
+                            v-model="form.menu_category_id"
+                            label="Categoría"
+                            required
+                            placeholder="Seleccionar categoría"
+                            :options="categoryOptions"
+                            :error="form.errors.menu_category_id"
+                        />
+                        <TcInput
+                            id="name"
+                            v-model="form.name"
+                            label="Nombre del platillo"
+                            required
+                            placeholder="Ej: Enchiladas verdes, Pozole rojo…"
+                            :error="form.errors.name"
+                        />
+                        <TcTextarea
+                            id="description"
+                            v-model="form.description"
+                            label="Descripción"
+                            placeholder="Describe brevemente el platillo…"
+                            :rows="3"
+                        />
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="tc-field">
+                                <label for="price">Precio <span class="text-[var(--tc-pink)]">*</span></label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
+                                    <input
+                                        id="price"
+                                        v-model="form.price"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        required
+                                        class="tc-input pl-8"
+                                        :class="{ 'border-[var(--tc-pink)]': form.errors.price }"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <p v-if="form.errors.price" class="text-xs text-[var(--tc-pink)] mt-0.5">{{ form.errors.price }}</p>
+                            </div>
+                            <TcInput
+                                id="badge"
+                                v-model="form.badge"
+                                label="Etiqueta"
+                                placeholder="Ej: Nuevo, Popular, Chef's pick…"
+                                hint="Badge visible en el menú"
+                            />
+                        </div>
+                    </AdminFormSection>
+
+                    <AdminFormSection title="Detalles">
+                        <TcTextarea
+                            id="ingredients"
+                            v-model="form.ingredients"
+                            label="Ingredientes"
+                            placeholder="Ej: pollo, chile ancho, crema, queso…"
+                            :rows="2"
+                        />
+                    </AdminFormSection>
+
+                    <AdminFormSection title="Configuración">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <TcInput
+                                id="sort_order"
+                                v-model="form.sort_order"
+                                type="number"
+                                label="Orden"
+                                hint="Menor número = primero"
+                            />
+                            <div class="flex items-end pb-1">
+                                <TcSwitch v-model="form.is_active" label="Activo" description="Visible en el menú" />
+                            </div>
+                            <div class="flex items-end pb-1">
+                                <TcSwitch v-model="form.is_featured" label="Destacado" description="Aparece como especial" />
+                            </div>
+                        </div>
+                    </AdminFormSection>
+
+                    <div class="flex gap-3">
+                        <button type="submit" class="tc-btn-primary" :disabled="form.processing">
+                            {{ form.processing ? 'Guardando…' : 'Crear platillo' }}
+                        </button>
+                        <Link href="/admin/menu-items" class="tc-btn-secondary">Cancelar</Link>
                     </div>
                 </div>
-            </div>
 
-            <!-- Ingredientes -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Ingredientes</label>
-                <textarea v-model="form.ingredients" rows="2" placeholder="ej: pollo, chile ancho, tomate..."
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
-            </div>
-
-            <!-- Opciones -->
-            <div class="grid grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Orden</label>
-                    <input v-model.number="form.sort_order" type="number" min="0"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div class="flex items-end pb-2">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input v-model="form.is_active" type="checkbox"
-                            class="w-4 h-4 text-blue-600 rounded border-gray-300" />
-                        <span class="text-sm font-medium text-gray-700">Activo</span>
-                    </label>
-                </div>
-                <div class="flex items-end pb-2">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input v-model="form.is_featured" type="checkbox"
-                            class="w-4 h-4 text-yellow-500 rounded border-gray-300" />
-                        <span class="text-sm font-medium text-gray-700">Destacado</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="flex gap-3 pt-2">
-                <button type="submit" :disabled="form.processing"
-                    class="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                    {{ form.processing ? 'Guardando...' : 'Crear Platillo' }}
-                </button>
-                <Link href="/admin/menu-items"
-                    class="px-6 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700">
-                    Cancelar
-                </Link>
             </div>
         </form>
     </div>

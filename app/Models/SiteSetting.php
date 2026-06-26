@@ -7,7 +7,11 @@ use Illuminate\Support\Facades\Storage;
 
 class SiteSetting extends Model
 {
-    protected $fillable = ['key', 'value', 'type'];
+    protected $fillable = ['key', 'value', 'type', 'group', 'is_public'];
+
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
 
     public static function get(string $key, mixed $default = null): mixed
     {
@@ -16,14 +20,23 @@ class SiteSetting extends Model
         return $setting?->value ?? $default;
     }
 
-    public static function set(string $key, mixed $value): void
+    public static function set(string $key, mixed $value, string $group = 'general', string $type = 'text'): void
     {
-        static::updateOrCreate(['key' => $key], ['value' => $value]);
+        static::updateOrCreate(['key' => $key], [
+            'value' => $value,
+            'group' => $group,
+            'type' => $type,
+        ]);
     }
 
     public static function allAsArray(): array
     {
         return static::all()->pluck('value', 'key')->toArray();
+    }
+
+    public static function byGroup(string $group): array
+    {
+        return static::where('group', $group)->get()->pluck('value', 'key')->toArray();
     }
 
     public function getImageUrlAttribute(): ?string

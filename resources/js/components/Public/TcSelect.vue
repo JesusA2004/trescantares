@@ -13,7 +13,7 @@ defineEmits<{ 'update:modelValue': [value: string] }>();
 </script>
 
 <template>
-    <Select :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)">
+    <Select :model-value="modelValue" @update:model-value="(v) => $emit('update:modelValue', v as string)">
         <SelectTrigger class="tc-jobs-input tc-select-trigger font-body">
             <SelectValue :placeholder="placeholder ?? 'Selecciona una opción'" />
         </SelectTrigger>

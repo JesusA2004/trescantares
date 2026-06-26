@@ -13,13 +13,17 @@ use Inertia\Response;
 
 class SettingController extends Controller
 {
-    private array $imageKeys = ['logo', 'hero_background', 'location_background'];
+    private array $imageKeys = ['logo', 'favicon', 'hero_background', 'location_background'];
 
     private array $textKeys = [
         'restaurant_name', 'contact_phone', 'whatsapp_phone', 'address',
-        'google_maps_embed_url', 'schedule', 'facebook_url', 'instagram_url', 'tiktok_url',
+        'google_maps_embed_url', 'schedule', 'currency', 'timezone',
+        'facebook_url', 'instagram_url', 'tiktok_url',
         'billing_url', 'privacy_policy_url', 'jobs_url',
+        'menu_intro_text', 'jobs_whatsapp', 'jobs_intro_text',
     ];
+
+    private array $boolKeys = ['menu_show_prices', 'jobs_enabled'];
 
     public function index(): Response
     {
@@ -43,6 +47,9 @@ class SettingController extends Controller
         foreach ($this->textKeys as $key) {
             $rules[$key] = 'nullable|string';
         }
+        foreach ($this->boolKeys as $key) {
+            $rules[$key] = 'nullable|boolean';
+        }
         foreach ($this->imageKeys as $key) {
             $rules[$key] = 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120';
         }
@@ -53,6 +60,10 @@ class SettingController extends Controller
             SiteSetting::set($key, $request->input($key));
         }
 
+        foreach ($this->boolKeys as $key) {
+            SiteSetting::set($key, $request->boolean($key) ? '1' : '0');
+        }
+
         foreach ($this->imageKeys as $key) {
             if ($request->hasFile($key)) {
                 $existing = SiteSetting::get($key);
@@ -60,7 +71,11 @@ class SettingController extends Controller
                     Storage::disk('public')->delete($existing);
                 }
                 $path = $request->file($key)->store('site', 'public');
-                SiteSetting::updateOrCreate(['key' => $key], ['value' => $path, 'type' => 'image']);
+                SiteSetting::updateOrCreate(['key' => $key], [
+                    'value' => $path,
+                    'type' => 'image',
+                    'group' => 'branding',
+                ]);
             }
         }
 

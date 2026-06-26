@@ -31,7 +31,11 @@
       "Bash(node *)",
       "Bash(npm list *)",
       "Bash(npm install *)",
-      "Bash(grep -E \"GET.*/\\(bolsa|aviso|menu|ubicacion|$\\)\")"
+      "Bash(grep -E \"GET.*/\\(bolsa|aviso|menu|ubicacion|$\\)\")",
+      "Bash(git checkout *)",
+      "Bash(grep -E \"\\\\.php$\")",
+      "Bash(composer show *)",
+      "Bash(php -l app/Http/Controllers/Admin/ReportsController.php app/Http/Middleware/EnsureModuleEnabled.php app/Exports/MenuReportExport.php app/Http/Controllers/Public/JobsController.php)"
     ]
   }
 }

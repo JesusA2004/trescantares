@@ -10,7 +10,8 @@ use Illuminate\Support\Str;
 class MenuCategory extends Model
 {
     protected $fillable = [
-        'name', 'slug', 'description', 'image', 'sort_order', 'is_active',
+        'name', 'slug', 'description', 'image', 'icon', 'color',
+        'sort_order', 'is_active',
     ];
 
     protected $casts = [

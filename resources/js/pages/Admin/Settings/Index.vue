@@ -1,180 +1,212 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import {
+    Briefcase,
+    Globe,
+    Image as ImageIcon,
+    Info,
+    Settings,
+    UtensilsCrossed,
+} from 'lucide-vue-next';
 import { ref } from 'vue';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AdminFormSection from '@/components/admin/AdminFormSection.vue';
+import TcImageUpload from '@/components/tc/TcImageUpload.vue';
+import TcInput from '@/components/tc/TcInput.vue';
+import TcSwitch from '@/components/tc/TcSwitch.vue';
+import TcTextarea from '@/components/tc/TcTextarea.vue';
 
 const props = defineProps<{
-    settings: Record<string, any>
-    imageKeys: string[]
+    settings: Record<string, any>;
+    imageKeys: string[];
 }>();
 
+const activeTab = ref<string>('general');
+
+const tabs = [
+    { key: 'general', label: 'General', icon: Info },
+    { key: 'branding', label: 'Branding', icon: ImageIcon },
+    { key: 'menu', label: 'Menú', icon: UtensilsCrossed },
+    { key: 'jobs', label: 'Bolsa', icon: Briefcase },
+    { key: 'social', label: 'Redes', icon: Globe },
+    { key: 'urls', label: 'URLs', icon: Settings },
+];
+
 const form = useForm({
+    // General
     restaurant_name: props.settings.restaurant_name ?? '',
     contact_phone: props.settings.contact_phone ?? '',
     whatsapp_phone: props.settings.whatsapp_phone ?? '',
     address: props.settings.address ?? '',
     google_maps_embed_url: props.settings.google_maps_embed_url ?? '',
     schedule: props.settings.schedule ?? '',
+    currency: props.settings.currency ?? 'MXN',
+    timezone: props.settings.timezone ?? 'America/Mexico_City',
+    // Social
     facebook_url: props.settings.facebook_url ?? '',
     instagram_url: props.settings.instagram_url ?? '',
     tiktok_url: props.settings.tiktok_url ?? '',
+    // URLs
     billing_url: props.settings.billing_url ?? '',
     privacy_policy_url: props.settings.privacy_policy_url ?? '',
     jobs_url: props.settings.jobs_url ?? '',
+    // Menu
+    menu_show_prices: props.settings.menu_show_prices === '1' || props.settings.menu_show_prices === true,
+    menu_intro_text: props.settings.menu_intro_text ?? '',
+    // Jobs
+    jobs_whatsapp: props.settings.jobs_whatsapp ?? '',
+    jobs_intro_text: props.settings.jobs_intro_text ?? '',
+    jobs_enabled: props.settings.jobs_enabled === '1' || props.settings.jobs_enabled === true,
+    // Images
     logo: null as File | null,
+    favicon: null as File | null,
     hero_background: null as File | null,
     location_background: null as File | null,
     _method: 'POST',
 });
 
-const previews: Record<string, string | null> = {
-    logo: props.settings.logo_url ?? null,
-    hero_background: props.settings.hero_background_url ?? null,
-    location_background: props.settings.location_background_url ?? null,
-};
+type ImageKey = 'logo' | 'favicon' | 'hero_background' | 'location_background';
 
-const previewRefs = ref({ ...previews });
-
-function handleImage(key: string, e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-        (form as any)[key] = file;
-        previewRefs.value[key] = URL.createObjectURL(file);
-    }
+function handleImage(key: ImageKey, file: File | null) {
+    (form as any)[key] = file;
 }
+
+const imageLabels: Record<string, string> = {
+    logo: 'Logo del restaurante',
+    favicon: 'Favicon (ícono del navegador)',
+    hero_background: 'Imagen de fondo del hero',
+    location_background: 'Imagen de fondo de ubicación',
+};
 
 function submit() {
     form.post('/admin/settings', { forceFormData: true });
 }
-
-const imageLabels: Record<string, string> = {
-    logo: 'Logo del Restaurante',
-    hero_background: 'Imagen de Fondo del Hero',
-    location_background: 'Imagen de Fondo de Ubicación',
-};
 </script>
 
 <template>
-    <Head title="Configuración del Sitio" />
+    <Head title="Configuración" />
 
-    <div class="max-w-3xl space-y-6">
-        <h1 class="text-2xl font-semibold">Configuración del Sitio</h1>
+    <div class="tc-admin-page space-y-5">
 
-        <form @submit.prevent="submit" class="space-y-6">
-            <!-- Datos básicos -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
-                <h2 class="font-semibold text-gray-800 text-lg border-b pb-3">Información del Restaurante</h2>
+        <AdminPageHeader title="Configuración" description="Ajusta los datos y apariencia del sitio">
+            <template #label>Sistema</template>
+        </AdminPageHeader>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Restaurante</label>
-                        <input v-model="form.restaurant_name" type="text"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono de Contacto</label>
-                        <input v-model="form.contact_phone" type="text"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp (solo números)</label>
-                        <input v-model="form.whatsapp_phone" type="text"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-                        <input v-model="form.address" type="text"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                </div>
+        <!-- Tabs -->
+        <div class="tc-tabs">
+            <button
+                v-for="tab in tabs"
+                :key="tab.key"
+                type="button"
+                class="tc-tab"
+                :class="{ active: activeTab === tab.key }"
+                @click="activeTab = tab.key"
+            >
+                <component :is="tab.icon" class="w-3.5 h-3.5" />
+                {{ tab.label }}
+            </button>
+        </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Horario</label>
-                    <textarea v-model="form.schedule" rows="4" placeholder="Lunes a Jueves: 1pm – 10pm&#10;Viernes y Sábado: 1pm – 12am"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
-                </div>
+        <form @submit.prevent="submit" class="space-y-4">
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Google Maps Embed URL</label>
-                    <textarea v-model="form.google_maps_embed_url" rows="3" placeholder="https://www.google.com/maps/embed?pb=..."
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none font-mono"></textarea>
-                    <p class="mt-1 text-xs text-gray-400">Copia el src del iframe de Google Maps.</p>
-                </div>
-            </div>
+            <!-- TAB: General -->
+            <template v-if="activeTab === 'general'">
+                <AdminFormSection title="Información del restaurante">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <TcInput id="restaurant_name" v-model="form.restaurant_name" label="Nombre" />
+                        <TcInput id="contact_phone" v-model="form.contact_phone" label="Teléfono de contacto" />
+                        <TcInput id="whatsapp_phone" v-model="form.whatsapp_phone" label="WhatsApp (solo números)" hint="Ej: 527774475431" />
+                        <TcInput id="address" v-model="form.address" label="Dirección" />
+                        <TcInput id="currency" v-model="form.currency" label="Moneda" hint="Ej: MXN, USD" />
+                        <TcInput id="timezone" v-model="form.timezone" label="Zona horaria" hint="Ej: America/Mexico_City" />
+                    </div>
+                    <TcTextarea id="schedule" v-model="form.schedule" label="Horarios" :rows="4" placeholder="Lunes a Jueves: 9am–10pm&#10;Martes: cerrado" />
+                    <TcTextarea id="maps_url" v-model="form.google_maps_embed_url" label="Google Maps Embed URL" :rows="3" hint="Copia el src del iframe de Google Maps" />
+                </AdminFormSection>
+            </template>
 
-            <!-- Redes sociales -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-                <h2 class="font-semibold text-gray-800 text-lg border-b pb-3">Redes Sociales</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Facebook URL</label>
-                        <input v-model="form.facebook_url" type="url"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            <!-- TAB: Branding -->
+            <template v-if="activeTab === 'branding'">
+                <AdminFormSection title="Imágenes del sitio" description="Dejar sin cambios para conservar las imágenes actuales">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <TcImageUpload
+                            v-for="key in imageKeys"
+                            :key="key"
+                            :label="imageLabels[key]"
+                            :current-url="settings[key + '_url'] ?? null"
+                            :max-mb="5"
+                            @change="(f) => handleImage(key as ImageKey, f)"
+                        />
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Instagram URL</label>
-                        <input v-model="form.instagram_url" type="url"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">TikTok URL</label>
-                        <input v-model="form.tiktok_url" type="url"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                </div>
-            </div>
+                </AdminFormSection>
+            </template>
 
-            <!-- URLs del sitio -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-                <h2 class="font-semibold text-gray-800 text-lg border-b pb-3">URLs del Sitio</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Facturación URL</label>
-                        <input v-model="form.billing_url" type="text"
-                            placeholder="https://..."
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Aviso de Privacidad URL</label>
-                        <input v-model="form.privacy_policy_url" type="text"
-                            placeholder="https://..."
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Bolsa de Trabajo URL</label>
-                        <input v-model="form.jobs_url" type="text"
-                            placeholder="https://..."
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                    </div>
-                </div>
-            </div>
+            <!-- TAB: Menú -->
+            <template v-if="activeTab === 'menu'">
+                <AdminFormSection title="Configuración del menú público">
+                    <TcSwitch
+                        v-model="form.menu_show_prices"
+                        label="Mostrar precios"
+                        description="Los precios se verán en el menú público"
+                    />
+                    <TcTextarea
+                        id="menu_intro_text"
+                        v-model="form.menu_intro_text"
+                        label="Texto introductorio del menú"
+                        :rows="3"
+                        placeholder="Texto que aparece al inicio del menú público…"
+                    />
+                </AdminFormSection>
+            </template>
 
-            <!-- Imágenes -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
-                <h2 class="font-semibold text-gray-800 text-lg border-b pb-3">Imágenes</h2>
+            <!-- TAB: Bolsa -->
+            <template v-if="activeTab === 'jobs'">
+                <AdminFormSection title="Bolsa de trabajo">
+                    <TcSwitch
+                        v-model="form.jobs_enabled"
+                        label="Bolsa de trabajo activa"
+                        description="Habilita o deshabilita la sección de bolsa de trabajo"
+                    />
+                    <TcInput
+                        id="jobs_whatsapp"
+                        v-model="form.jobs_whatsapp"
+                        label="WhatsApp de bolsa de trabajo (solo números)"
+                        hint="Ej: 527772678443"
+                    />
+                    <TcTextarea
+                        id="jobs_intro_text"
+                        v-model="form.jobs_intro_text"
+                        label="Texto introductorio"
+                        :rows="4"
+                        placeholder="Describe la cultura y oportunidades del restaurante…"
+                    />
+                </AdminFormSection>
+            </template>
 
-                <div v-for="key in imageKeys" :key="key" class="flex items-start gap-4">
-                    <div class="w-28 h-20 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <img v-if="previewRefs[key]" :src="previewRefs[key]!" class="w-full h-full object-cover" />
-                        <svg v-else class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ imageLabels[key] }}</label>
-                        <input type="file" accept="image/*" @change="(e) => handleImage(key, e)"
-                            class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
-                        <p class="mt-1 text-xs text-gray-400">JPG, PNG, WEBP. Máx. 5MB. Dejar vacío para conservar la imagen actual.</p>
-                    </div>
-                </div>
-            </div>
+            <!-- TAB: Redes -->
+            <template v-if="activeTab === 'social'">
+                <AdminFormSection title="Redes sociales">
+                    <TcInput id="facebook_url" v-model="form.facebook_url" label="Facebook URL" placeholder="https://facebook.com/…" />
+                    <TcInput id="instagram_url" v-model="form.instagram_url" label="Instagram URL" placeholder="https://instagram.com/…" />
+                    <TcInput id="tiktok_url" v-model="form.tiktok_url" label="TikTok URL" placeholder="https://tiktok.com/@…" />
+                </AdminFormSection>
+            </template>
 
-            <div class="flex gap-3">
-                <button type="submit" :disabled="form.processing"
-                    class="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors">
-                    {{ form.processing ? 'Guardando...' : 'Guardar Configuración' }}
+            <!-- TAB: URLs -->
+            <template v-if="activeTab === 'urls'">
+                <AdminFormSection title="URLs del sitio">
+                    <TcInput id="billing_url" v-model="form.billing_url" label="Facturación URL" placeholder="https://…" />
+                    <TcInput id="privacy_policy_url" v-model="form.privacy_policy_url" label="Aviso de Privacidad URL" />
+                    <TcInput id="jobs_url" v-model="form.jobs_url" label="Bolsa de Trabajo URL" />
+                </AdminFormSection>
+            </template>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="tc-btn-primary" :disabled="form.processing">
+                    {{ form.processing ? 'Guardando…' : 'Guardar configuración' }}
                 </button>
             </div>
+
         </form>
     </div>
 </template>

@@ -20,7 +20,9 @@ class CategoryController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
-            ->map(fn ($c) => array_merge($c->toArray(), ['image_url' => $c->image_url]));
+            ->map(fn ($c) => array_merge($c->toArray(), [
+                'image_url' => $c->image_url,
+            ]));
 
         return Inertia::render('Admin/Categories/Index', compact('categories'));
     }
@@ -35,6 +37,8 @@ class CategoryController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'icon' => 'nullable|string|max:60',
+            'color' => 'nullable|string|max:20',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'sort_order' => 'nullable|integer',
             'is_active' => 'boolean',
@@ -57,7 +61,9 @@ class CategoryController extends Controller
     public function edit(MenuCategory $category): Response
     {
         return Inertia::render('Admin/Categories/Edit', [
-            'category' => array_merge($category->toArray(), ['image_url' => $category->image_url]),
+            'category' => array_merge($category->toArray(), [
+                'image_url' => $category->image_url,
+            ]),
         ]);
     }
 
@@ -66,6 +72,8 @@ class CategoryController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'icon' => 'nullable|string|max:60',
+            'color' => 'nullable|string|max:20',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'sort_order' => 'nullable|integer',
             'is_active' => 'boolean',

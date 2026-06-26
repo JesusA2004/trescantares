@@ -11,6 +11,12 @@ class JobsController extends Controller
 {
     public function index(): Response
     {
+        $enabled = SiteSetting::get('jobs_enabled', '0');
+
+        if ($enabled !== '1') {
+            abort(404);
+        }
+
         $settings = SiteSetting::allAsArray();
 
         foreach (['logo', 'hero_background', 'location_background'] as $key) {
