@@ -26,15 +26,26 @@ const form = useForm({
 });
 
 async function toggleJobsEnabled(value: boolean | undefined) {
-    if (value === undefined) return;
+    if (value === undefined) {
+return;
+}
+
     if (!value) {
         const ok = await confirm(
             '¿Desactivar bolsa de trabajo pública?',
             'Los visitantes ya no podrán ver la página /bolsa-de-trabajo.',
-            { icon: 'warning', confirmText: 'Sí, desactivar', cancelText: 'Cancelar' }
+            {
+                icon: 'warning',
+                confirmText: 'Sí, desactivar',
+                cancelText: 'Cancelar',
+            },
         );
-        if (!ok) return;
+
+        if (!ok) {
+return;
+}
     }
+
     form.jobs_enabled = value;
 }
 
@@ -47,11 +58,17 @@ function submit() {
     <Head title="Bolsa de Trabajo — Admin" />
 
     <div class="tc-admin-page space-y-5">
-
-        <AdminPageHeader title="Bolsa de Trabajo" description="Configura la sección de bolsa de trabajo del sitio">
+        <AdminPageHeader
+            title="Bolsa de Trabajo"
+            description="Configura la sección de bolsa de trabajo del sitio"
+        >
             <template #label>Sistema</template>
             <template #actions>
-                <a href="/bolsa-de-trabajo" target="_blank" class="tc-btn-secondary text-sm">
+                <a
+                    href="/bolsa-de-trabajo"
+                    target="_blank"
+                    class="tc-btn-secondary text-sm"
+                >
                     Ver pública →
                 </a>
             </template>
@@ -59,19 +76,29 @@ function submit() {
 
         <!-- Status card -->
         <div
-            class="tc-admin-card p-5 flex items-center gap-4 border-l-4 transition-colors duration-300"
+            class="tc-admin-card flex items-center gap-4 border-l-4 p-5 transition-colors duration-300"
             :class="form.jobs_enabled ? 'border-green-400' : 'border-gray-300'"
         >
             <div
-                class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors duration-300"
-                :class="form.jobs_enabled ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'"
+                class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl transition-colors duration-300"
+                :class="
+                    form.jobs_enabled
+                        ? 'bg-green-50 text-green-600'
+                        : 'bg-gray-100 text-gray-400'
+                "
             >
-                <Briefcase class="w-6 h-6" />
+                <Briefcase class="h-6 w-6" />
             </div>
-            <div class="flex-1 min-w-0">
-                <p class="font-semibold text-gray-900">Bolsa de trabajo pública</p>
+            <div class="min-w-0 flex-1">
+                <p class="font-semibold text-gray-900">
+                    Bolsa de trabajo pública
+                </p>
                 <p class="text-sm text-gray-500">
-                    {{ form.jobs_enabled ? 'Visible para visitantes en /bolsa-de-trabajo' : 'Oculta — los visitantes no pueden verla' }}
+                    {{
+                        form.jobs_enabled
+                            ? 'Visible para visitantes en /bolsa-de-trabajo'
+                            : 'Oculta — los visitantes no pueden verla'
+                    }}
                 </p>
             </div>
             <TcSwitch
@@ -82,13 +109,12 @@ function submit() {
         </div>
 
         <form @submit.prevent="submit" class="space-y-4">
-
             <AdminFormSection title="Configuración de contacto">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <!-- WhatsApp field — clean layout -->
                     <div class="tc-field">
                         <label class="tc-label flex items-center gap-1.5">
-                            <Phone class="w-3.5 h-3.5 text-gray-400" />
+                            <Phone class="h-3.5 w-3.5 text-gray-400" />
                             WhatsApp de bolsa de trabajo
                         </label>
                         <div class="tc-input-icon-wrap">
@@ -101,13 +127,23 @@ function submit() {
                                 maxlength="25"
                             />
                         </div>
-                        <p class="tc-help-text">Número sin espacios ni símbolos. Ej: 7771234567</p>
-                        <p v-if="form.errors.jobs_whatsapp" class="tc-field-error">{{ form.errors.jobs_whatsapp }}</p>
+                        <p class="tc-help-text">
+                            Número sin espacios ni símbolos. Ej: 7771234567
+                        </p>
+                        <p
+                            v-if="form.errors.jobs_whatsapp"
+                            class="tc-field-error"
+                        >
+                            {{ form.errors.jobs_whatsapp }}
+                        </p>
                     </div>
                 </div>
             </AdminFormSection>
 
-            <AdminFormSection title="Texto introductorio" description="Texto que aparece en la parte superior de la página pública">
+            <AdminFormSection
+                title="Texto introductorio"
+                description="Texto que aparece en la parte superior de la página pública"
+            >
                 <TcTextarea
                     id="jobs_intro_text"
                     v-model="form.jobs_intro_text"
@@ -117,7 +153,10 @@ function submit() {
                 />
             </AdminFormSection>
 
-            <AdminFormSection title="Vacantes sugeridas" description="Un puesto por línea. Se mostrarán como lista en el sitio público.">
+            <AdminFormSection
+                title="Vacantes sugeridas"
+                description="Un puesto por línea. Se mostrarán como lista en el sitio público."
+            >
                 <TcTextarea
                     id="jobs_positions"
                     v-model="form.jobs_positions"
@@ -128,26 +167,36 @@ function submit() {
             </AdminFormSection>
 
             <div class="flex gap-3">
-                <button type="submit" class="tc-btn-primary" :disabled="form.processing">
-                    {{ form.processing ? 'Guardando…' : 'Guardar configuración' }}
+                <button
+                    type="submit"
+                    class="tc-btn-primary"
+                    :disabled="form.processing"
+                >
+                    {{
+                        form.processing ? 'Guardando…' : 'Guardar configuración'
+                    }}
                 </button>
             </div>
-
         </form>
 
         <!-- Info note -->
-        <div class="tc-admin-card p-4 bg-blue-50/60 border border-blue-100">
+        <div class="tc-admin-card border border-blue-100 bg-blue-50/60 p-4">
             <div class="flex items-start gap-3">
-                <MessageCircle class="w-4 h-4 text-[var(--tc-blue)] mt-0.5 flex-shrink-0" />
+                <MessageCircle
+                    class="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--tc-blue)]"
+                />
                 <div>
-                    <p class="text-sm font-medium text-gray-700">¿Cómo funciona la bolsa?</p>
-                    <p class="text-xs text-gray-500 mt-1">
-                        La bolsa de trabajo no almacena CVs. Los interesados hacen click en "Aplicar" y son redirigidos
-                        al WhatsApp configurado. Ideal para restaurantes sin sistema de RRHH complejo.
+                    <p class="text-sm font-medium text-gray-700">
+                        ¿Cómo funciona la bolsa?
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500">
+                        La bolsa de trabajo no almacena CVs. Los interesados
+                        hacen click en "Aplicar" y son redirigidos al WhatsApp
+                        configurado. Ideal para restaurantes sin sistema de RRHH
+                        complejo.
                     </p>
                 </div>
             </div>
         </div>
-
     </div>
 </template>

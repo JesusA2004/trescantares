@@ -23,7 +23,8 @@ const authConfigContent = computed<TwoFactorConfigContent>(() => {
 
     return {
         title: 'Autenticación de dos factores',
-        description: 'Ingresa el código generado por tu aplicación de autenticación.',
+        description:
+            'Ingresa el código generado por tu aplicación de autenticación.',
         buttonText: 'Usar código de recuperación',
     };
 });
@@ -59,7 +60,9 @@ const code = ref<string>('');
                 #default="{ errors, processing, clearErrors }"
             >
                 <input type="hidden" name="code" :value="code" />
-                <div class="flex flex-col items-center justify-center space-y-3 text-center">
+                <div
+                    class="flex flex-col items-center justify-center space-y-3 text-center"
+                >
                     <div class="flex w-full items-center justify-center">
                         <InputOTP
                             id="otp"
@@ -79,7 +82,11 @@ const code = ref<string>('');
                     </div>
                     <InputError :message="errors.code" />
                 </div>
-                <Button type="submit" class="w-full tc-auth-submit-btn" :disabled="processing">
+                <Button
+                    type="submit"
+                    class="tc-auth-submit-btn w-full"
+                    :disabled="processing"
+                >
                     Continuar
                 </Button>
                 <div class="text-center text-sm text-muted-foreground">
@@ -110,7 +117,11 @@ const code = ref<string>('');
                     required
                 />
                 <InputError :message="errors.recovery_code" />
-                <Button type="submit" class="w-full tc-auth-submit-btn" :disabled="processing">
+                <Button
+                    type="submit"
+                    class="tc-auth-submit-btn w-full"
+                    :disabled="processing"
+                >
                     Continuar
                 </Button>
 

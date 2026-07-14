@@ -11,86 +11,98 @@ class ImportMenuCommand extends Command
 {
     protected $signature = 'menu:import-initial';
 
-    protected $description = 'Importa (de forma idempotente) las categorías y platillos reales del menú Tres Cantares y normaliza sus imágenes en storage';
+    protected $description = 'Importa (de forma idempotente) las categorías y platillos reales del menú Tres Cantares desde los recursos versionados en database/seeders/assets/menu';
 
-    /** Mapea archivo origen (tal como existe hoy en storage) -> ruta destino normalizada. */
+    /**
+     * Mapea archivo origen (versionado en database/seeders/assets/menu) -> ruta
+     * destino normalizada dentro del disco "public". Estos originales viajan
+     * en el repositorio para que un VPS limpio pueda reconstruir storage/
+     * desde cero con `php artisan db:seed --class=MenuSeeder`.
+     */
     private array $assetCopies = [
         // Diseño
-        'menu/design/FONDO.png' => 'menu/design/fondo.png',
-        'menu/design/Portada.png' => 'menu/design/portada.png',
-        'menu/titles/01.png' => 'menu/design/title-pozole.png',
-        'menu/titles/02.png' => 'menu/design/title-acompanalo.png',
-        'menu/titles/03.png' => 'menu/design/title-pancita.png',
-        'menu/titles/04.png' => 'menu/design/title-tortillas-caption.png',
-        'menu/titles/05.png' => 'menu/design/title-birria.png',
-        'menu/titles/06.png' => 'menu/design/title-fusiones.png',
-        'menu/titles/07.png' => 'menu/design/title-comal.png',
-        'menu/titles/08.png' => 'menu/design/title-postres.png',
-        'menu/titles/09.png' => 'menu/design/title-postres-caption.png',
-        'menu/titles/10.png' => 'menu/design/title-bebidas.png',
-        'menu/titles/11.png' => 'menu/design/title-compra-dos.png',
-        'menu/titles/12.png' => 'menu/design/title-mesa-momento.png',
-        'menu/titles/13.png' => 'menu/design/title-refrescar-antojo.png',
+        'design/FONDO.png' => 'menu/design/fondo.png',
+        'design/Portada.png' => 'menu/design/portada.png',
+        'titles/01.png' => 'menu/design/title-pozole.png',
+        'titles/02.png' => 'menu/design/title-acompanalo.png',
+        'titles/03.png' => 'menu/design/title-pancita.png',
+        'titles/04.png' => 'menu/design/title-tortillas-caption.png',
+        'titles/05.png' => 'menu/design/title-birria.png',
+        'titles/06.png' => 'menu/design/title-fusiones.png',
+        'titles/07.png' => 'menu/design/title-comal.png',
+        'titles/08.png' => 'menu/design/title-postres.png',
+        'titles/09.png' => 'menu/design/title-postres-caption.png',
+        'titles/10.png' => 'menu/design/title-bebidas.png',
+        'titles/11.png' => 'menu/design/title-compra-dos.png',
+        'titles/12.png' => 'menu/design/title-mesa-momento.png',
+        'titles/13.png' => 'menu/design/title-refrescar-antojo.png',
         // Imagen de categoría (hero de bebidas con alcohol)
-        'menu/items/28 Bebidas.png' => 'menu/categories/cantaritos-mojitos-cervezas.png',
+        'items/28 Bebidas.png' => 'menu/categories/cantaritos-mojitos-cervezas.png',
         // Platillos
-        'menu/items/01 Pozole Blanco.png' => 'menu/items/pozole-blanco.png',
-        'menu/items/02 Tacos Dorados.png' => 'menu/items/tacos-dorados.png',
-        'menu/items/03 Pancita.png' => 'menu/items/pancita.png',
-        'menu/items/04 Panal.png' => 'menu/items/panal.png',
-        'menu/items/05 Pata.png' => 'menu/items/pata.png',
-        'menu/items/06 Callo.png' => 'menu/items/callo.png',
-        'menu/items/07 Libro.png' => 'menu/items/libro.png',
-        'menu/items/08 Panza.png' => 'menu/items/panza.png',
-        'menu/items/09 Tortillas.png' => 'menu/items/tortillas.png',
-        'menu/items/10 Birria.png' => 'menu/items/birria.png',
-        'menu/items/11 Chilaquiles Birria.png' => 'menu/items/chilaquiles-birria.png',
-        'menu/items/12 Enchiladas Birria.png' => 'menu/items/enchiladas-birria.png',
-        'menu/items/13 Quesabirria.png' => 'menu/items/quesabirria.png',
-        'menu/items/14 El valiente.png' => 'menu/items/el-valiente.png',
-        'menu/items/15 El consentido.png' => 'menu/items/el-consentido.png',
-        'menu/items/16 El Norteño.png' => 'menu/items/el-norteno.png',
-        'menu/items/17 Todo Terreno.png' => 'menu/items/todo-terreno.png',
-        'menu/items/18 Quesadillas.png' => 'menu/items/quesadillas.png',
-        'menu/items/19 Setas.png' => 'menu/items/setas.png',
-        'menu/items/20 Champiñones.png' => 'menu/items/champinones.png',
-        'menu/items/21 Huitlacoche.png' => 'menu/items/huitlacoche.png',
-        'menu/items/22 Flor de Calabaza.png' => 'menu/items/flor-de-calabaza.png',
-        'menu/items/23 Pollo.png' => 'menu/items/pollo.png',
-        'menu/items/24 Sope.png' => 'menu/items/sope.png',
-        'menu/items/25 Pay de Limon.png' => 'menu/items/pay-de-limon.png',
-        'menu/items/26 Arroz con Leche.png' => 'menu/items/arroz-con-leche.png',
-        'menu/items/27 Flan.png' => 'menu/items/flan.png',
+        'items/01 Pozole Blanco.png' => 'menu/items/pozole-blanco.png',
+        'items/02 Tacos Dorados.png' => 'menu/items/tacos-dorados.png',
+        'items/03 Pancita.png' => 'menu/items/pancita.png',
+        'items/04 Panal.png' => 'menu/items/panal.png',
+        'items/05 Pata.png' => 'menu/items/pata.png',
+        'items/06 Callo.png' => 'menu/items/callo.png',
+        'items/07 Libro.png' => 'menu/items/libro.png',
+        'items/08 Panza.png' => 'menu/items/panza.png',
+        'items/09 Tortillas.png' => 'menu/items/tortillas.png',
+        'items/10 Birria.png' => 'menu/items/birria.png',
+        'items/11 Chilaquiles Birria.png' => 'menu/items/chilaquiles-birria.png',
+        'items/12 Enchiladas Birria.png' => 'menu/items/enchiladas-birria.png',
+        'items/13 Quesabirria.png' => 'menu/items/quesabirria.png',
+        'items/14 El valiente.png' => 'menu/items/el-valiente.png',
+        'items/15 El consentido.png' => 'menu/items/el-consentido.png',
+        'items/16 El Norteño.png' => 'menu/items/el-norteno.png',
+        'items/17 Todo Terreno.png' => 'menu/items/todo-terreno.png',
+        'items/18 Quesadillas.png' => 'menu/items/quesadillas.png',
+        'items/19 Setas.png' => 'menu/items/setas.png',
+        'items/20 Champiñones.png' => 'menu/items/champinones.png',
+        'items/21 Huitlacoche.png' => 'menu/items/huitlacoche.png',
+        'items/22 Flor de Calabaza.png' => 'menu/items/flor-de-calabaza.png',
+        'items/23 Pollo.png' => 'menu/items/pollo.png',
+        'items/24 Sope.png' => 'menu/items/sope.png',
+        'items/25 Pay de Limon.png' => 'menu/items/pay-de-limon.png',
+        'items/26 Arroz con Leche.png' => 'menu/items/arroz-con-leche.png',
+        'items/27 Flan.png' => 'menu/items/flan.png',
     ];
 
     public function handle(): int
     {
+        $sourceBase = database_path('seeders/assets/menu');
         $disk = Storage::disk('public');
         $missing = [];
 
-        $this->info('Normalizando recursos gráficos…');
+        $this->info('Copiando recursos gráficos versionados a storage…');
         foreach ($this->assetCopies as $source => $destination) {
-            if (! $disk->exists($source)) {
+            $sourcePath = $sourceBase.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $source);
+
+            if (! is_file($sourcePath)) {
                 $missing[] = $source;
 
                 continue;
             }
-            $disk->put($destination, $disk->get($source));
+
+            $disk->put($destination, file_get_contents($sourcePath));
         }
 
-        $resolve = fn (string $normalized): ?string => $disk->exists($normalized) ? $normalized : null;
+        if ($missing !== []) {
+            $this->error('Faltan imágenes obligatorias en database/seeders/assets/menu — se detiene sin tocar la base de datos:');
+            foreach ($missing as $m) {
+                $this->error("  - {$m}");
+            }
 
+            return self::FAILURE;
+        }
+
+        // Todas las imágenes requeridas ya están copiadas a storage; a partir
+        // de aquí toda ruta declarada en categoryDefinitions() existe.
         $categories = $this->categoryDefinitions();
 
         foreach ($categories as $catData) {
             $items = $catData['items'] ?? [];
             unset($catData['items']);
-
-            foreach (['image', 'title_image', 'subtitle_image', 'tagline_image'] as $field) {
-                if (isset($catData[$field])) {
-                    $catData[$field] = $resolve($catData[$field]);
-                }
-            }
 
             $category = MenuCategory::updateOrCreate(
                 ['slug' => $catData['slug']],
@@ -98,10 +110,6 @@ class ImportMenuCommand extends Command
             );
 
             foreach ($items as $i => $itemData) {
-                if (isset($itemData['image'])) {
-                    $itemData['image'] = $resolve($itemData['image']);
-                }
-
                 $itemData['menu_category_id'] = $category->id;
                 $itemData['sort_order'] = $itemData['sort_order'] ?? ($i + 1);
                 $itemData['is_active'] = $itemData['is_active'] ?? true;
@@ -114,14 +122,6 @@ class ImportMenuCommand extends Command
             }
 
             $this->line("  ✓ {$category->name} ({$catData['slug']}) — ".count($items).' platillo(s)');
-        }
-
-        if ($missing !== []) {
-            $this->newLine();
-            $this->warn('Las siguientes imágenes de origen no se encontraron y fueron omitidas:');
-            foreach (array_unique($missing) as $m) {
-                $this->warn("  - {$m}");
-            }
         }
 
         $this->newLine();

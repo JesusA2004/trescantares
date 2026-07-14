@@ -19,6 +19,6 @@ defineProps<Props>();
         alt="Tres Cantares"
         :class="className"
         v-bind="$attrs"
-        style="object-fit: contain;"
+        style="object-fit: contain"
     />
 </template>

@@ -20,9 +20,12 @@ const props = defineProps<{
     }[];
 }>();
 
-async function toggleModule(module: typeof props.modules[0]) {
+async function toggleModule(module: (typeof props.modules)[0]) {
     if (module.is_core) {
-        warning(`"${module.name}" es un módulo esencial y no puede desactivarse.`);
+        warning(
+            `"${module.name}" es un módulo esencial y no puede desactivarse.`,
+        );
+
         return;
     }
 
@@ -32,10 +35,12 @@ async function toggleModule(module: typeof props.modules[0]) {
         module.is_enabled
             ? 'Este módulo quedará oculto en el sidebar y sus rutas quedarán bloqueadas.'
             : 'Este módulo volverá a ser visible y sus rutas estarán disponibles.',
-        { icon: module.is_enabled ? 'warning' : 'question' }
+        { icon: module.is_enabled ? 'warning' : 'question' },
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+return;
+}
 
     router.patch(
         `/admin/modules/${module.id}`,
@@ -49,32 +54,56 @@ async function toggleModule(module: typeof props.modules[0]) {
     <Head title="Módulos del sistema" />
 
     <div class="tc-admin-page space-y-5">
-
-        <AdminPageHeader title="Módulos" description="Activa o desactiva funcionalidades del sistema">
+        <AdminPageHeader
+            title="Módulos"
+            description="Activa o desactiva funcionalidades del sistema"
+        >
             <template #label>Sistema</template>
         </AdminPageHeader>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div
                 v-for="mod in modules"
                 :key="mod.id"
-                class="tc-admin-card p-4 flex items-start gap-4 transition-opacity duration-200"
+                class="tc-admin-card flex items-start gap-4 p-4 transition-opacity duration-200"
                 :class="{ 'opacity-55': !mod.is_enabled && !mod.is_core }"
             >
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    :class="mod.is_enabled ? 'bg-blue-50 text-[var(--tc-blue)] dark:bg-blue-500/15 dark:text-blue-300' : 'bg-gray-100 text-gray-400 dark:bg-white/8 dark:text-white/50'"
+                <div
+                    class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
+                    :class="
+                        mod.is_enabled
+                            ? 'bg-blue-50 text-[var(--tc-blue)] dark:bg-blue-500/15 dark:text-blue-300'
+                            : 'bg-gray-100 text-gray-400 dark:bg-white/8 dark:text-white/50'
+                    "
                 >
-                    <Boxes class="w-5 h-5" />
+                    <Boxes class="h-5 w-5" />
                 </div>
-                <div class="flex-1 min-w-0">
+                <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
-                        <p class="font-semibold text-gray-900 text-sm">{{ mod.name }}</p>
-                        <span v-if="mod.is_core" class="tc-badge tc-badge-blue text-[10px] flex items-center gap-1">
-                            <Lock class="w-2.5 h-2.5" /> Core
+                        <p class="text-sm font-semibold text-gray-900">
+                            {{ mod.name }}
+                        </p>
+                        <span
+                            v-if="mod.is_core"
+                            class="tc-badge tc-badge-blue flex items-center gap-1 text-[10px]"
+                        >
+                            <Lock class="h-2.5 w-2.5" /> Core
                         </span>
                     </div>
-                    <p v-if="mod.description" class="text-xs text-gray-500 mt-0.5">{{ mod.description }}</p>
-                    <p class="text-xs mt-1" :class="mod.is_enabled ? 'text-[var(--tc-green)]' : 'text-gray-400'">
+                    <p
+                        v-if="mod.description"
+                        class="mt-0.5 text-xs text-gray-500"
+                    >
+                        {{ mod.description }}
+                    </p>
+                    <p
+                        class="mt-1 text-xs"
+                        :class="
+                            mod.is_enabled
+                                ? 'text-[var(--tc-green)]'
+                                : 'text-gray-400'
+                        "
+                    >
                         {{ mod.is_enabled ? '● Activo' : '○ Inactivo' }}
                     </p>
                 </div>
@@ -87,6 +116,5 @@ async function toggleModule(module: typeof props.modules[0]) {
                 </div>
             </div>
         </div>
-
     </div>
 </template>

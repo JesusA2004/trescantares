@@ -96,7 +96,7 @@ defineProps<{
 
             <Button
                 type="submit"
-                class="mt-4 w-full tc-auth-submit-btn"
+                class="tc-auth-submit-btn mt-4 w-full"
                 :tabindex="4"
                 :disabled="processing"
                 data-test="login-button"

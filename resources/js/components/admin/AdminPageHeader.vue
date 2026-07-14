@@ -9,14 +9,21 @@ defineProps<{
     <div class="tc-admin-page-header">
         <div>
             <div class="tc-admin-accent">
-                <span class="text-xs font-semibold tracking-widest uppercase text-[var(--tc-yellow)]">
+                <span
+                    class="text-xs font-semibold tracking-widest text-[var(--tc-yellow)] uppercase"
+                >
                     <slot name="label">Panel</slot>
                 </span>
             </div>
             <h1 class="tc-admin-page-title">{{ title }}</h1>
-            <p v-if="description" class="tc-admin-page-description">{{ description }}</p>
+            <p v-if="description" class="tc-admin-page-description">
+                {{ description }}
+            </p>
         </div>
-        <div v-if="$slots.actions" class="flex items-center gap-2 flex-shrink-0">
+        <div
+            v-if="$slots.actions"
+            class="flex flex-shrink-0 items-center gap-2"
+        >
             <slot name="actions" />
         </div>
     </div>

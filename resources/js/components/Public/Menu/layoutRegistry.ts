@@ -25,6 +25,8 @@ export const layoutComponents: Record<string, Component> = {
     destilados: DestiladosPage,
 };
 
-export function layoutFor(category: Pick<MenuCategoryData, 'layout'>): Component {
+export function layoutFor(
+    category: Pick<MenuCategoryData, 'layout'>,
+): Component {
     return layoutComponents[category.layout] ?? GridPage;
 }

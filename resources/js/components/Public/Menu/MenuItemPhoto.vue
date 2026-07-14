@@ -57,13 +57,21 @@ const wrapStyle = computed(() => {
 // variable --tc-mp-size-mult que multiplican las reglas width/max-width de
 // cada sección), no un transform — así el layout reserva el espacio real y
 // no se solapa con lo que está al lado.
-const sizeClass = computed(() => `tc-mp-photo--${props.item.visual_size ?? 'md'}`);
+const sizeClass = computed(
+    () => `tc-mp-photo--${props.item.visual_size ?? 'md'}`,
+);
 
-const fit = computed(() => (props.cover ? 'cover' : (props.item.image_fit ?? 'contain')));
+const fit = computed(() =>
+    props.cover ? 'cover' : (props.item.image_fit ?? 'contain'),
+);
 </script>
 
 <template>
-    <div class="tc-mp-photo" :class="[sizeClass, { 'tc-mp-photo--cover': fit === 'cover' }]" :style="wrapStyle">
+    <div
+        class="tc-mp-photo"
+        :class="[sizeClass, { 'tc-mp-photo--cover': fit === 'cover' }]"
+        :style="wrapStyle"
+    >
         <img
             v-if="item.image_url"
             :src="item.image_url"
@@ -72,6 +80,12 @@ const fit = computed(() => (props.cover ? 'cover' : (props.item.image_fit ?? 'co
             decoding="async"
             :style="imgStyle"
         />
-        <img v-if="item.caption_image_url" :src="item.caption_image_url" alt="" class="tc-mp-caption-img" loading="lazy" />
+        <img
+            v-if="item.caption_image_url"
+            :src="item.caption_image_url"
+            alt=""
+            class="tc-mp-caption-img"
+            loading="lazy"
+        />
     </div>
 </template>

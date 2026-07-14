@@ -5,7 +5,10 @@ import { ref, computed, watch } from 'vue';
 import AdminFormSection from '@/components/admin/AdminFormSection.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import MenuLivePreview from '@/components/Public/Menu/MenuLivePreview.vue';
-import type { MenuCategoryData, MenuItemData } from '@/components/Public/Menu/types';
+import type {
+    MenuCategoryData,
+    MenuItemData,
+} from '@/components/Public/Menu/types';
 import TcImagePositionEditor from '@/components/tc/TcImagePositionEditor.vue';
 import TcImageUpload from '@/components/tc/TcImageUpload.vue';
 import TcInput from '@/components/tc/TcInput.vue';
@@ -53,7 +56,10 @@ const props = defineProps<{
     categories: MenuCategoryData[];
 }>();
 
-const categoryOptions = props.categories.map((c) => ({ value: c.id, label: c.name }));
+const categoryOptions = props.categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+}));
 
 const form = useForm({
     menu_category_id: props.item.menu_category_id,
@@ -79,13 +85,20 @@ const form = useForm({
     is_active: props.item.is_active,
     _method: 'PUT',
     delete_image_ids: [] as number[],
-    primary_image_id: (props.item.gallery.find((g) => g.is_primary)?.id ?? null) as number | null,
+    primary_image_id: (props.item.gallery.find((g) => g.is_primary)?.id ??
+        null) as number | null,
     new_images: [] as File[],
     caption_image: null as File | null,
 });
 
-const selectedCategory = computed(() => props.categories.find((c) => c.id === Number(form.menu_category_id)) ?? null);
-const zoneOptions = computed(() => zonesForLayout(selectedCategory.value?.layout));
+const selectedCategory = computed(
+    () =>
+        props.categories.find((c) => c.id === Number(form.menu_category_id)) ??
+        null,
+);
+const zoneOptions = computed(() =>
+    zonesForLayout(selectedCategory.value?.layout),
+);
 
 // Solo se limpia la zona si el usuario cambia la categoría a una plantilla
 // donde la zona actual ya no existe (al cargar la página, la del item guardado
@@ -94,10 +107,12 @@ watch(
     () => form.menu_category_id,
     (_, oldValue) => {
         if (oldValue === undefined) {
-return;
-}
+            return;
+        }
 
-        const valid = zonesForLayout(selectedCategory.value?.layout).some((z) => z.value === form.zone);
+        const valid = zonesForLayout(selectedCategory.value?.layout).some(
+            (z) => z.value === form.zone,
+        );
 
         if (!valid) {
             form.zone = '';
@@ -114,9 +129,16 @@ interface NewPreview {
 const newPreviews = ref<NewPreview[]>([]);
 
 const primaryPreviewUrl = computed(() => {
-    const primary = gallery.value.find((g) => g.is_primary && !form.delete_image_ids.includes(g.id));
+    const primary = gallery.value.find(
+        (g) => g.is_primary && !form.delete_image_ids.includes(g.id),
+    );
 
-    return primary?.image_url ?? newPreviews.value[0]?.url ?? props.item.image_url ?? null;
+    return (
+        primary?.image_url ??
+        newPreviews.value[0]?.url ??
+        props.item.image_url ??
+        null
+    );
 });
 
 // Vista previa en vivo: la categoría seleccionada con sus platillos reales,
@@ -152,15 +174,20 @@ const previewCategory = computed<MenuCategoryData | null>(() => {
 
     return {
         ...selectedCategory.value,
-        items: [draftItem, ...selectedCategory.value.items.filter((i) => i.id !== props.item.id)],
+        items: [
+            draftItem,
+            ...selectedCategory.value.items.filter(
+                (i) => i.id !== props.item.id,
+            ),
+        ],
     };
 });
 
 function handleFiles(files: FileList | File[]) {
     Array.from(files).forEach((file) => {
         if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) {
-return;
-}
+            return;
+        }
 
         newPreviews.value.push({ url: URL.createObjectURL(file), file });
         form.new_images.push(file);
@@ -171,8 +198,8 @@ function onFileInput(e: Event) {
     const input = e.target as HTMLInputElement;
 
     if (input.files) {
-handleFiles(input.files);
-}
+        handleFiles(input.files);
+    }
 
     input.value = '';
 }
@@ -181,18 +208,18 @@ function onDrop(e: DragEvent) {
     e.preventDefault();
 
     if (e.dataTransfer?.files) {
-handleFiles(e.dataTransfer.files);
-}
+        handleFiles(e.dataTransfer.files);
+    }
 }
 
 function markDeleteExisting(id: number) {
     if (!form.delete_image_ids.includes(id)) {
-form.delete_image_ids.push(id);
-}
+        form.delete_image_ids.push(id);
+    }
 
     if (form.primary_image_id === id) {
-form.primary_image_id = null;
-}
+        form.primary_image_id = null;
+    }
 }
 
 function setPrimaryExisting(id: number) {
@@ -221,98 +248,175 @@ function submit() {
     <Head :title="`Editar: ${item.name}`" />
 
     <div class="tc-admin-page space-y-5">
-
-        <AdminPageHeader :title="`Editar: ${item.name}`" description="Modifica los datos del platillo">
+        <AdminPageHeader
+            :title="`Editar: ${item.name}`"
+            description="Modifica los datos del platillo"
+        >
             <template #label>Platillos</template>
             <template #actions>
-                <Link href="/admin/menu-items" class="tc-btn-secondary">← Volver</Link>
+                <Link href="/admin/menu-items" class="tc-btn-secondary"
+                    >← Volver</Link
+                >
             </template>
         </AdminPageHeader>
 
         <form @submit.prevent="submit">
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
-
+            <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
                 <!-- Left: gallery manager -->
-                <div class="xl:col-span-1 space-y-4">
+                <div class="space-y-4 xl:col-span-1">
                     <div class="tc-admin-card p-5">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                            <ImagePlus class="w-4 h-4 text-[var(--tc-blue)]" />
+                        <h3
+                            class="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700"
+                        >
+                            <ImagePlus class="h-4 w-4 text-[var(--tc-blue)]" />
                             Galería de imágenes
                         </h3>
 
                         <!-- Existing images -->
-                        <div v-if="gallery.length" class="grid grid-cols-2 gap-2 mb-4">
+                        <div
+                            v-if="gallery.length"
+                            class="mb-4 grid grid-cols-2 gap-2"
+                        >
                             <div
                                 v-for="img in gallery"
                                 :key="img.id"
-                                class="relative group rounded-xl overflow-hidden border-2 transition-all"
-                                :class="[isMarkedDelete(img.id) ? 'border-red-300 opacity-40' : img.is_primary ? 'border-[var(--tc-blue)]' : 'border-transparent']"
+                                class="group relative overflow-hidden rounded-xl border-2 transition-all"
+                                :class="[
+                                    isMarkedDelete(img.id)
+                                        ? 'border-red-300 opacity-40'
+                                        : img.is_primary
+                                          ? 'border-[var(--tc-blue)]'
+                                          : 'border-transparent',
+                                ]"
                             >
-                                <img :src="img.image_url" :alt="img.alt_text ?? item.name" class="w-full aspect-square object-cover" />
-                                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                                <div v-if="img.is_primary && !isMarkedDelete(img.id)" class="absolute top-1.5 left-1.5">
-                                    <span class="tc-badge tc-badge-blue text-[10px] flex items-center gap-1">
-                                        <Star class="w-2.5 h-2.5" fill="currentColor" /> Principal
+                                <img
+                                    :src="img.image_url"
+                                    :alt="img.alt_text ?? item.name"
+                                    class="aspect-square w-full object-cover"
+                                />
+                                <div
+                                    class="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/30"
+                                />
+                                <div
+                                    v-if="
+                                        img.is_primary &&
+                                        !isMarkedDelete(img.id)
+                                    "
+                                    class="absolute top-1.5 left-1.5"
+                                >
+                                    <span
+                                        class="tc-badge tc-badge-blue flex items-center gap-1 text-[10px]"
+                                    >
+                                        <Star
+                                            class="h-2.5 w-2.5"
+                                            fill="currentColor"
+                                        />
+                                        Principal
                                     </span>
                                 </div>
-                                <div v-if="isMarkedDelete(img.id)" class="absolute inset-0 flex items-center justify-center">
-                                    <span class="tc-badge tc-badge-pink text-[10px]">Se eliminará</span>
+                                <div
+                                    v-if="isMarkedDelete(img.id)"
+                                    class="absolute inset-0 flex items-center justify-center"
+                                >
+                                    <span
+                                        class="tc-badge tc-badge-pink text-[10px]"
+                                        >Se eliminará</span
+                                    >
                                 </div>
-                                <div v-else class="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div
+                                    v-else
+                                    class="absolute right-1.5 bottom-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+                                >
                                     <button
                                         v-if="!img.is_primary"
                                         type="button"
-                                        class="w-6 h-6 rounded-lg bg-amber-400 text-white flex items-center justify-center"
+                                        class="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-400 text-white"
                                         title="Marcar como principal"
                                         @click.stop="setPrimaryExisting(img.id)"
                                     >
-                                        <Star class="w-3 h-3" />
+                                        <Star class="h-3 w-3" />
                                     </button>
                                     <button
                                         type="button"
-                                        class="w-6 h-6 rounded-lg bg-red-500 text-white flex items-center justify-center"
+                                        class="flex h-6 w-6 items-center justify-center rounded-lg bg-red-500 text-white"
                                         title="Eliminar"
                                         @click.stop="markDeleteExisting(img.id)"
                                     >
-                                        <X class="w-3 h-3" />
+                                        <X class="h-3 w-3" />
                                     </button>
                                 </div>
                             </div>
                         </div>
 
                         <div v-else-if="item.image_url" class="mb-4">
-                            <p class="text-xs text-gray-500 mb-2">Imagen actual (legacy):</p>
-                            <img :src="item.image_url" :alt="item.name" class="w-full max-h-40 object-cover rounded-xl" />
+                            <p class="mb-2 text-xs text-gray-500">
+                                Imagen actual (legacy):
+                            </p>
+                            <img
+                                :src="item.image_url"
+                                :alt="item.name"
+                                class="max-h-40 w-full rounded-xl object-cover"
+                            />
                         </div>
 
-                        <div v-if="newPreviews.length" class="grid grid-cols-2 gap-2 mb-3">
-                            <div v-for="(preview, idx) in newPreviews" :key="preview.url" class="relative group rounded-xl overflow-hidden border-2 border-green-300">
-                                <img :src="preview.url" alt="Nueva imagen" class="w-full aspect-square object-cover" />
+                        <div
+                            v-if="newPreviews.length"
+                            class="mb-3 grid grid-cols-2 gap-2"
+                        >
+                            <div
+                                v-for="(preview, idx) in newPreviews"
+                                :key="preview.url"
+                                class="group relative overflow-hidden rounded-xl border-2 border-green-300"
+                            >
+                                <img
+                                    :src="preview.url"
+                                    alt="Nueva imagen"
+                                    class="aspect-square w-full object-cover"
+                                />
                                 <div class="absolute top-1.5 left-1.5">
-                                    <span class="tc-badge tc-badge-green text-[10px]">Nueva</span>
+                                    <span
+                                        class="tc-badge tc-badge-green text-[10px]"
+                                        >Nueva</span
+                                    >
                                 </div>
                                 <button
                                     type="button"
-                                    class="absolute top-1.5 right-1.5 w-5 h-5 rounded-lg bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    class="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-lg bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100"
                                     @click.stop="removeNewPreview(idx)"
                                 >
-                                    <X class="w-3 h-3" />
+                                    <X class="h-3 w-3" />
                                 </button>
                             </div>
                         </div>
 
                         <div
-                            class="border-2 border-dashed border-amber-200 rounded-xl p-4 text-center cursor-pointer hover:border-[var(--tc-blue)] hover:bg-blue-50/30 transition-colors"
+                            class="cursor-pointer rounded-xl border-2 border-dashed border-amber-200 p-4 text-center transition-colors hover:border-[var(--tc-blue)] hover:bg-blue-50/30"
                             @dragover.prevent
                             @drop="onDrop"
-                            @click="($refs.newFileInput as HTMLInputElement).click()"
+                            @click="
+                                ($refs.newFileInput as HTMLInputElement).click()
+                            "
                         >
-                            <ImagePlus class="w-5 h-5 text-amber-300 mx-auto mb-1" />
-                            <p class="text-xs text-gray-500">Agregar más imágenes</p>
+                            <ImagePlus
+                                class="mx-auto mb-1 h-5 w-5 text-amber-300"
+                            />
+                            <p class="text-xs text-gray-500">
+                                Agregar más imágenes
+                            </p>
                         </div>
-                        <input ref="newFileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden" @change="onFileInput" />
+                        <input
+                            ref="newFileInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            class="hidden"
+                            @change="onFileInput"
+                        />
 
-                        <p class="text-xs text-gray-400 mt-2">Haz click en ⭐ para cambiar la imagen principal. La imagen marcada se muestra en el menú.</p>
+                        <p class="mt-2 text-xs text-gray-400">
+                            Haz click en ⭐ para cambiar la imagen principal. La
+                            imagen marcada se muestra en el menú.
+                        </p>
                     </div>
 
                     <div class="tc-admin-card p-5">
@@ -349,20 +453,47 @@ function submit() {
                 </div>
 
                 <!-- Right: form fields -->
-                <div class="xl:col-span-2 space-y-4">
+                <div class="space-y-4 xl:col-span-2">
                     <AdminFormSection title="Información básica">
-                        <TcSelect id="category" v-model="form.menu_category_id" label="Categoría" required :options="categoryOptions" :error="form.errors.menu_category_id" />
-                        <TcInput id="name" v-model="form.name" label="Nombre del platillo" required :error="form.errors.name" />
-                        <TcTextarea id="description" v-model="form.description" label="Descripción" :rows="2" />
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <TcInput id="alt_text" v-model="form.alt_text" label="Texto alternativo" />
+                        <TcSelect
+                            id="category"
+                            v-model="form.menu_category_id"
+                            label="Categoría"
+                            required
+                            :options="categoryOptions"
+                            :error="form.errors.menu_category_id"
+                        />
+                        <TcInput
+                            id="name"
+                            v-model="form.name"
+                            label="Nombre del platillo"
+                            required
+                            :error="form.errors.name"
+                        />
+                        <TcTextarea
+                            id="description"
+                            v-model="form.description"
+                            label="Descripción"
+                            :rows="2"
+                        />
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <TcInput
+                                id="alt_text"
+                                v-model="form.alt_text"
+                                label="Texto alternativo"
+                            />
                             <TcSelect
                                 id="zone"
                                 v-model="form.zone"
                                 label="Zona en la plantilla"
                                 placeholder="Seleccionar categoría primero"
                                 :disabled="!zoneOptions.length"
-                                :options="zoneOptions.map((z) => ({ value: z.value, label: z.label }))"
+                                :options="
+                                    zoneOptions.map((z) => ({
+                                        value: z.value,
+                                        label: z.label,
+                                    }))
+                                "
                                 :error="form.errors.zone"
                                 hint="Determina en qué parte de la página se ubica este platillo, según la plantilla de la categoría."
                             />
@@ -370,11 +501,19 @@ function submit() {
                     </AdminFormSection>
 
                     <AdminFormSection title="Precio">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="tc-field">
-                                <label for="price">Precio <span class="text-[var(--tc-pink)]">*</span></label>
+                                <label for="price"
+                                    >Precio
+                                    <span class="text-[var(--tc-pink)]"
+                                        >*</span
+                                    ></label
+                                >
                                 <div class="relative">
-                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">$</span>
+                                    <span
+                                        class="absolute top-1/2 left-3 -translate-y-1/2 font-semibold text-gray-400"
+                                        >$</span
+                                    >
                                     <input
                                         id="price"
                                         v-model="form.price"
@@ -383,44 +522,104 @@ function submit() {
                                         step="0.01"
                                         required
                                         class="tc-input pl-8"
-                                        :class="{ 'border-[var(--tc-pink)]': form.errors.price }"
+                                        :class="{
+                                            'border-[var(--tc-pink)]':
+                                                form.errors.price,
+                                        }"
                                     />
                                 </div>
-                                <p v-if="form.errors.price" class="text-xs text-[var(--tc-pink)] mt-0.5">{{ form.errors.price }}</p>
+                                <p
+                                    v-if="form.errors.price"
+                                    class="mt-0.5 text-xs text-[var(--tc-pink)]"
+                                >
+                                    {{ form.errors.price }}
+                                </p>
                             </div>
-                            <TcInput id="price_label" v-model="form.price_label" label="Etiqueta del precio" />
+                            <TcInput
+                                id="price_label"
+                                v-model="form.price_label"
+                                label="Etiqueta del precio"
+                            />
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <TcInput id="price_secondary" v-model="form.price_secondary" type="number" min="0" step="0.01" label="Precio secundario" />
-                            <TcInput id="price_secondary_label" v-model="form.price_secondary_label" label="Etiqueta del precio secundario" />
-                            <TcInput id="presentation" v-model="form.presentation" label="Presentación / unidad" />
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <TcInput
+                                id="price_secondary"
+                                v-model="form.price_secondary"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                label="Precio secundario"
+                            />
+                            <TcInput
+                                id="price_secondary_label"
+                                v-model="form.price_secondary_label"
+                                label="Etiqueta del precio secundario"
+                            />
+                            <TcInput
+                                id="presentation"
+                                v-model="form.presentation"
+                                label="Presentación / unidad"
+                            />
                         </div>
                     </AdminFormSection>
 
                     <AdminFormSection title="Detalles">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <TcInput id="badge" v-model="form.badge" label="Insignia" />
-                            <TcInput id="choice_label" v-model="form.choice_label" label="Etiqueta de elección" />
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <TcInput
+                                id="badge"
+                                v-model="form.badge"
+                                label="Insignia"
+                            />
+                            <TcInput
+                                id="choice_label"
+                                v-model="form.choice_label"
+                                label="Etiqueta de elección"
+                            />
                         </div>
-                        <TcTextarea id="ingredients" v-model="form.ingredients" label="Ingredientes / opciones" :rows="2" />
+                        <TcTextarea
+                            id="ingredients"
+                            v-model="form.ingredients"
+                            label="Ingredientes / opciones"
+                            :rows="2"
+                        />
                     </AdminFormSection>
 
                     <AdminFormSection title="Configuración">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <TcSwitch v-model="form.is_active" label="Activo" description="Visible en el menú" />
-                            <TcSwitch v-model="form.is_featured" label="Destacado" description="Aparece como especial" />
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <TcSwitch
+                                v-model="form.is_active"
+                                label="Activo"
+                                description="Visible en el menú"
+                            />
+                            <TcSwitch
+                                v-model="form.is_featured"
+                                label="Destacado"
+                                description="Aparece como especial"
+                            />
                         </div>
-                        <p class="text-xs text-gray-400">El orden dentro de la categoría se controla arrastrando los platillos en el listado.</p>
+                        <p class="text-xs text-gray-400">
+                            El orden dentro de la categoría se controla
+                            arrastrando los platillos en el listado.
+                        </p>
                     </AdminFormSection>
 
                     <div class="flex gap-3">
-                        <button type="submit" class="tc-btn-primary" :disabled="form.processing">
-                            {{ form.processing ? 'Guardando…' : 'Actualizar platillo' }}
+                        <button
+                            type="submit"
+                            class="tc-btn-primary"
+                            :disabled="form.processing"
+                        >
+                            {{
+                                form.processing
+                                    ? 'Guardando…'
+                                    : 'Actualizar platillo'
+                            }}
                         </button>
-                        <Link href="/admin/menu-items" class="tc-btn-secondary">Cancelar</Link>
+                        <Link href="/admin/menu-items" class="tc-btn-secondary"
+                            >Cancelar</Link
+                        >
                     </div>
                 </div>
-
             </div>
         </form>
     </div>

@@ -10,9 +10,18 @@ const props = defineProps<{
 const { can, hasRole, canAny } = usePermissions();
 
 function isAllowed(): boolean {
-    if (props.permission) return can(props.permission);
-    if (props.role) return hasRole(props.role);
-    if (props.any) return canAny(...props.any);
+    if (props.permission) {
+return can(props.permission);
+}
+
+    if (props.role) {
+return hasRole(props.role);
+}
+
+    if (props.any) {
+return canAny(...props.any);
+}
+
     return true;
 }
 </script>

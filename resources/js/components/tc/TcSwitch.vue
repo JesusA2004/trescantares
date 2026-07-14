@@ -17,8 +17,15 @@ const model = defineModel<boolean>();
             :aria-pressed="model"
         />
         <div v-if="label || description">
-            <span class="text-sm font-medium text-gray-700 dark:text-[#fff7e6] block">{{ label }}</span>
-            <span v-if="description" class="text-xs text-gray-500 dark:text-white/60">{{ description }}</span>
+            <span
+                class="block text-sm font-medium text-gray-700 dark:text-[#fff7e6]"
+                >{{ label }}</span
+            >
+            <span
+                v-if="description"
+                class="text-xs text-gray-500 dark:text-white/60"
+                >{{ description }}</span
+            >
         </div>
     </label>
 </template>

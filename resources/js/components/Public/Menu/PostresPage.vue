@@ -10,11 +10,31 @@ defineProps<{
 </script>
 
 <template>
-    <MenuPageFrame :primary-color="category.color ?? undefined" :secondary-color="category.color_secondary ?? undefined">
-        <img v-if="category.title_image_url" :src="category.title_image_url" :alt="category.name" class="tc-mp-title-img" />
+    <MenuPageFrame
+        :primary-color="category.color ?? undefined"
+        :secondary-color="category.color_secondary ?? undefined"
+    >
+        <img
+            v-if="category.title_image_url"
+            :src="category.title_image_url"
+            :alt="category.name"
+            class="tc-mp-title-img"
+        />
         <template v-else>
-            <h2 class="tc-mp-title-text" :style="{ color: category.color ?? undefined, '--tc-mp-h': category.color ?? undefined }">{{ category.name }}</h2>
-            <p v-if="category.subtitle" class="tc-mp-choice text-center" :style="{ color: category.color_secondary ?? undefined }">
+            <h2
+                class="tc-mp-title-text"
+                :style="{
+                    color: category.color ?? undefined,
+                    '--tc-mp-h': category.color ?? undefined,
+                }"
+            >
+                {{ category.name }}
+            </h2>
+            <p
+                v-if="category.subtitle"
+                class="tc-mp-choice text-center"
+                :style="{ color: category.color_secondary ?? undefined }"
+            >
                 {{ category.subtitle }}
             </p>
         </template>
@@ -28,8 +48,23 @@ defineProps<{
             >
                 <MenuItemPhoto :item="item" class="tc-mp-dessert-photo" />
                 <div class="tc-mp-dessert-text">
-                    <p class="tc-mp-name tc-mp-name--md" :style="{ color: category.color_secondary ?? undefined }">{{ item.name }}</p>
-                    <p class="tc-mp-price tc-mp-price--sm" :style="{ color: category.color ?? undefined, '--tc-mp-h': category.color ?? undefined }">${{ money(item.price) }}</p>
+                    <p
+                        class="tc-mp-name tc-mp-name--md"
+                        :style="{
+                            color: category.color_secondary ?? undefined,
+                        }"
+                    >
+                        {{ item.name }}
+                    </p>
+                    <p
+                        class="tc-mp-price tc-mp-price--sm"
+                        :style="{
+                            color: category.color ?? undefined,
+                            '--tc-mp-h': category.color ?? undefined,
+                        }"
+                    >
+                        ${{ money(item.price) }}
+                    </p>
                 </div>
             </div>
         </div>

@@ -94,7 +94,10 @@ const user = computed(() => page.props.auth.user);
             </div>
 
             <div class="flex items-center gap-4">
-                <Button :disabled="processing" data-test="update-profile-button">
+                <Button
+                    :disabled="processing"
+                    data-test="update-profile-button"
+                >
                     Guardar
                 </Button>
             </div>

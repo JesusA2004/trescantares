@@ -19,7 +19,9 @@ const isDark = computed(() => resolvedAppearance.value === 'dark');
 
 const mounted = ref(false);
 onMounted(() => {
-    setTimeout(() => { mounted.value = true; }, 80);
+    setTimeout(() => {
+        mounted.value = true;
+    }, 80);
 });
 
 const sz = computed(() => props.size ?? 156);
@@ -30,7 +32,10 @@ const cx = computed(() => sz.value / 2);
 const cy = computed(() => sz.value / 2);
 
 const total = computed(() => {
-    if (props.total !== undefined && props.total > 0) return props.total;
+    if (props.total !== undefined && props.total > 0) {
+return props.total;
+}
+
     return props.segments.reduce((s, seg) => s + seg.value, 0) || 1;
 });
 
@@ -46,6 +51,7 @@ interface Arc {
 
 const arcs = computed((): Arc[] => {
     let cum = 0;
+
     return props.segments.map((seg) => {
         const pct = total.value > 0 ? seg.value / total.value : 0;
         const dash = mounted.value ? pct * circ.value : 0;
@@ -53,6 +59,7 @@ const arcs = computed((): Arc[] => {
         const startAngle = circ.value * 0.25;
         const offset = startAngle - cum * circ.value;
         cum += pct;
+
         return { ...seg, pct, dash, gap, offset };
     });
 });
@@ -62,7 +69,6 @@ const hoveredIdx = ref<number | null>(null);
 
 <template>
     <div class="donut-wrap">
-
         <!-- SVG Donut -->
         <div class="donut-chart-area">
             <svg
@@ -77,25 +83,43 @@ const hoveredIdx = ref<number | null>(null);
                         v-for="(seg, i) in segments"
                         :id="`dg-${i}`"
                         :key="`grad-${i}`"
-                        cx="50%" cy="50%" r="50%"
+                        cx="50%"
+                        cy="50%"
+                        r="50%"
                     >
-                        <stop offset="0%" :stop-color="seg.color" stop-opacity="0.85" />
-                        <stop offset="100%" :stop-color="seg.color" stop-opacity="1" />
+                        <stop
+                            offset="0%"
+                            :stop-color="seg.color"
+                            stop-opacity="0.85"
+                        />
+                        <stop
+                            offset="100%"
+                            :stop-color="seg.color"
+                            stop-opacity="1"
+                        />
                     </radialGradient>
                 </defs>
 
                 <!-- Background track -->
                 <circle
-                    :cx="cx" :cy="cy" :r="r"
+                    :cx="cx"
+                    :cy="cy"
+                    :r="r"
                     fill="none"
                     :stroke="isDark ? 'rgba(109,76,255,.12)' : '#E8E8EC'"
                     :stroke-width="sw"
                 />
                 <!-- Inner glow ring -->
                 <circle
-                    :cx="cx" :cy="cy" :r="r"
+                    :cx="cx"
+                    :cy="cy"
+                    :r="r"
                     fill="none"
-                    :stroke="isDark ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.5)'"
+                    :stroke="
+                        isDark
+                            ? 'rgba(255,255,255,.03)'
+                            : 'rgba(255,255,255,.5)'
+                    "
                     :stroke-width="sw - 6"
                 />
 
@@ -103,15 +127,25 @@ const hoveredIdx = ref<number | null>(null);
                 <circle
                     v-for="(arc, i) in arcs"
                     :key="arc.label"
-                    :cx="cx" :cy="cy" :r="r"
+                    :cx="cx"
+                    :cy="cy"
+                    :r="r"
                     fill="none"
                     :stroke="arc.color"
                     :stroke-width="hoveredIdx === i ? sw + 4 : sw"
                     stroke-linecap="round"
                     :stroke-dasharray="`${arc.dash} ${arc.gap}`"
                     :stroke-dashoffset="arc.offset"
-                    :opacity="hoveredIdx !== null && hoveredIdx !== i ? 0.45 : 1"
-                    style="transition: stroke-dasharray .72s cubic-bezier(.4,0,.2,1), stroke-dashoffset .72s cubic-bezier(.4,0,.2,1), stroke-width .18s ease, opacity .18s ease"
+                    :opacity="
+                        hoveredIdx !== null && hoveredIdx !== i ? 0.45 : 1
+                    "
+                    style="
+                        transition:
+                            stroke-dasharray 0.72s cubic-bezier(0.4, 0, 0.2, 1),
+                            stroke-dashoffset 0.72s cubic-bezier(0.4, 0, 0.2, 1),
+                            stroke-width 0.18s ease,
+                            opacity 0.18s ease;
+                    "
                     class="donut-segment"
                     @mouseenter="hoveredIdx = i"
                     @mouseleave="hoveredIdx = null"
@@ -119,41 +153,52 @@ const hoveredIdx = ref<number | null>(null);
 
                 <!-- Center background circle -->
                 <circle
-                    :cx="cx" :cy="cy" :r="r - sw / 2 - 2"
+                    :cx="cx"
+                    :cy="cy"
+                    :r="r - sw / 2 - 2"
                     :fill="isDark ? '#202020' : 'white'"
                     fill-opacity="0.97"
                 />
 
                 <!-- Center text -->
                 <text
-                    :x="cx" :y="cy - 8"
+                    :x="cx"
+                    :y="cy - 8"
                     text-anchor="middle"
                     :font-size="sz * 0.148"
                     font-weight="800"
                     :fill="isDark ? '#F5F5F5' : '#1D1D1F'"
                     font-family="sans-serif"
                     letter-spacing="-1"
-                >{{ total }}</text>
+                >
+                    {{ total }}
+                </text>
                 <text
-                    :x="cx" :y="cy + 10"
+                    :x="cx"
+                    :y="cy + 10"
                     text-anchor="middle"
                     :font-size="sz * 0.074"
                     :fill="isDark ? '#8E8E8E' : '#8B9097'"
                     font-family="sans-serif"
                     font-weight="500"
-                >{{ centerLabel ?? 'total' }}</text>
+                >
+                    {{ centerLabel ?? 'total' }}
+                </text>
 
                 <!-- Hover pct label -->
                 <Transition name="donut-center">
                     <text
                         v-if="hoveredIdx !== null"
-                        :x="cx" :y="cy + sz * 0.13"
+                        :x="cx"
+                        :y="cy + sz * 0.13"
                         text-anchor="middle"
                         :font-size="sz * 0.065"
                         :fill="segments[hoveredIdx]?.color ?? '#6b7280'"
                         font-family="sans-serif"
                         font-weight="700"
-                    >{{ Math.round((arcs[hoveredIdx]?.pct ?? 0) * 100) }}%</text>
+                    >
+                        {{ Math.round((arcs[hoveredIdx]?.pct ?? 0) * 100) }}%
+                    </text>
                 </Transition>
             </svg>
         </div>
@@ -169,11 +214,18 @@ const hoveredIdx = ref<number | null>(null);
                 @mouseleave="hoveredIdx = null"
             >
                 <div class="donut-legend-dot-wrap">
-                    <span class="donut-legend-dot" :style="{ background: seg.color }" />
+                    <span
+                        class="donut-legend-dot"
+                        :style="{ background: seg.color }"
+                    />
                 </div>
                 <span class="donut-legend-label">{{ seg.label }}</span>
                 <strong class="donut-legend-val">{{ seg.value }}</strong>
-                <span class="donut-legend-pct">{{ total > 0 ? Math.round((seg.value / total) * 100) : 0 }}%</span>
+                <span class="donut-legend-pct"
+                    >{{
+                        total > 0 ? Math.round((seg.value / total) * 100) : 0
+                    }}%</span
+                >
             </div>
         </div>
     </div>
@@ -189,7 +241,7 @@ const hoveredIdx = ref<number | null>(null);
 }
 .donut-chart-area {
     position: relative;
-    filter: drop-shadow(0 8px 24px rgba(20,78,143,.1));
+    filter: drop-shadow(0 8px 24px rgba(20, 78, 143, 0.1));
 }
 .donut-svg {
     display: block;
@@ -211,12 +263,14 @@ const hoveredIdx = ref<number | null>(null);
     padding: 6px 10px;
     border-radius: 10px;
     cursor: default;
-    transition: background .15s ease, transform .15s ease;
+    transition:
+        background 0.15s ease,
+        transform 0.15s ease;
     border: 1px solid transparent;
 }
 .donut-legend-row.is-hovered {
-    background: rgba(255,255,255,.7);
-    border-color: rgba(210,175,100,.28);
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(210, 175, 100, 0.28);
     transform: translateX(3px);
 }
 .donut-legend-dot-wrap {
@@ -232,8 +286,8 @@ const hoveredIdx = ref<number | null>(null);
     height: 11px;
     border-radius: 50%;
     display: block;
-    box-shadow: 0 2px 6px rgba(0,0,0,.15);
-    transition: transform .15s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: transform 0.15s ease;
 }
 .donut-legend-row.is-hovered .donut-legend-dot {
     transform: scale(1.3);
@@ -262,29 +316,31 @@ const hoveredIdx = ref<number | null>(null);
     width: 30px;
     text-align: right;
 }
-.donut-center-enter-active, .donut-center-leave-active {
-    transition: opacity .15s ease;
+.donut-center-enter-active,
+.donut-center-leave-active {
+    transition: opacity 0.15s ease;
 }
-.donut-center-enter-from, .donut-center-leave-to {
+.donut-center-enter-from,
+.donut-center-leave-to {
     opacity: 0;
 }
 
 /* ── Dark mode overrides ── */
 :global(.dark) .donut-legend-row.is-hovered {
-    background: rgba(109,76,255,.10);
-    border-color: rgba(109,76,255,.26);
+    background: rgba(109, 76, 255, 0.1);
+    border-color: rgba(109, 76, 255, 0.26);
     transform: translateX(3px);
 }
 :global(.dark) .donut-legend-label {
-    color: #8E8E8E;
+    color: #8e8e8e;
 }
 :global(.dark) .donut-legend-row.is-hovered .donut-legend-label {
-    color: #F5F5F5;
+    color: #f5f5f5;
 }
 :global(.dark) .donut-legend-val {
-    color: #F5F5F5;
+    color: #f5f5f5;
 }
 :global(.dark) .donut-legend-pct {
-    color: #8E8E8E;
+    color: #8e8e8e;
 }
 </style>

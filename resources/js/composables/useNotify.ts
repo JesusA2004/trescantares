@@ -67,11 +67,15 @@ export function useNotify() {
         });
     }
 
-    async function confirm(title: string, text?: string, opts?: {
-        confirmText?: string;
-        cancelText?: string;
-        icon?: 'warning' | 'question' | 'error';
-    }) {
+    async function confirm(
+        title: string,
+        text?: string,
+        opts?: {
+            confirmText?: string;
+            cancelText?: string;
+            icon?: 'warning' | 'question' | 'error';
+        },
+    ) {
         const result = await Swal.fire({
             ...swalBase(),
             title,
@@ -83,6 +87,7 @@ export function useNotify() {
             reverseButtons: true,
             focusCancel: true,
         });
+
         return result.isConfirmed;
     }
 

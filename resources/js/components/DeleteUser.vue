@@ -28,7 +28,9 @@ const passwordInput = useTemplateRef('passwordInput');
             title="Eliminar cuenta"
             description="Elimina tu cuenta y todos sus recursos"
         />
-        <div class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
+        <div
+            class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10"
+        >
             <div class="relative space-y-0.5 text-red-600 dark:text-red-100">
                 <p class="font-medium">Advertencia</p>
                 <p class="text-sm">
@@ -37,7 +39,10 @@ const passwordInput = useTemplateRef('passwordInput');
             </div>
             <Dialog>
                 <DialogTrigger as-child>
-                    <Button variant="destructive" data-test="delete-user-button">
+                    <Button
+                        variant="destructive"
+                        data-test="delete-user-button"
+                    >
                         Eliminar cuenta
                     </Button>
                 </DialogTrigger>
@@ -51,15 +56,21 @@ const passwordInput = useTemplateRef('passwordInput');
                         v-slot="{ errors, processing, reset, clearErrors }"
                     >
                         <DialogHeader class="space-y-3">
-                            <DialogTitle>¿Seguro que deseas eliminar tu cuenta?</DialogTitle>
+                            <DialogTitle
+                                >¿Seguro que deseas eliminar tu
+                                cuenta?</DialogTitle
+                            >
                             <DialogDescription>
-                                Una vez eliminada tu cuenta, todos sus recursos y datos serán
-                                eliminados permanentemente. Ingresa tu contraseña para confirmar.
+                                Una vez eliminada tu cuenta, todos sus recursos
+                                y datos serán eliminados permanentemente.
+                                Ingresa tu contraseña para confirmar.
                             </DialogDescription>
                         </DialogHeader>
 
                         <div class="grid gap-2">
-                            <Label for="password" class="sr-only">Contraseña</Label>
+                            <Label for="password" class="sr-only"
+                                >Contraseña</Label
+                            >
                             <PasswordInput
                                 id="password"
                                 name="password"
@@ -73,7 +84,12 @@ const passwordInput = useTemplateRef('passwordInput');
                             <DialogClose as-child>
                                 <Button
                                     variant="secondary"
-                                    @click="() => { clearErrors(); reset(); }"
+                                    @click="
+                                        () => {
+                                            clearErrors();
+                                            reset();
+                                        }
+                                    "
                                 >
                                     Cancelar
                                 </Button>

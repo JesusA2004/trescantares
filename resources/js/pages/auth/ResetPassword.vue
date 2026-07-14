@@ -78,7 +78,7 @@ const inputEmail = ref(props.email);
 
             <Button
                 type="submit"
-                class="mt-4 w-full tc-auth-submit-btn"
+                class="tc-auth-submit-btn mt-4 w-full"
                 :disabled="processing"
                 data-test="reset-password-button"
             >

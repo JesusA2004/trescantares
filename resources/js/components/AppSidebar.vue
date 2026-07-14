@@ -35,7 +35,9 @@ const { can } = usePermissions();
 const user = computed(() => (page.props as any).auth?.user ?? null);
 
 // Enabled modules from props (shared via HandleInertiaRequests)
-const enabledModules = computed<string[]>(() => (page.props as any).enabledModules ?? []);
+const enabledModules = computed<string[]>(
+    () => (page.props as any).enabledModules ?? [],
+);
 
 function moduleEnabled(slug: string): boolean {
     return enabledModules.value.includes(slug);
@@ -45,35 +47,89 @@ const navGroups = computed(() => [
     {
         label: 'Principal',
         items: [
-            { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.view', module: 'dashboard' },
+            {
+                title: 'Dashboard',
+                href: '/dashboard',
+                icon: LayoutDashboard,
+                permission: 'dashboard.view',
+                module: 'dashboard',
+            },
         ],
     },
     {
         label: 'Contenido',
         items: [
-            { title: 'Categorías', href: '/admin/categories', icon: Tag, permission: 'categories.view', module: 'categories' },
-            { title: 'Platillos', href: '/admin/menu-items', icon: UtensilsCrossed, permission: 'menu.view', module: 'menu' },
+            {
+                title: 'Categorías',
+                href: '/admin/categories',
+                icon: Tag,
+                permission: 'categories.view',
+                module: 'categories',
+            },
+            {
+                title: 'Platillos',
+                href: '/admin/menu-items',
+                icon: UtensilsCrossed,
+                permission: 'menu.view',
+                module: 'menu',
+            },
         ],
     },
     {
         label: 'Personas',
         items: [
-            { title: 'Usuarios', href: '/admin/users', icon: Users, permission: 'users.view', module: 'users' },
-            { title: 'Roles', href: '/admin/roles', icon: ShieldCheck, permission: 'roles.view', module: 'roles' },
+            {
+                title: 'Usuarios',
+                href: '/admin/users',
+                icon: Users,
+                permission: 'users.view',
+                module: 'users',
+            },
+            {
+                title: 'Roles',
+                href: '/admin/roles',
+                icon: ShieldCheck,
+                permission: 'roles.view',
+                module: 'roles',
+            },
         ],
     },
     {
         label: 'Operaciones',
         items: [
-            { title: 'Reportes', href: '/admin/reports', icon: BarChart3, permission: 'reports.view', module: 'reports' },
-            { title: 'Bolsa de Trabajo', href: '/admin/jobs', icon: Briefcase, permission: 'jobs.view', module: 'jobs' },
+            {
+                title: 'Reportes',
+                href: '/admin/reports',
+                icon: BarChart3,
+                permission: 'reports.view',
+                module: 'reports',
+            },
+            {
+                title: 'Bolsa de Trabajo',
+                href: '/admin/jobs',
+                icon: Briefcase,
+                permission: 'jobs.view',
+                module: 'jobs',
+            },
         ],
     },
     {
         label: 'Sistema',
         items: [
-            { title: 'Módulos', href: '/admin/modules', icon: Boxes, permission: 'modules.view', module: 'modules' },
-            { title: 'Configuración', href: '/admin/settings', icon: Settings, permission: 'settings.view', module: 'settings' },
+            {
+                title: 'Módulos',
+                href: '/admin/modules',
+                icon: Boxes,
+                permission: 'modules.view',
+                module: 'modules',
+            },
+            {
+                title: 'Configuración',
+                href: '/admin/settings',
+                icon: Settings,
+                permission: 'settings.view',
+                module: 'settings',
+            },
         ],
     },
 ]);
@@ -105,11 +161,20 @@ function handleLogout() {
         <!-- Logo header -->
         <div class="tc-msidebar-header">
             <Link href="/dashboard" class="tc-msidebar-logo-link">
-                <img :src="logoTresCantares" alt="TC" class="tc-msidebar-logo" style="filter: none;" />
+                <img
+                    :src="logoTresCantares"
+                    alt="TC"
+                    class="tc-msidebar-logo"
+                    style="filter: none"
+                />
                 <Transition name="tc-sidebar-fade">
                     <div v-if="open" class="tc-msidebar-brand">
-                        <span class="tc-msidebar-brand-name">Tres Cantares</span>
-                        <span class="tc-msidebar-brand-sub">Panel administrativo</span>
+                        <span class="tc-msidebar-brand-name"
+                            >Tres Cantares</span
+                        >
+                        <span class="tc-msidebar-brand-sub"
+                            >Panel administrativo</span
+                        >
                     </div>
                 </Transition>
             </Link>
@@ -121,7 +186,9 @@ function handleLogout() {
                 <div v-if="idx > 0" class="tc-msidebar-sep" />
 
                 <Transition name="tc-sidebar-fade">
-                    <span v-if="open" class="tc-msidebar-group-label">{{ group.label }}</span>
+                    <span v-if="open" class="tc-msidebar-group-label">{{
+                        group.label
+                    }}</span>
                 </Transition>
 
                 <div class="tc-msidebar-items">
@@ -130,11 +197,17 @@ function handleLogout() {
                         :key="item.href"
                         :href="item.href"
                         class="tc-msidebar-item"
-                        :class="{ 'is-active': isCurrentOrParentUrl(item.href) }"
+                        :class="{
+                            'is-active': isCurrentOrParentUrl(item.href),
+                        }"
                     >
                         <component :is="item.icon" class="tc-msidebar-icon" />
-                        <span v-if="open" class="tc-msidebar-item-label">{{ item.title }}</span>
-                        <span v-else class="tc-msidebar-tooltip">{{ item.title }}</span>
+                        <span v-if="open" class="tc-msidebar-item-label">{{
+                            item.title
+                        }}</span>
+                        <span v-else class="tc-msidebar-tooltip">{{
+                            item.title
+                        }}</span>
                     </Link>
                 </div>
             </template>
@@ -144,9 +217,16 @@ function handleLogout() {
         <div class="tc-msidebar-footer">
             <div class="tc-msidebar-sep" />
 
-            <a href="/" target="_blank" rel="noopener" class="tc-msidebar-item tc-msidebar-item--muted">
+            <a
+                href="/"
+                target="_blank"
+                rel="noopener"
+                class="tc-msidebar-item tc-msidebar-item--muted"
+            >
                 <Globe class="tc-msidebar-icon" />
-                <span v-if="open" class="tc-msidebar-item-label">Ver sitio</span>
+                <span v-if="open" class="tc-msidebar-item-label"
+                    >Ver sitio</span
+                >
                 <span v-else class="tc-msidebar-tooltip">Ver sitio</span>
             </a>
 
@@ -158,21 +238,41 @@ function handleLogout() {
                         </div>
                         <Transition name="tc-sidebar-fade">
                             <div v-if="open" class="tc-msidebar-user-info">
-                                <span class="tc-msidebar-user-name">{{ user?.name }}</span>
-                                <span class="tc-msidebar-user-email">{{ user?.email }}</span>
+                                <span class="tc-msidebar-user-name">{{
+                                    user?.name
+                                }}</span>
+                                <span class="tc-msidebar-user-email">{{
+                                    user?.email
+                                }}</span>
                             </div>
                         </Transition>
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" :side-offset="10" align="end" class="min-w-52">
+                <DropdownMenuContent
+                    side="right"
+                    :side-offset="10"
+                    align="end"
+                    class="min-w-52"
+                >
                     <div class="px-3 py-2 text-sm">
-                        <p class="font-semibold text-gray-800 dark:text-[#fff7e6]">{{ user?.name }}</p>
-                        <p class="text-xs text-gray-400 dark:text-white/55 truncate">{{ user?.email }}</p>
+                        <p
+                            class="font-semibold text-gray-800 dark:text-[#fff7e6]"
+                        >
+                            {{ user?.name }}
+                        </p>
+                        <p
+                            class="truncate text-xs text-gray-400 dark:text-white/55"
+                        >
+                            {{ user?.email }}
+                        </p>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem :as-child="true">
-                        <Link :href="editProfile()" class="flex items-center gap-2 cursor-pointer">
-                            <Settings class="w-4 h-4" />
+                        <Link
+                            :href="editProfile()"
+                            class="flex cursor-pointer items-center gap-2"
+                        >
+                            <Settings class="h-4 w-4" />
                             Perfil
                         </Link>
                     </DropdownMenuItem>
@@ -181,10 +281,10 @@ function handleLogout() {
                         <Link
                             :href="logout()"
                             as="button"
-                            class="flex items-center gap-2 cursor-pointer w-full text-red-600"
+                            class="flex w-full cursor-pointer items-center gap-2 text-red-600"
                             @click="handleLogout"
                         >
-                            <LogOut class="w-4 h-4" />
+                            <LogOut class="h-4 w-4" />
                             Cerrar sesión
                         </Link>
                     </DropdownMenuItem>

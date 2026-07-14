@@ -17,7 +17,7 @@ const model = defineModel<string | number>();
     <div class="tc-field">
         <label v-if="label" :for="id" class="tc-field-label">
             {{ label }}
-            <span v-if="required" class="text-[var(--tc-pink)] ml-0.5">*</span>
+            <span v-if="required" class="ml-0.5 text-[var(--tc-pink)]">*</span>
         </label>
         <input
             :id="id"
@@ -30,7 +30,14 @@ const model = defineModel<string | number>();
             :required="required"
             v-bind="$attrs"
         />
-        <p v-if="error" class="text-xs text-[var(--tc-pink)] mt-0.5">{{ error }}</p>
-        <p v-else-if="hint" class="text-xs text-gray-400 dark:text-white/55 mt-0.5">{{ hint }}</p>
+        <p v-if="error" class="mt-0.5 text-xs text-[var(--tc-pink)]">
+            {{ error }}
+        </p>
+        <p
+            v-else-if="hint"
+            class="mt-0.5 text-xs text-gray-400 dark:text-white/55"
+        >
+            {{ hint }}
+        </p>
     </div>
 </template>

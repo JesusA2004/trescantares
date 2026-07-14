@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { bgLocation } from '@/lib/tres-cantares-assets';
-import Navbar from '@/components/Public/Navbar.vue';
 import Footer from '@/components/Public/Footer.vue';
+import Navbar from '@/components/Public/Navbar.vue';
+import { bgLocation } from '@/lib/tres-cantares-assets';
 
 defineOptions({
     layout: null as any,
@@ -131,9 +131,7 @@ const mapSrc = computed(() => {
                         <div class="tc-location-info-text">
                             <h3>TELÉFONO</h3>
                             <p>
-                                {{
-                                    setting('contact_phone', '777 447 5431')
-                                }}
+                                {{ setting('contact_phone', '777 447 5431') }}
                             </p>
                         </div>
                     </div>
@@ -197,7 +195,7 @@ const mapSrc = computed(() => {
                                 {{
                                     setting(
                                         'schedule',
-                                        "Lunes, miércoles y domingo: 9:00–20:00 hrs.\nJueves, viernes y sábado: 9:00–22:00 hrs.\nMartes: cerrado",
+                                        'Lunes, miércoles y domingo: 9:00–20:00 hrs.\nJueves, viernes y sábado: 9:00–22:00 hrs.\nMartes: cerrado',
                                     )
                                 }}
                             </p>

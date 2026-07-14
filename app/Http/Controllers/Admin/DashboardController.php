@@ -24,9 +24,7 @@ class DashboardController extends Controller
 
         $itemsWithoutImage = MenuItem::whereNull('image')->where('is_active', true)->count();
         $itemsWithoutPrice = MenuItem::where('price', 0)->count();
-        $categoriesEmpty = MenuCategory::withCount('items')
-            ->having('items_count', 0)
-            ->count();
+        $categoriesEmpty = MenuCategory::doesntHave('items')->count();
 
         $byCategory = MenuCategory::withCount(['items', 'items as active_items_count' => fn ($q) => $q->where('is_active', true)])
             ->orderBy('sort_order')

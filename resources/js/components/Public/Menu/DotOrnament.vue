@@ -12,7 +12,14 @@ withDefaults(
 </script>
 
 <template>
-    <svg :width="size" :height="size" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="mx-auto">
+    <svg
+        :width="size"
+        :height="size"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+        class="mx-auto"
+    >
         <path d="M12 2c1.2 3 1.2 5-0 8-1.2-3-1.2-5 0-8Z" :fill="color" />
         <path d="M12 22c1.2-3 1.2-5-0-8-1.2 3-1.2 5 0 8Z" :fill="color" />
         <path d="M2 12c3-1.2 5-1.2 8 0-3 1.2-5 1.2-8 0Z" :fill="color" />

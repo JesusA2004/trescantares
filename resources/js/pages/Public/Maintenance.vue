@@ -10,20 +10,26 @@ defineProps<{
 
 <template>
     <div class="tc-maintenance-page tc-public-layout">
-
         <!-- Decorative top border -->
         <div class="tc-maintenance-border-top" />
 
         <div class="tc-maintenance-wrap">
-
             <!-- Logo -->
             <div class="tc-maintenance-logo-wrap">
-                <img :src="logoTresCantares" alt="Tres Cantares" class="tc-maintenance-logo" />
+                <img
+                    :src="logoTresCantares"
+                    alt="Tres Cantares"
+                    class="tc-maintenance-logo"
+                />
             </div>
 
             <!-- Decorative image -->
             <div class="tc-maintenance-deco" aria-hidden="true">
-                <img :src="cantaritoMain" alt="" class="tc-maintenance-cantarito" />
+                <img
+                    :src="cantaritoMain"
+                    alt=""
+                    class="tc-maintenance-cantarito"
+                />
             </div>
 
             <!-- Content -->
@@ -36,10 +42,17 @@ defineProps<{
                 </h1>
 
                 <p class="tc-maintenance-msg">
-                    {{ message ?? 'Actualmente esta sección no está disponible. Próximamente estaremos de vuelta.' }}
+                    {{
+                        message ??
+                        'Actualmente esta sección no está disponible. Próximamente estaremos de vuelta.'
+                    }}
                 </p>
 
-                <div class="tc-maintenance-ornament tc-maintenance-ornament--bottom">— ✦ —</div>
+                <div
+                    class="tc-maintenance-ornament tc-maintenance-ornament--bottom"
+                >
+                    — ✦ —
+                </div>
 
                 <div class="tc-maintenance-actions">
                     <Link href="/" class="tc-maintenance-btn-primary">
@@ -50,12 +63,10 @@ defineProps<{
                     </Link>
                 </div>
             </div>
-
         </div>
 
         <!-- Decorative bottom border -->
         <div class="tc-maintenance-border-bottom" />
-
     </div>
 </template>
 
@@ -76,12 +87,22 @@ defineProps<{
 
 .tc-maintenance-border-top {
     height: 6px;
-    background: linear-gradient(90deg, var(--tc-blue) 0%, var(--tc-pink) 50%, var(--tc-yellow) 100%);
+    background: linear-gradient(
+        90deg,
+        var(--tc-blue) 0%,
+        var(--tc-pink) 50%,
+        var(--tc-yellow) 100%
+    );
 }
 
 .tc-maintenance-border-bottom {
     height: 4px;
-    background: linear-gradient(90deg, var(--tc-yellow) 0%, var(--tc-pink) 50%, var(--tc-blue) 100%);
+    background: linear-gradient(
+        90deg,
+        var(--tc-yellow) 0%,
+        var(--tc-pink) 50%,
+        var(--tc-blue) 100%
+    );
     margin-top: auto;
 }
 
@@ -103,7 +124,7 @@ defineProps<{
     height: 80px;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.18));
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
 }
 
 .tc-maintenance-deco {
@@ -183,7 +204,9 @@ defineProps<{
     font-family: var(--tc-font-body);
     text-decoration: none;
     box-shadow: 0 4px 16px rgba(20, 78, 143, 0.28);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .tc-maintenance-btn-primary:hover {
@@ -204,7 +227,9 @@ defineProps<{
     font-weight: 700;
     font-family: var(--tc-font-body);
     text-decoration: none;
-    transition: background 0.2s ease, color 0.2s ease;
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
 }
 
 .tc-maintenance-btn-secondary:hover {
@@ -213,9 +238,17 @@ defineProps<{
 }
 
 @media (max-width: 480px) {
-    .tc-maintenance-deco { display: none; }
-    .tc-maintenance-actions { flex-direction: column; align-items: center; }
+    .tc-maintenance-deco {
+        display: none;
+    }
+    .tc-maintenance-actions {
+        flex-direction: column;
+        align-items: center;
+    }
     .tc-maintenance-btn-primary,
-    .tc-maintenance-btn-secondary { width: 100%; justify-content: center; }
+    .tc-maintenance-btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
 }
 </style>

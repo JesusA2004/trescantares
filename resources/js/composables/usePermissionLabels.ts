@@ -27,15 +27,15 @@ export const PERMISSION_LABELS: Record<string, string> = {
 };
 
 export const GROUP_LABELS: Record<string, string> = {
-    dashboard:  'Dashboard',
-    menu:       'Platillos',
+    dashboard: 'Dashboard',
+    menu: 'Platillos',
     categories: 'Categorías',
-    users:      'Usuarios',
-    roles:      'Roles',
-    settings:   'Configuración',
-    jobs:       'Bolsa de trabajo',
-    modules:    'Módulos',
-    reports:    'Reportes',
+    users: 'Usuarios',
+    roles: 'Roles',
+    settings: 'Configuración',
+    jobs: 'Bolsa de trabajo',
+    modules: 'Módulos',
+    reports: 'Reportes',
 };
 
 export function permissionLabel(permission: string): string {

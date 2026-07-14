@@ -14,7 +14,10 @@ withDefaults(
 
 <template>
     <header class="tc-admin-topbar">
-        <Breadcrumbs v-if="breadcrumbs && breadcrumbs.length > 0" :breadcrumbs="breadcrumbs" />
+        <Breadcrumbs
+            v-if="breadcrumbs && breadcrumbs.length > 0"
+            :breadcrumbs="breadcrumbs"
+        />
         <div v-else class="h-4" />
     </header>
 </template>

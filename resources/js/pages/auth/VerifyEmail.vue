@@ -9,7 +9,8 @@ import { send } from '@/routes/verification';
 defineOptions({
     layout: {
         title: 'Verifica tu correo',
-        description: 'Por favor verifica tu correo haciendo clic en el enlace que te enviamos.',
+        description:
+            'Por favor verifica tu correo haciendo clic en el enlace que te enviamos.',
     },
 });
 
@@ -28,8 +29,12 @@ defineProps<{
         Se ha enviado un nuevo enlace de verificación al correo que registraste.
     </div>
 
-    <Form v-bind="send.form()" class="space-y-6 text-center" v-slot="{ processing }">
-        <Button :disabled="processing" class="w-full tc-auth-submit-btn">
+    <Form
+        v-bind="send.form()"
+        class="space-y-6 text-center"
+        v-slot="{ processing }"
+    >
+        <Button :disabled="processing" class="tc-auth-submit-btn w-full">
             <Spinner v-if="processing" />
             Reenviar correo de verificación
         </Button>

@@ -18,7 +18,10 @@ class MenuLayoutZones
         'bebidas_promo' => ['drink'],
         'bebidas_tabla' => ['top_table', 'con_alcohol', 'cerveza', 'sin_alcohol', 'complementos', 'calientes'],
         'destilados' => ['tequila', 'mezcal', 'ron'],
-        'grid' => ['item'],
+        // "grid" (plantilla genérica de respaldo) NO filtra por zona —
+        // GridPage.vue itera category.items sin usar byZone() — así que no
+        // debe restringirse a un valor fijo; cualquier item de esa categoría
+        // pasa por la validación genérica de texto libre.
     ];
 
     /**

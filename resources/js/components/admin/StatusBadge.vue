@@ -7,10 +7,7 @@ defineProps<{
 </script>
 
 <template>
-    <span
-        class="tc-badge"
-        :class="active ? 'tc-badge-green' : 'tc-badge-red'"
-    >
+    <span class="tc-badge" :class="active ? 'tc-badge-green' : 'tc-badge-red'">
         {{ active ? (activeLabel ?? 'Activo') : (inactiveLabel ?? 'Inactivo') }}
     </span>
 </template>

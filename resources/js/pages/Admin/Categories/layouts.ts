@@ -12,6 +12,8 @@ const LABELS: Record<string, string> = {
     grid: 'Genérico (lista simple)',
 };
 
-export function layoutOptions(layouts: string[]): { value: string; label: string }[] {
+export function layoutOptions(
+    layouts: string[],
+): { value: string; label: string }[] {
     return layouts.map((l) => ({ value: l, label: LABELS[l] ?? l }));
 }

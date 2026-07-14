@@ -13,7 +13,10 @@ export function usePermissions() {
     );
 
     function can(permission: string): boolean {
-        if (roles.value.includes('super-admin')) return true;
+        if (roles.value.includes('super-admin')) {
+return true;
+}
+
         return permissions.value.includes(permission);
     }
 

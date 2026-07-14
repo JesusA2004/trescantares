@@ -50,8 +50,8 @@ function onKeydown(e: KeyboardEvent) {
 
 watch(drawerOpen, (open) => {
     if (!mounted.value) {
-return;
-}
+        return;
+    }
 
     document.body.style.overflow = open ? 'hidden' : '';
 
@@ -106,7 +106,11 @@ onUnmounted(() => {
 
     <Teleport v-if="mounted" to="body">
         <Transition name="tc-mp-navdrawer-overlay">
-            <div v-if="drawerOpen" class="tc-mp-navdrawer-overlay" @click="closeDrawer" />
+            <div
+                v-if="drawerOpen"
+                class="tc-mp-navdrawer-overlay"
+                @click="closeDrawer"
+            />
         </Transition>
         <Transition name="tc-mp-navdrawer">
             <div
@@ -122,7 +126,9 @@ onUnmounted(() => {
                     :key="item.id ?? 'inicio'"
                     type="button"
                     class="tc-mp-navdrawer-item"
-                    :class="{ 'tc-mp-navdrawer-item--active': item.id === activeId }"
+                    :class="{
+                        'tc-mp-navdrawer-item--active': item.id === activeId,
+                    }"
                     @click="select(item.id)"
                 >
                     {{ item.fullLabel }}

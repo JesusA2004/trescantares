@@ -18,7 +18,10 @@ const CHART_H = H - PAD_Y * 2;
 const maxVal = computed(() => Math.max(...props.data.map((d) => d.count), 1));
 
 function x(i: number): number {
-    if (props.data.length <= 1) return PAD_X + CHART_W / 2;
+    if (props.data.length <= 1) {
+return PAD_X + CHART_W / 2;
+}
+
     return PAD_X + (i / (props.data.length - 1)) * CHART_W;
 }
 
@@ -28,7 +31,10 @@ function y(val: number): number {
 
 const linePath = computed(() =>
     props.data
-        .map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(d.count).toFixed(1)}`)
+        .map(
+            (d, i) =>
+                `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(d.count).toFixed(1)}`,
+        )
         .join(' '),
 );
 
@@ -37,6 +43,7 @@ const areaPath = computed(() => {
     const last = props.data[props.data.length - 1];
     const n = props.data.length - 1;
     const bottom = (PAD_Y + CHART_H).toFixed(1);
+
     return `${linePath.value} L ${x(n).toFixed(1)} ${bottom} L ${PAD_X.toFixed(1)} ${bottom} Z`;
 });
 
@@ -55,7 +62,11 @@ const gradTo = computed(() => props.gradientTo ?? 'transparent');
         >
             <defs>
                 <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" :stop-color="gradFrom" stop-opacity="0.25" />
+                    <stop
+                        offset="0%"
+                        :stop-color="gradFrom"
+                        stop-opacity="0.25"
+                    />
                     <stop offset="100%" :stop-color="gradTo" stop-opacity="0" />
                 </linearGradient>
             </defs>
@@ -88,10 +99,19 @@ const gradTo = computed(() => props.gradientTo ?? 'transparent');
         </svg>
 
         <!-- X-axis labels — show only first, middle, last -->
-        <div class="flex justify-between mt-1 px-1">
-            <span class="text-[10px] text-gray-400 dark:text-white/55 tabular-nums">{{ data[0]?.label }}</span>
-            <span class="text-[10px] text-gray-400 dark:text-white/55 tabular-nums">{{ data[Math.floor(data.length / 2)]?.label }}</span>
-            <span class="text-[10px] text-gray-400 dark:text-white/55 tabular-nums">{{ data[data.length - 1]?.label }}</span>
+        <div class="mt-1 flex justify-between px-1">
+            <span
+                class="text-[10px] text-gray-400 tabular-nums dark:text-white/55"
+                >{{ data[0]?.label }}</span
+            >
+            <span
+                class="text-[10px] text-gray-400 tabular-nums dark:text-white/55"
+                >{{ data[Math.floor(data.length / 2)]?.label }}</span
+            >
+            <span
+                class="text-[10px] text-gray-400 tabular-nums dark:text-white/55"
+                >{{ data[data.length - 1]?.label }}</span
+            >
         </div>
     </div>
 </template>

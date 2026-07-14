@@ -45,7 +45,10 @@ export interface MenuCategoryData {
 }
 
 export function money(value: number | string | null | undefined): string {
-    return Number(value ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return Number(value ?? 0).toLocaleString('es-MX', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 }
 
 export function byZone(items: MenuItemData[], zone: string): MenuItemData[] {

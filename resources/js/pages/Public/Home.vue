@@ -2,9 +2,9 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import Navbar from '@/components/Public/Navbar.vue';
-import Footer from '@/components/Public/Footer.vue';
 import DecorativeDivider from '@/components/Public/DecorativeDivider.vue';
+import Footer from '@/components/Public/Footer.vue';
+import Navbar from '@/components/Public/Navbar.vue';
 import {
     heroHome,
     imgConcepto,

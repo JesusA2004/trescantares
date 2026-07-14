@@ -19,7 +19,9 @@ interface ZoneState<T extends DragSortItem> {
  * success, reject on failure) — `saving` stays true until it settles, and a
  * rejection reverts the zones to their pre-drag order and surfaces an error toast.
  */
-export function useDragSort<T extends DragSortItem>(onCommit: (zones: Record<string, T[]>) => Promise<unknown>) {
+export function useDragSort<T extends DragSortItem>(
+    onCommit: (zones: Record<string, T[]>) => Promise<unknown>,
+) {
     const zones = new Map<string, ZoneState<T>>();
     const dragging = ref<{ item: T; fromZone: string } | null>(null);
     const overZone = ref<string | null>(null);
@@ -34,15 +36,25 @@ export function useDragSort<T extends DragSortItem>(onCommit: (zones: Record<str
         zones.delete(key);
     }
 
-    function findTarget(clientX: number, clientY: number): { zone: string; index: number } | null {
+    function findTarget(
+        clientX: number,
+        clientY: number,
+    ): { zone: string; index: number } | null {
         for (const [key, zone] of zones) {
             const rect = zone.el.getBoundingClientRect();
 
-            if (clientX < rect.left - 40 || clientX > rect.right + 40 || clientY < rect.top || clientY > rect.bottom) {
-continue;
-}
+            if (
+                clientX < rect.left - 40 ||
+                clientX > rect.right + 40 ||
+                clientY < rect.top ||
+                clientY > rect.bottom
+            ) {
+                continue;
+            }
 
-            const rows = Array.from(zone.el.querySelectorAll<HTMLElement>('[data-drag-row]'));
+            const rows = Array.from(
+                zone.el.querySelectorAll<HTMLElement>('[data-drag-row]'),
+            );
             let index = rows.length;
 
             for (let i = 0; i < rows.length; i++) {
@@ -72,7 +84,9 @@ continue;
         dragging.value = { item, fromZone };
         overZone.value = fromZone;
         const zone = zones.get(fromZone);
-        overIndex.value = zone ? zone.items.findIndex((i) => i.id === item.id) : null;
+        overIndex.value = zone
+            ? zone.items.findIndex((i) => i.id === item.id)
+            : null;
 
         const beforeSnapshot: Record<string, T[]> = {};
         zones.forEach((z, key) => {
@@ -83,8 +97,8 @@ continue;
             const target = findTarget(e.clientX, e.clientY);
 
             if (!target || !dragging.value) {
-return;
-}
+                return;
+            }
 
             overZone.value = target.zone;
             overIndex.value = target.index;
@@ -93,22 +107,30 @@ return;
             const toZoneState = zones.get(target.zone);
 
             if (!fromZoneState || !toZoneState) {
-return;
-}
+                return;
+            }
 
-            const currentIndex = fromZoneState.items.findIndex((i) => i.id === dragging.value!.item.id);
+            const currentIndex = fromZoneState.items.findIndex(
+                (i) => i.id === dragging.value!.item.id,
+            );
 
             if (currentIndex === -1) {
-return;
-}
+                return;
+            }
 
             if (dragging.value.fromZone === target.zone) {
-                if (currentIndex === target.index || currentIndex === target.index - 1) {
-return;
-}
+                if (
+                    currentIndex === target.index ||
+                    currentIndex === target.index - 1
+                ) {
+                    return;
+                }
 
                 const [moved] = fromZoneState.items.splice(currentIndex, 1);
-                const insertAt = target.index > currentIndex ? target.index - 1 : target.index;
+                const insertAt =
+                    target.index > currentIndex
+                        ? target.index - 1
+                        : target.index;
                 fromZoneState.items.splice(insertAt, 0, moved);
             } else {
                 const [moved] = fromZoneState.items.splice(currentIndex, 1);
@@ -130,8 +152,14 @@ return;
                 afterSnapshot[key] = [...z.items];
             });
 
-            const idsOf = (snap: Record<string, T[]>) => Object.entries(snap).map(([key, items]) => [key, items.map((i) => i.id)]);
-            const unchanged = JSON.stringify(idsOf(beforeSnapshot)) === JSON.stringify(idsOf(afterSnapshot));
+            const idsOf = (snap: Record<string, T[]>) =>
+                Object.entries(snap).map(([key, items]) => [
+                    key,
+                    items.map((i) => i.id),
+                ]);
+            const unchanged =
+                JSON.stringify(idsOf(beforeSnapshot)) ===
+                JSON.stringify(idsOf(afterSnapshot));
 
             if (unchanged) {
                 return;
@@ -142,9 +170,15 @@ return;
             Promise.resolve(onCommit(afterSnapshot))
                 .catch(() => {
                     zones.forEach((z, key) => {
-                        z.items.splice(0, z.items.length, ...(beforeSnapshot[key] ?? z.items));
+                        z.items.splice(
+                            0,
+                            z.items.length,
+                            ...(beforeSnapshot[key] ?? z.items),
+                        );
                     });
-                    useNotify().error('No se pudo guardar el nuevo orden. Se restauró el orden anterior.');
+                    useNotify().error(
+                        'No se pudo guardar el nuevo orden. Se restauró el orden anterior.',
+                    );
                 })
                 .finally(() => {
                     saving.value = false;
@@ -156,5 +190,13 @@ return;
         document.addEventListener('pointercancel', up);
     }
 
-    return { registerZone, unregisterZone, start, dragging, overZone, overIndex, saving };
+    return {
+        registerZone,
+        unregisterZone,
+        start,
+        dragging,
+        overZone,
+        overIndex,
+        saving,
+    };
 }

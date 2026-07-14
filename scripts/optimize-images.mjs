@@ -4,10 +4,10 @@
  * Ejecutar: node scripts/optimize-images.mjs
  */
 
-import sharp from 'sharp';
 import { readFileSync, statSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -129,9 +129,11 @@ for (const job of jobs) {
         console.log(`   Tamaño original: ${(originalSize / 1024 / 1024).toFixed(1)} MB  (${job.note})`);
 
         let pipeline = sharp(inputPath);
+
         if (job.resize) {
             pipeline = pipeline.resize(job.resize);
         }
+
         await pipeline.webp(job.webp).toFile(outputPath);
 
         const newSize = statSync(outputPath).size;

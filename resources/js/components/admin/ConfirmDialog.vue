@@ -19,15 +19,16 @@ const emit = defineEmits<{
             <div class="tc-confirm-card">
                 <p class="tc-confirm-title">{{ title }}</p>
                 <p class="tc-confirm-desc">{{ description }}</p>
-                <div class="flex gap-3 justify-end">
-                    <button
-                        class="tc-btn-secondary"
-                        @click="emit('cancel')"
-                    >
+                <div class="flex justify-end gap-3">
+                    <button class="tc-btn-secondary" @click="emit('cancel')">
                         {{ cancelLabel ?? 'Cancelar' }}
                     </button>
                     <button
-                        :class="danger !== false ? 'tc-btn-danger' : 'tc-btn-primary'"
+                        :class="
+                            danger !== false
+                                ? 'tc-btn-danger'
+                                : 'tc-btn-primary'
+                        "
                         @click="emit('confirm')"
                     >
                         {{ confirmLabel ?? 'Confirmar' }}

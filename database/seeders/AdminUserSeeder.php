@@ -6,10 +6,9 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
-class AdminUserSeeder extends Seeder
-{
-    public function run(): void
-    {
+class AdminUserSeeder extends Seeder {
+
+    public function run(): void {
         $user = User::firstOrCreate(
             ['email' => 'admin@trescantares.com'],
             [
@@ -19,7 +18,7 @@ class AdminUserSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
-
         $user->syncRoles(['super-admin']);
     }
+
 }

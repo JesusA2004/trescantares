@@ -40,9 +40,13 @@ export const LAYOUT_ZONES: Record<string, ZoneOption[]> = {
         { value: 'mezcal', label: 'Mezcal' },
         { value: 'ron', label: 'Ron' },
     ],
-    grid: [{ value: 'item', label: 'Producto' }],
+    // "grid" (plantilla genérica de respaldo) no filtra por zona en
+    // GridPage.vue, así que no ofrece opciones — el campo queda sin uso para
+    // esas categorías, igual que en el backend (ver MenuLayoutZones).
 };
 
-export function zonesForLayout(layout: string | undefined | null): ZoneOption[] {
+export function zonesForLayout(
+    layout: string | undefined | null,
+): ZoneOption[] {
     return LAYOUT_ZONES[layout ?? ''] ?? [];
 }

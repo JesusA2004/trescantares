@@ -15,7 +15,8 @@ import { store } from '@/routes/password/confirm';
 defineOptions({
     layout: {
         title: 'Confirmar contraseña',
-        description: 'Esta es un área segura. Confirma tu contraseña para continuar.',
+        description:
+            'Esta es un área segura. Confirma tu contraseña para continuar.',
     },
 });
 </script>
@@ -33,7 +34,11 @@ defineOptions({
         separator="O confirma con contraseña"
     />
 
-    <Form v-bind="store.form()" reset-on-success v-slot="{ errors, processing }">
+    <Form
+        v-bind="store.form()"
+        reset-on-success
+        v-slot="{ errors, processing }"
+    >
         <div class="space-y-6">
             <div class="grid gap-2">
                 <Label htmlFor="password">Contraseña</Label>
@@ -50,7 +55,7 @@ defineOptions({
 
             <div class="flex items-center">
                 <Button
-                    class="w-full tc-auth-submit-btn"
+                    class="tc-auth-submit-btn w-full"
                     :disabled="processing"
                     data-test="confirm-password-button"
                 >

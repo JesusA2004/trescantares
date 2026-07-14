@@ -24,7 +24,7 @@ defineProps<{
                 class="tc-stat-card-premium-icon"
                 :class="color ?? 'blue'"
             >
-                <component :is="icon" class="w-5 h-5" />
+                <component :is="icon" class="h-5 w-5" />
             </div>
         </div>
         <p class="tc-stat-card-premium-value">{{ value }}</p>

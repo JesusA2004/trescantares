@@ -24,7 +24,10 @@ defineProps<{
 <template>
     <Head title="Recuperar contraseña" />
 
-    <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
+    <div
+        v-if="status"
+        class="mb-4 text-center text-sm font-medium text-green-600"
+    >
         {{ status }}
     </div>
 
@@ -45,7 +48,7 @@ defineProps<{
 
             <div class="my-6 flex items-center justify-start">
                 <Button
-                    class="w-full tc-auth-submit-btn"
+                    class="tc-auth-submit-btn w-full"
                     :disabled="processing"
                     data-test="email-password-reset-link-button"
                 >

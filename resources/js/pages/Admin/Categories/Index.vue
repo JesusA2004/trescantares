@@ -38,41 +38,50 @@ const filtered = computed(() => {
     const q = search.value.trim().toLowerCase();
 
     if (q) {
-items = items.filter((c) => c.name.toLowerCase().includes(q) || c.slug.includes(q));
-}
+        items = items.filter(
+            (c) => c.name.toLowerCase().includes(q) || c.slug.includes(q),
+        );
+    }
 
     if (filterActive.value === 'active') {
-items = items.filter((c) => c.is_active);
-}
+        items = items.filter((c) => c.is_active);
+    }
 
     if (filterActive.value === 'inactive') {
-items = items.filter((c) => !c.is_active);
-}
+        items = items.filter((c) => !c.is_active);
+    }
 
     return items;
 });
 
-const isFiltering = computed(() => search.value.trim() !== '' || filterActive.value !== 'all');
+const isFiltering = computed(
+    () => search.value.trim() !== '' || filterActive.value !== 'all',
+);
 
-const { registerZone, start, dragging, saving } = useDragSort<CategoryRow>((zones) => {
-    const ordered = zones.main ?? list.value;
-    list.value = ordered;
+const { registerZone, start, dragging, saving } = useDragSort<CategoryRow>(
+    (zones) => {
+        const ordered = zones.main ?? list.value;
+        list.value = ordered;
 
-    return new Promise((resolve, reject) => {
-        router.post(
-            '/admin/categories/reorder',
-            {
-                categories: ordered.map((c, idx) => ({ id: c.id, sort_order: idx + 1 })),
-            },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: () => resolve(undefined),
-                onError: (errors) => reject(errors),
-            },
-        );
-    });
-});
+        return new Promise((resolve, reject) => {
+            router.post(
+                '/admin/categories/reorder',
+                {
+                    categories: ordered.map((c, idx) => ({
+                        id: c.id,
+                        sort_order: idx + 1,
+                    })),
+                },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => resolve(undefined),
+                    onError: (errors) => reject(errors),
+                },
+            );
+        });
+    },
+);
 
 function bindZone(el: HTMLElement | null) {
     if (el) {
@@ -83,8 +92,8 @@ function bindZone(el: HTMLElement | null) {
 
 function onHandleDown(cat: CategoryRow, e: PointerEvent) {
     if (isFiltering.value) {
-return;
-}
+        return;
+    }
 
     start(cat, 'main', e);
 }
@@ -103,12 +112,17 @@ function deleteCategory(id: number) {
     <Head title="Categorías" />
 
     <div class="tc-admin-page space-y-5">
-
-        <AdminPageHeader title="Categorías" description="Organiza el menú por secciones">
+        <AdminPageHeader
+            title="Categorías"
+            description="Organiza el menú por secciones"
+        >
             <template #label>Menú</template>
             <template #actions>
                 <Can permission="categories.create">
-                    <Link href="/admin/categories/create" class="tc-btn-primary">
+                    <Link
+                        href="/admin/categories/create"
+                        class="tc-btn-primary"
+                    >
                         <span class="text-base leading-none font-bold">+</span>
                         Nueva categoría
                     </Link>
@@ -119,7 +133,7 @@ function deleteCategory(id: number) {
         <!-- Toolbar -->
         <div class="tc-toolbar">
             <div class="tc-toolbar-search flex-1">
-                <Search class="w-3.5 h-3.5 flex-shrink-0" />
+                <Search class="h-3.5 w-3.5 flex-shrink-0" />
                 <input v-model="search" placeholder="Buscar categoría…" />
             </div>
             <select v-model="filterActive" class="tc-toolbar-select">
@@ -127,14 +141,22 @@ function deleteCategory(id: number) {
                 <option value="active">Solo activas</option>
                 <option value="inactive">Solo inactivas</option>
             </select>
-            <span v-if="saving" class="text-xs text-[var(--tc-blue)] flex items-center gap-1">Guardando orden…</span>
-            <span v-else-if="isFiltering && filtered.length !== list.length" class="text-xs text-gray-400">
+            <span
+                v-if="saving"
+                class="flex items-center gap-1 text-xs text-[var(--tc-blue)]"
+                >Guardando orden…</span
+            >
+            <span
+                v-else-if="isFiltering && filtered.length !== list.length"
+                class="text-xs text-gray-400"
+            >
                 {{ filtered.length }} de {{ list.length }}
             </span>
         </div>
 
-        <p v-if="isFiltering" class="text-xs text-amber-600 -mt-3">
-            Quita los filtros de búsqueda para poder reordenar las categorías arrastrándolas.
+        <p v-if="isFiltering" class="-mt-3 text-xs text-amber-600">
+            Quita los filtros de búsqueda para poder reordenar las categorías
+            arrastrándolas.
         </p>
 
         <!-- Table -->
@@ -157,50 +179,86 @@ function deleteCategory(id: number) {
                             v-for="cat in filtered"
                             :key="cat.id"
                             data-drag-row
-                            :class="{ 'opacity-40': dragging?.item.id === cat.id }"
+                            :class="{
+                                'opacity-40': dragging?.item.id === cat.id,
+                            }"
                         >
                             <td>
                                 <button
                                     v-if="!isFiltering"
                                     type="button"
-                                    class="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none"
+                                    class="cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing"
                                     aria-label="Arrastrar para reordenar"
                                     @pointerdown="onHandleDown(cat, $event)"
                                 >
-                                    <GripVertical class="w-4 h-4" />
+                                    <GripVertical class="h-4 w-4" />
                                 </button>
                             </td>
                             <td>
-                                <div class="w-11 h-11 rounded-lg overflow-hidden bg-gray-100 border border-[#f0e8d8] flex-shrink-0">
-                                    <img v-if="cat.image_url" :src="cat.image_url" :alt="cat.name" class="w-full h-full object-cover" />
-                                    <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
-                                        <Tag class="w-5 h-5" />
+                                <div
+                                    class="h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg border border-[#f0e8d8] bg-gray-100"
+                                >
+                                    <img
+                                        v-if="cat.image_url"
+                                        :src="cat.image_url"
+                                        :alt="cat.name"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <div
+                                        v-else
+                                        class="flex h-full w-full items-center justify-center text-gray-300"
+                                    >
+                                        <Tag class="h-5 w-5" />
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <p class="font-semibold text-gray-900">{{ cat.name }}</p>
-                                <p class="text-xs text-gray-400">{{ cat.slug }}</p>
+                                <p class="font-semibold text-gray-900">
+                                    {{ cat.name }}
+                                </p>
+                                <p class="text-xs text-gray-400">
+                                    {{ cat.slug }}
+                                </p>
                             </td>
                             <td class="hidden sm:table-cell">
-                                <span class="tc-badge tc-badge-blue text-[10px]">{{ cat.layout }}</span>
+                                <span
+                                    class="tc-badge tc-badge-blue text-[10px]"
+                                    >{{ cat.layout }}</span
+                                >
                             </td>
                             <td>
-                                <span class="tc-badge" :class="cat.items_count > 0 ? 'tc-badge-blue' : 'tc-badge-gray'">
-                                    {{ cat.items_count }} platillo{{ cat.items_count !== 1 ? 's' : '' }}
+                                <span
+                                    class="tc-badge"
+                                    :class="
+                                        cat.items_count > 0
+                                            ? 'tc-badge-blue'
+                                            : 'tc-badge-gray'
+                                    "
+                                >
+                                    {{ cat.items_count }} platillo{{
+                                        cat.items_count !== 1 ? 's' : ''
+                                    }}
                                 </span>
                             </td>
                             <td><StatusBadge :active="cat.is_active" /></td>
                             <td class="text-right">
-                                <div class="flex items-center justify-end gap-1">
+                                <div
+                                    class="flex items-center justify-end gap-1"
+                                >
                                     <Can permission="categories.update">
-                                        <Link :href="`/admin/categories/${cat.id}/edit`" class="tc-btn-edit-sm">
-                                            <Pencil class="w-3 h-3" /> Editar
+                                        <Link
+                                            :href="`/admin/categories/${cat.id}/edit`"
+                                            class="tc-btn-edit-sm"
+                                        >
+                                            <Pencil class="h-3 w-3" /> Editar
                                         </Link>
                                     </Can>
                                     <Can permission="categories.delete">
-                                        <button class="tc-btn-danger-sm" @click="confirmDelete = cat.id">
-                                            <Trash2 class="w-3 h-3" /> Eliminar
+                                        <button
+                                            class="tc-btn-danger-sm"
+                                            @click="confirmDelete = cat.id"
+                                        >
+                                            <Trash2 class="h-3 w-3" /> Eliminar
                                         </button>
                                     </Can>
                                 </div>
@@ -210,12 +268,23 @@ function deleteCategory(id: number) {
                     <tr v-else>
                         <td colspan="7" class="p-0">
                             <AdminEmptyState
-                                :title="search ? 'Sin resultados' : 'Sin categorías'"
-                                :description="search ? `No hay categorías que coincidan con '${search}'.` : 'Crea la primera categoría para organizar el menú.'"
+                                :title="
+                                    search ? 'Sin resultados' : 'Sin categorías'
+                                "
+                                :description="
+                                    search
+                                        ? `No hay categorías que coincidan con '${search}'.`
+                                        : 'Crea la primera categoría para organizar el menú.'
+                                "
                             >
                                 <template #action>
                                     <Can permission="categories.create">
-                                        <Link href="/admin/categories/create" class="tc-btn-primary"> + Crear categoría </Link>
+                                        <Link
+                                            href="/admin/categories/create"
+                                            class="tc-btn-primary"
+                                        >
+                                            + Crear categoría
+                                        </Link>
                                     </Can>
                                 </template>
                             </AdminEmptyState>
@@ -224,7 +293,6 @@ function deleteCategory(id: number) {
                 </tbody>
             </table>
         </div>
-
     </div>
 
     <ConfirmDialog

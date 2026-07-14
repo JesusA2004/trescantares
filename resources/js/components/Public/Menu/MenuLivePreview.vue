@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { layoutFor } from './layoutRegistry';
 import type { MenuCategoryData } from './types';
 
-const props = defineProps<{
+defineProps<{
     category: MenuCategoryData;
 }>();
 
@@ -11,7 +11,10 @@ const viewport = ref<'mobile' | 'desktop'>('mobile');
 
 // Ancho real que simula cada viewport y ancho aproximado del panel donde se
 // dibuja la vista previa (se escala para caber sin scroll horizontal).
-const TARGET_WIDTH: Record<'mobile' | 'desktop', number> = { mobile: 390, desktop: 1440 };
+const TARGET_WIDTH: Record<'mobile' | 'desktop', number> = {
+    mobile: 390,
+    desktop: 1440,
+};
 const PANEL_WIDTH = 320;
 
 const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
@@ -25,7 +28,11 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                 <button
                     type="button"
                     class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
-                    :class="viewport === 'mobile' ? 'bg-white shadow-sm text-[var(--tc-blue)]' : 'text-gray-500'"
+                    :class="
+                        viewport === 'mobile'
+                            ? 'bg-white text-[var(--tc-blue)] shadow-sm'
+                            : 'text-gray-500'
+                    "
                     @click="viewport = 'mobile'"
                 >
                     Móvil
@@ -33,7 +40,11 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                 <button
                     type="button"
                     class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
-                    :class="viewport === 'desktop' ? 'bg-white shadow-sm text-[var(--tc-blue)]' : 'text-gray-500'"
+                    :class="
+                        viewport === 'desktop'
+                            ? 'bg-white text-[var(--tc-blue)] shadow-sm'
+                            : 'text-gray-500'
+                    "
                     @click="viewport = 'desktop'"
                 >
                     Escritorio
@@ -42,7 +53,13 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
         </div>
 
         <div class="tc-preview-viewport" :class="viewport">
-            <div class="tc-preview-scaled tc-mp tc-public-layout" :style="{ width: TARGET_WIDTH[viewport] + 'px', transform: `scale(${scale})` }">
+            <div
+                class="tc-preview-scaled tc-mp tc-public-layout"
+                :style="{
+                    width: TARGET_WIDTH[viewport] + 'px',
+                    transform: `scale(${scale})`,
+                }"
+            >
                 <section v-if="category.layout === 'portada'">
                     <component :is="layoutFor(category)" :category="category" />
                 </section>
@@ -51,7 +68,9 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                 </section>
             </div>
         </div>
-        <p class="mt-1 text-xs text-gray-400">Vista previa aproximada — abre /menu para ver el resultado real.</p>
+        <p class="mt-1 text-xs text-gray-400">
+            Vista previa aproximada — abre /menu para ver el resultado real.
+        </p>
     </div>
 </template>
 

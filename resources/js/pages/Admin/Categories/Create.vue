@@ -59,17 +59,21 @@ function submit() {
     <Head title="Nueva Categoría" />
 
     <div class="tc-admin-page space-y-5">
-
-        <AdminPageHeader title="Nueva Categoría" description="Agrega una sección al menú">
+        <AdminPageHeader
+            title="Nueva Categoría"
+            description="Agrega una sección al menú"
+        >
             <template #label>Categorías</template>
             <template #actions>
-                <Link href="/admin/categories" class="tc-btn-secondary">← Volver</Link>
+                <Link href="/admin/categories" class="tc-btn-secondary"
+                    >← Volver</Link
+                >
             </template>
         </AdminPageHeader>
 
         <form @submit.prevent="submit">
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
-                <div class="xl:col-span-2 space-y-4">
+            <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
+                <div class="space-y-4 xl:col-span-2">
                     <AdminFormSection title="Información básica">
                         <TcInput
                             id="name"
@@ -87,8 +91,13 @@ function submit() {
                             :rows="2"
                             :error="form.errors.description"
                         />
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <TcInput id="subtitle" v-model="form.subtitle" label="Subtítulo" placeholder="Ej: Para cerrar con broche de oro" />
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <TcInput
+                                id="subtitle"
+                                v-model="form.subtitle"
+                                label="Subtítulo"
+                                placeholder="Ej: Para cerrar con broche de oro"
+                            />
                             <TcSelect
                                 id="layout"
                                 v-model="form.layout"
@@ -97,31 +106,53 @@ function submit() {
                                 hint="Define cómo se compone la página en el menú público"
                             />
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <TcInput id="tagline" v-model="form.tagline" label="Frase decorativa" placeholder="Ej: CALDO ILIMITADO" />
-                            <TcInput id="tagline_sub" v-model="form.tagline_sub" label="Frase decorativa (línea secundaria)" />
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <TcInput
+                                id="tagline"
+                                v-model="form.tagline"
+                                label="Frase decorativa"
+                                placeholder="Ej: CALDO ILIMITADO"
+                            />
+                            <TcInput
+                                id="tagline_sub"
+                                v-model="form.tagline_sub"
+                                label="Frase decorativa (línea secundaria)"
+                            />
                         </div>
                     </AdminFormSection>
 
                     <AdminFormSection title="Colores">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="tc-field">
                                 <label for="color">Color principal</label>
                                 <div class="flex items-center gap-3">
-                                    <input id="color" v-model="form.color" type="color" class="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer" />
-                                    <span class="tc-input flex-1 text-gray-500 text-sm">{{ form.color }}</span>
+                                    <input
+                                        id="color"
+                                        v-model="form.color"
+                                        type="color"
+                                        class="h-10 w-10 cursor-pointer rounded-lg border border-gray-200"
+                                    />
+                                    <span
+                                        class="tc-input flex-1 text-sm text-gray-500"
+                                        >{{ form.color }}</span
+                                    >
                                 </div>
                             </div>
                             <div class="tc-field">
-                                <label for="color_secondary">Color secundario</label>
+                                <label for="color_secondary"
+                                    >Color secundario</label
+                                >
                                 <div class="flex items-center gap-3">
                                     <input
                                         id="color_secondary"
                                         v-model="form.color_secondary"
                                         type="color"
-                                        class="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
+                                        class="h-10 w-10 cursor-pointer rounded-lg border border-gray-200"
                                     />
-                                    <span class="tc-input flex-1 text-gray-500 text-sm">{{ form.color_secondary }}</span>
+                                    <span
+                                        class="tc-input flex-1 text-sm text-gray-500"
+                                        >{{ form.color_secondary }}</span
+                                    >
                                 </div>
                             </div>
                         </div>
@@ -164,17 +195,32 @@ function submit() {
                     </AdminFormSection>
 
                     <AdminFormSection title="Configuración">
-                        <TcSwitch v-model="form.is_active" label="Categoría activa" description="Visible en el menú público" />
+                        <TcSwitch
+                            v-model="form.is_active"
+                            label="Categoría activa"
+                            description="Visible en el menú público"
+                        />
                         <p class="text-xs text-gray-400">
-                            El orden de aparición se controla arrastrando las categorías en el listado.
+                            El orden de aparición se controla arrastrando las
+                            categorías en el listado.
                         </p>
                     </AdminFormSection>
 
                     <div class="flex gap-3">
-                        <button type="submit" class="tc-btn-primary" :disabled="form.processing">
-                            {{ form.processing ? 'Guardando…' : 'Crear categoría' }}
+                        <button
+                            type="submit"
+                            class="tc-btn-primary"
+                            :disabled="form.processing"
+                        >
+                            {{
+                                form.processing
+                                    ? 'Guardando…'
+                                    : 'Crear categoría'
+                            }}
                         </button>
-                        <Link href="/admin/categories" class="tc-btn-secondary">Cancelar</Link>
+                        <Link href="/admin/categories" class="tc-btn-secondary"
+                            >Cancelar</Link
+                        >
                     </div>
                 </div>
 
