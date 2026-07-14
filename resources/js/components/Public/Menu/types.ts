@@ -19,6 +19,8 @@ export interface MenuItemData {
     image_position_y?: number | null;
     image_scale?: number | string | null;
     image_fit?: string | null;
+    image_align?: string | null;
+    visual_size?: string | null;
     is_featured?: boolean;
     sort_order: number;
 }

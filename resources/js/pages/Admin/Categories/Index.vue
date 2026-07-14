@@ -57,13 +57,21 @@ const isFiltering = computed(() => search.value.trim() !== '' || filterActive.va
 const { registerZone, start, dragging, saving } = useDragSort<CategoryRow>((zones) => {
     const ordered = zones.main ?? list.value;
     list.value = ordered;
-    router.post(
-        '/admin/categories/reorder',
-        {
-            categories: ordered.map((c, idx) => ({ id: c.id, sort_order: idx + 1 })),
-        },
-        { preserveScroll: true, preserveState: true },
-    );
+
+    return new Promise((resolve, reject) => {
+        router.post(
+            '/admin/categories/reorder',
+            {
+                categories: ordered.map((c, idx) => ({ id: c.id, sort_order: idx + 1 })),
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => resolve(undefined),
+                onError: (errors) => reject(errors),
+            },
+        );
+    });
 });
 
 function bindZone(el: HTMLElement | null) {

@@ -64,6 +64,23 @@ class MenuCategory extends Model
         return $this->assetUrl('tagline_image');
     }
 
+    /**
+     * Representación usada por el menú público y por la vista previa del
+     * CRUD: mismos campos calculados (URLs de imagen) en ambos lugares.
+     */
+    public function toPublicArray(): array
+    {
+        return array_merge($this->toArray(), [
+            'image_url' => $this->image_url,
+            'title_image_url' => $this->title_image_url,
+            'subtitle_image_url' => $this->subtitle_image_url,
+            'tagline_image_url' => $this->tagline_image_url,
+            'items' => $this->relationLoaded('items')
+                ? $this->items->map(fn (MenuItem $item) => $item->toPublicArray())->values()
+                : [],
+        ]);
+    }
+
     private function assetUrl(string $field): ?string
     {
         $path = $this->{$field};

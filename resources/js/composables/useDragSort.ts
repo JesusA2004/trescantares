@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { useNotify } from '@/composables/useNotify';
 
 export interface DragSortItem {
     id: number;
@@ -13,8 +14,12 @@ interface ZoneState<T extends DragSortItem> {
 /**
  * Reorder / move items across one or more lists ("zones") using Pointer Events,
  * so it works with mouse, touch and pen without any external drag-and-drop library.
+ *
+ * `onCommit` must return a promise tied to the actual server request (resolve on
+ * success, reject on failure) — `saving` stays true until it settles, and a
+ * rejection reverts the zones to their pre-drag order and surfaces an error toast.
  */
-export function useDragSort<T extends DragSortItem>(onCommit: (zones: Record<string, T[]>) => void) {
+export function useDragSort<T extends DragSortItem>(onCommit: (zones: Record<string, T[]>) => Promise<unknown>) {
     const zones = new Map<string, ZoneState<T>>();
     const dragging = ref<{ item: T; fromZone: string } | null>(null);
     const overZone = ref<string | null>(null);
@@ -57,11 +62,22 @@ continue;
     }
 
     function start(item: T, fromZone: string, event: PointerEvent) {
+        // Ignora un nuevo arrastre mientras el orden anterior sigue guardándose,
+        // para no disparar solicitudes de reordenamiento simultáneas.
+        if (saving.value) {
+            return;
+        }
+
         event.preventDefault();
         dragging.value = { item, fromZone };
         overZone.value = fromZone;
         const zone = zones.get(fromZone);
         overIndex.value = zone ? zone.items.findIndex((i) => i.id === item.id) : null;
+
+        const beforeSnapshot: Record<string, T[]> = {};
+        zones.forEach((z, key) => {
+            beforeSnapshot[key] = [...z.items];
+        });
 
         const move = (e: PointerEvent) => {
             const target = findTarget(e.clientX, e.clientY);
@@ -109,14 +125,30 @@ return;
             overZone.value = null;
             overIndex.value = null;
 
-            saving.value = true;
-            const snapshot: Record<string, T[]> = {};
+            const afterSnapshot: Record<string, T[]> = {};
             zones.forEach((z, key) => {
-                snapshot[key] = [...z.items];
+                afterSnapshot[key] = [...z.items];
             });
-            Promise.resolve(onCommit(snapshot)).finally(() => {
-                saving.value = false;
-            });
+
+            const idsOf = (snap: Record<string, T[]>) => Object.entries(snap).map(([key, items]) => [key, items.map((i) => i.id)]);
+            const unchanged = JSON.stringify(idsOf(beforeSnapshot)) === JSON.stringify(idsOf(afterSnapshot));
+
+            if (unchanged) {
+                return;
+            }
+
+            saving.value = true;
+
+            Promise.resolve(onCommit(afterSnapshot))
+                .catch(() => {
+                    zones.forEach((z, key) => {
+                        z.items.splice(0, z.items.length, ...(beforeSnapshot[key] ?? z.items));
+                    });
+                    useNotify().error('No se pudo guardar el nuevo orden. Se restauró el orden anterior.');
+                })
+                .finally(() => {
+                    saving.value = false;
+                });
         };
 
         document.addEventListener('pointermove', move);

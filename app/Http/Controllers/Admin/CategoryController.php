@@ -60,13 +60,10 @@ class CategoryController extends Controller
 
     public function edit(MenuCategory $category): Response
     {
+        $category->load(['items' => fn ($q) => $q->orderBy('sort_order')->orderBy('name')]);
+
         return Inertia::render('Admin/Categories/Edit', [
-            'category' => array_merge($category->toArray(), [
-                'image_url' => $category->image_url,
-                'title_image_url' => $category->title_image_url,
-                'subtitle_image_url' => $category->subtitle_image_url,
-                'tagline_image_url' => $category->tagline_image_url,
-            ]),
+            'category' => $category->toPublicArray(),
             'layouts' => self::LAYOUTS,
         ]);
     }

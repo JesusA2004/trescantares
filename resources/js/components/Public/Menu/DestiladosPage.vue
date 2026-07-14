@@ -17,32 +17,33 @@ const groups = computed(() => [
 
 <template>
     <MenuPageFrame :primary-color="category.color ?? undefined" :secondary-color="category.color_secondary ?? undefined">
-        <template v-for="group in groups" :key="group.key">
-            <template v-if="group.items.length">
-                <p class="tc-mp-spirit-group-title">{{ group.title }}</p>
-                <div class="tc-mp-spirit-head">
-                    <span>Copa</span>
-                    <span>Botella</span>
-                </div>
-                <div v-for="item in group.items" :key="item.id" class="tc-mp-spirit-row">
-                    <span class="tc-mp-spirit-name">
-                        {{ item.name }}
-                        <span v-if="item.presentation" class="tc-mp-spirit-presentation">({{ item.presentation }})</span>
-                    </span>
-                    <span class="tc-mp-spirit-prices">
-                        <span>${{ money(item.price) }}</span>
-                        <span>${{ money(item.price_secondary) }}</span>
-                    </span>
-                </div>
-            </template>
-        </template>
+        <div class="tc-mp-spirit-groups">
+            <div v-for="group in groups" :key="group.key" class="tc-mp-spirit-group">
+                <template v-if="group.items.length">
+                    <p class="tc-mp-spirit-group-title">{{ group.title }}</p>
+                    <div class="tc-mp-spirit-head">
+                        <span>Copa</span>
+                        <span>Botella</span>
+                    </div>
+                    <div v-for="item in group.items" :key="item.id" class="tc-mp-spirit-row">
+                        <span class="tc-mp-spirit-name">
+                            {{ item.name }}
+                            <span v-if="item.presentation" class="tc-mp-spirit-presentation">({{ item.presentation }})</span>
+                        </span>
+                        <span class="tc-mp-spirit-prices">
+                            <span>${{ money(item.price) }}</span>
+                            <span>${{ money(item.price_secondary) }}</span>
+                        </span>
+                    </div>
+                </template>
+            </div>
+        </div>
 
         <img
             v-if="category.tagline_image_url"
             :src="category.tagline_image_url"
             :alt="category.tagline_sub ?? ''"
-            class="tc-mp-tagline-img"
-            style="margin-top: 22px; max-width: 260px"
+            class="tc-mp-tagline-img tc-mp-tagline-img--sm mt-[22px]"
         />
 
         <div class="tc-mp-social-row">

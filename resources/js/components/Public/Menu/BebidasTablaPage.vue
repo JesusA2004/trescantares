@@ -25,7 +25,7 @@ function rowLabel(item: MenuItemData): string {
         <img v-if="category.title_image_url" :src="category.title_image_url" :alt="category.name" class="tc-mp-title-img" />
         <h2 v-else class="tc-mp-title-text" :style="{ color: category.color ?? undefined, '--tc-mp-h': category.color ?? undefined }">{{ category.name }}</h2>
 
-        <div v-if="topTable.length" style="margin-top: 16px">
+        <div v-if="topTable.length" class="mt-4">
             <div class="tc-mp-table-head">
                 <span>Litros</span>
                 <span>Medio litro</span>
@@ -40,7 +40,7 @@ function rowLabel(item: MenuItemData): string {
             </div>
         </div>
 
-        <div v-if="conAlcohol.length" class="tc-mp-table-group" style="margin-top: 20px">
+        <div v-if="conAlcohol.length" class="tc-mp-table-group mt-5">
             <p class="tc-mp-table-group-title">Con alcohol</p>
             <div class="tc-mp-table-columns tc-mp-table-columns--split">
                 <div v-for="item in conAlcohol" :key="item.id" class="tc-mp-table-row">
@@ -50,7 +50,7 @@ function rowLabel(item: MenuItemData): string {
             </div>
         </div>
 
-        <div class="tc-mp-table-columns tc-mp-table-columns--2" style="margin-top: 8px">
+        <div class="tc-mp-table-columns tc-mp-table-columns--2 mt-2">
             <div>
                 <div class="tc-mp-table-group">
                     <p class="tc-mp-table-group-title">Cerveza</p>
@@ -86,7 +86,7 @@ function rowLabel(item: MenuItemData): string {
                     v-if="category.tagline_image_url"
                     :src="category.tagline_image_url"
                     :alt="category.tagline_sub ?? ''"
-                    style="width: 100%; max-width: 200px; margin: 10px auto 0; display: block"
+                    class="mx-auto mt-2.5 block w-full max-w-[200px]"
                 />
             </div>
         </div>

@@ -70,7 +70,18 @@ const { registerZone, start, dragging, saving } = useDragSort<ItemRow>((zones) =
         items.map((item, idx) => ({ id: item.id, menu_category_id: Number(categoryId), sort_order: idx + 1 })),
     );
 
-    router.post('/admin/menu-items/reorder', { items: payload }, { preserveScroll: true, preserveState: true });
+    return new Promise((resolve, reject) => {
+        router.post(
+            '/admin/menu-items/reorder',
+            { items: payload },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => resolve(undefined),
+                onError: (errors) => reject(errors),
+            },
+        );
+    });
 });
 
 function bindZone(categoryId: number, el: HTMLElement | null) {

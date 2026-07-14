@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ImagePlus, Star, X } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import AdminFormSection from '@/components/admin/AdminFormSection.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import MenuLivePreview from '@/components/Public/Menu/MenuLivePreview.vue';
+import type { MenuCategoryData, MenuItemData } from '@/components/Public/Menu/types';
 import TcImagePositionEditor from '@/components/tc/TcImagePositionEditor.vue';
 import TcInput from '@/components/tc/TcInput.vue';
 import TcSelect from '@/components/tc/TcSelect.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
 import TcTextarea from '@/components/tc/TcTextarea.vue';
-import { ZONE_SUGGESTIONS } from './zones';
+import { zonesForLayout } from './zones';
 
 const props = defineProps<{
-    categories: { id: number; name: string }[];
+    categories: MenuCategoryData[];
 }>();
 
 const categoryOptions = props.categories.map((c) => ({ value: c.id, label: c.name }));
@@ -43,6 +45,19 @@ const form = useForm({
     primary_image_index: 0,
 });
 
+const selectedCategory = computed(() => props.categories.find((c) => c.id === Number(form.menu_category_id)) ?? null);
+const zoneOptions = computed(() => zonesForLayout(selectedCategory.value?.layout));
+
+// Si cambia la categoría (y por tanto la plantilla), la zona seleccionada deja
+// de ser válida a menos que siga existiendo en la nueva lista.
+watch(selectedCategory, (category) => {
+    const valid = zonesForLayout(category?.layout).some((z) => z.value === form.zone);
+
+    if (!valid) {
+        form.zone = '';
+    }
+});
+
 interface Preview {
     url: string;
     file: File;
@@ -53,6 +68,46 @@ const previews = ref<Preview[]>([]);
 const dropzone = ref<HTMLDivElement>();
 
 const primaryPreviewUrl = computed(() => previews.value.find((p) => p.isPrimary)?.url ?? previews.value[0]?.url ?? null);
+
+// Vista previa en vivo: la categoría seleccionada con sus platillos reales,
+// más el platillo que se está creando (con sus valores actuales del formulario).
+const previewCategory = computed<MenuCategoryData | null>(() => {
+    if (!selectedCategory.value) {
+        return null;
+    }
+
+    const draftItem: MenuItemData = {
+        id: -1,
+        name: form.name || 'Nombre del platillo',
+        slug: '',
+        zone: form.zone || null,
+        price: form.price || 0,
+        price_label: form.price_label || null,
+        price_secondary: form.price_secondary || null,
+        price_secondary_label: form.price_secondary_label || null,
+        presentation: form.presentation || null,
+        choice_label: form.choice_label || null,
+        ingredients: form.ingredients || null,
+        badge: form.badge || null,
+        image_url: primaryPreviewUrl.value,
+        alt_text: form.alt_text || null,
+        image_position_x: form.image_position_x,
+        image_position_y: form.image_position_y,
+        image_scale: form.image_scale,
+        image_fit: form.image_fit,
+        image_align: form.image_align,
+        visual_size: form.visual_size,
+        sort_order: 0,
+    };
+
+    // El platillo en edición se antepone para que gane el primer puesto en las
+    // zonas de un solo elemento (main, accompaniment, footer, sope…); en zonas
+    // con varios elementos simplemente aparece junto a los ya existentes.
+    return {
+        ...selectedCategory.value,
+        items: [draftItem, ...selectedCategory.value.items],
+    };
+});
 
 function handleFiles(files: FileList | File[]) {
     const arr = Array.from(files);
@@ -212,6 +267,10 @@ function submit() {
                             @update:visual-size="form.visual_size = $event"
                         />
                     </div>
+
+                    <div v-if="previewCategory" class="tc-admin-card p-5">
+                        <MenuLivePreview :category="previewCategory" />
+                    </div>
                 </div>
 
                 <!-- Right: form fields -->
@@ -237,14 +296,16 @@ function submit() {
                         <TcTextarea id="description" v-model="form.description" label="Descripción" placeholder="Describe brevemente el platillo…" :rows="2" />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <TcInput id="alt_text" v-model="form.alt_text" label="Texto alternativo" placeholder="Descripción para accesibilidad" />
-                            <div class="tc-field">
-                                <label for="zone">Zona / columna en la plantilla</label>
-                                <input id="zone" v-model="form.zone" list="zone-suggestions" class="tc-input" placeholder="Ej: main, side, option…" />
-                                <datalist id="zone-suggestions">
-                                    <option v-for="z in ZONE_SUGGESTIONS" :key="z" :value="z" />
-                                </datalist>
-                                <p class="text-xs text-gray-400 mt-0.5">Determina en qué parte de la página se ubica este platillo.</p>
-                            </div>
+                            <TcSelect
+                                id="zone"
+                                v-model="form.zone"
+                                label="Zona en la plantilla"
+                                placeholder="Seleccionar categoría primero"
+                                :disabled="!zoneOptions.length"
+                                :options="zoneOptions.map((z) => ({ value: z.value, label: z.label }))"
+                                :error="form.errors.zone"
+                                hint="Determina en qué parte de la página se ubica este platillo, según la plantilla de la categoría."
+                            />
                         </div>
                     </AdminFormSection>
 

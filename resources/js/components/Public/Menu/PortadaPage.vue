@@ -1,32 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { logoTresCantares } from '@/lib/tres-cantares-assets';
 import type { MenuCategoryData } from './types';
 
-defineProps<{
+const props = defineProps<{
     category: MenuCategoryData;
 }>();
+
+// background_position permite reencuadrar Portada.png (p. ej. "center 30%")
+// sin recurrir a un valor fijo — controla el encuadre real de la foto.
+const coverStyle = computed(() => ({
+    '--tc-mp-bg-pos': props.category.background_position || 'center',
+}));
 </script>
 
 <template>
-    <section class="tc-mp-cover" aria-label="Tres Cantares — Puritito Norte">
+    <section class="tc-mp-cover" aria-label="Tres Cantares — Puritito Norte" :style="coverStyle">
         <img v-if="category.image_url" :src="category.image_url" alt="" />
-        <div
-            style="
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(180deg, rgba(123, 16, 48, 0.42) 0%, rgba(123, 16, 48, 0.12) 38%, rgba(20, 30, 50, 0.18) 100%);
-            "
-        />
-        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 10%">
-            <img
-                :src="logoTresCantares"
-                alt="Tres Cantares — Puritito Norte"
-                style="
-                    width: 100%;
-                    max-width: 380px;
-                    filter: brightness(0) invert(1) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
-                "
-            />
+        <div class="tc-mp-cover-overlay" />
+        <div class="tc-mp-cover-logo-wrap">
+            <img :src="logoTresCantares" alt="Tres Cantares — Puritito Norte" class="tc-mp-cover-logo" />
         </div>
         <div class="tc-mp-cover-scroll" aria-hidden="true">
             <span>Desliza</span>

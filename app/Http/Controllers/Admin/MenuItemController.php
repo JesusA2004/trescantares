@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\MenuItemImage;
+use App\Support\MenuLayoutZones;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,14 +45,16 @@ class MenuItemController extends Controller
 
     public function create(): Response
     {
-        $categories = MenuCategory::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+        $categories = $this->categoriesForPreview()->where('is_active', true)->get();
 
-        return Inertia::render('Admin/MenuItems/Create', compact('categories'));
+        return Inertia::render('Admin/MenuItems/Create', [
+            'categories' => $categories->map(fn (MenuCategory $c) => $c->toPublicArray()),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate($this->rules());
+        $data = $request->validate($this->rules($request));
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store(self::IMAGE_DISK_PATH, 'public');
@@ -82,7 +86,7 @@ class MenuItemController extends Controller
 
     public function edit(MenuItem $menuItem): Response
     {
-        $categories = MenuCategory::orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
+        $categories = $this->categoriesForPreview()->get();
         $menuItem->load('images');
 
         return Inertia::render('Admin/MenuItems/Edit', [
@@ -97,13 +101,24 @@ class MenuItemController extends Controller
                     'sort_order' => $img->sort_order,
                 ]),
             ]),
-            'categories' => $categories,
+            'categories' => $categories->map(fn (MenuCategory $c) => $c->toPublicArray()),
         ]);
+    }
+
+    /**
+     * Categorías con sus platillos activos, usadas para poblar el selector
+     * de categoría/zona y la vista previa en vivo del CRUD.
+     */
+    private function categoriesForPreview()
+    {
+        return MenuCategory::with(['items' => function ($q) {
+            $q->where('is_active', true)->orderBy('sort_order')->orderBy('name');
+        }])->orderBy('sort_order')->orderBy('name');
     }
 
     public function update(Request $request, MenuItem $menuItem): RedirectResponse
     {
-        $data = $request->validate($this->rules());
+        $data = $request->validate($this->rules($request));
 
         if ($request->hasFile('image')) {
             if ($menuItem->image) {
@@ -204,11 +219,14 @@ class MenuItemController extends Controller
         return back();
     }
 
-    private function rules(): array
+    private function rules(Request $request): array
     {
+        $layout = MenuCategory::find($request->input('menu_category_id'))?->layout;
+        $allowedZones = MenuLayoutZones::valuesFor($layout);
+
         return [
             'menu_category_id' => 'required|exists:menu_categories,id',
-            'zone' => 'nullable|string|max:40',
+            'zone' => $allowedZones !== [] ? ['nullable', Rule::in($allowedZones)] : 'nullable|string|max:40',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'badge' => 'nullable|string|max:60',

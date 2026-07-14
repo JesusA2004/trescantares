@@ -90,4 +90,15 @@ class MenuItem extends Model
             ? Storage::url($this->caption_image).'?v='.$this->updated_at->timestamp
             : null;
     }
+
+    /**
+     * Representación usada por el menú público y por la vista previa del CRUD.
+     */
+    public function toPublicArray(): array
+    {
+        return array_merge($this->toArray(), [
+            'image_url' => $this->image_url,
+            'caption_image_url' => $this->caption_image_url,
+        ]);
+    }
 }

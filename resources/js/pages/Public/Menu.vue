@@ -1,41 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, ref  } from 'vue';
-import type {Component} from 'vue';
-import BebidasPromoPage from '@/components/Public/Menu/BebidasPromoPage.vue';
-import BebidasTablaPage from '@/components/Public/Menu/BebidasTablaPage.vue';
-import BirriaPage from '@/components/Public/Menu/BirriaPage.vue';
-import ComalPage from '@/components/Public/Menu/ComalPage.vue';
-import DestiladosPage from '@/components/Public/Menu/DestiladosPage.vue';
-import FusionesPage from '@/components/Public/Menu/FusionesPage.vue';
-import GridPage from '@/components/Public/Menu/GridPage.vue';
-import PancitaPage from '@/components/Public/Menu/PancitaPage.vue';
-import PortadaPage from '@/components/Public/Menu/PortadaPage.vue';
-import PostresPage from '@/components/Public/Menu/PostresPage.vue';
-import PozolePage from '@/components/Public/Menu/PozolePage.vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { layoutFor } from '@/components/Public/Menu/layoutRegistry';
 import type { MenuCategoryData } from '@/components/Public/Menu/types';
 
 const props = defineProps<{
     settings: Record<string, any>;
     categories: MenuCategoryData[];
 }>();
-
-const layoutComponents: Record<string, Component> = {
-    portada: PortadaPage,
-    pozole: PozolePage,
-    pancita: PancitaPage,
-    birria: BirriaPage,
-    fusiones: FusionesPage,
-    comal: ComalPage,
-    postres: PostresPage,
-    bebidas_promo: BebidasPromoPage,
-    bebidas_tabla: BebidasTablaPage,
-    destilados: DestiladosPage,
-};
-
-function layoutFor(category: MenuCategoryData): Component {
-    return layoutComponents[category.layout] ?? GridPage;
-}
 
 const navCategories = computed(() => props.categories.filter((c) => c.layout !== 'portada'));
 
