@@ -141,6 +141,11 @@ function deleteItem(id: number) {
         >
             <template #label>Menú</template>
             <template #actions>
+                <Can permission="menu.update">
+                    <Link href="/admin/menu-editor" class="tc-btn-secondary">
+                        Editor visual del menú
+                    </Link>
+                </Can>
                 <Can permission="menu.create">
                     <Link
                         href="/admin/menu-items/create"

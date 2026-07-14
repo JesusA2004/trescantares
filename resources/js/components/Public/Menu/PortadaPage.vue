@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { logoTresCantares } from '@/lib/tres-cantares-assets';
-import type { MenuCategoryData } from './types';
+import type { MenuBreakpoint, MenuCategoryData } from './types';
 
+// Portada no tiene platillos ni títulos movibles — breakpoint/editable se
+// aceptan solo para no filtrar como atributos HTML sueltos al <section>.
 const props = defineProps<{
     category: MenuCategoryData;
+    breakpoint?: MenuBreakpoint;
+    editable?: boolean;
+    selectedKey?: string | null;
+    scaleFactor?: number;
 }>();
 
 // background_position permite reencuadrar Portada.png (p. ej. "center 30%")

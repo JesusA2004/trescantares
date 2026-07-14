@@ -4,6 +4,9 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { layoutFor } from '@/components/Public/Menu/layoutRegistry';
 import MenuSideNav from '@/components/Public/Menu/MenuSideNav.vue';
 import type { MenuCategoryData } from '@/components/Public/Menu/types';
+import { useBreakpoint } from '@/composables/useBreakpoint';
+
+const breakpoint = useBreakpoint();
 
 const props = defineProps<{
     settings: Record<string, any>;
@@ -134,7 +137,11 @@ function onScroll() {
                 <component :is="layoutFor(category)" :category="category" />
             </section>
             <section v-else :id="`cat-${category.id}`" class="tc-mp-page">
-                <component :is="layoutFor(category)" :category="category" />
+                <component
+                    :is="layoutFor(category)"
+                    :category="category"
+                    :breakpoint="breakpoint"
+                />
             </section>
         </template>
 

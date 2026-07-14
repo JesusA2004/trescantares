@@ -1,12 +1,41 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import MenuEditableVisual from './MenuEditableVisual.vue';
 import MenuPageFrame from './MenuPageFrame.vue';
-import { byZone, money } from './types';
-import type { MenuCategoryData } from './types';
+import { byZone, categoryVisualFor, money } from './types';
+import type {
+    BreakpointLayout,
+    MenuBreakpoint,
+    MenuCategoryData,
+} from './types';
 
-const props = defineProps<{
-    category: MenuCategoryData;
+const props = withDefaults(
+    defineProps<{
+        category: MenuCategoryData;
+        breakpoint: MenuBreakpoint;
+        editable?: boolean;
+        selectedKey?: string | null;
+        scaleFactor?: number;
+    }>(),
+    {
+        editable: false,
+        selectedKey: null,
+        scaleFactor: 1,
+    },
+);
+
+const emit = defineEmits<{
+    select: [key: string];
+    commit: [key: string, breakpoint: MenuBreakpoint, layout: BreakpointLayout];
 }>();
+
+function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
+    emit('commit', key, bp, layout);
+}
+
+function onSelect(key: string) {
+    emit('select', key);
+}
 
 const groups = computed(() => [
     {
@@ -62,12 +91,24 @@ const groups = computed(() => [
             </div>
         </div>
 
-        <img
+        <MenuEditableVisual
             v-if="category.tagline_image_url"
-            :src="category.tagline_image_url"
-            :alt="category.tagline_sub ?? ''"
-            class="tc-mp-tagline-img tc-mp-tagline-img--sm mt-[22px]"
-        />
+            element-key="tagline_image"
+            label="Refrescar el antojo"
+            :layout="categoryVisualFor(category, 'tagline_image', breakpoint)"
+            :breakpoint="breakpoint"
+            :editable="editable"
+            :selected="selectedKey === 'tagline_image'"
+            :scale-factor="scaleFactor"
+            @select="onSelect"
+            @commit="onCommit"
+        >
+            <img
+                :src="category.tagline_image_url"
+                :alt="category.tagline_sub ?? ''"
+                class="tc-mp-tagline-img tc-mp-tagline-img--sm mt-[22px]"
+            />
+        </MenuEditableVisual>
 
         <div class="tc-mp-social-row">
             <a

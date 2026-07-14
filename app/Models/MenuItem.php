@@ -18,7 +18,7 @@ class MenuItem extends Model
         'menu_category_id', 'zone', 'name', 'slug', 'description',
         'price', 'price_label', 'price_secondary', 'price_secondary_label', 'presentation',
         'image', 'alt_text', 'image_position_x', 'image_position_y', 'image_scale', 'image_fit',
-        'image_align', 'visual_size', 'caption_image',
+        'image_align', 'visual_size', 'caption_image', 'layout_settings',
         'badge', 'choice_label', 'ingredients', 'is_featured', 'is_active', 'sort_order',
     ];
 
@@ -28,6 +28,7 @@ class MenuItem extends Model
         'image_scale' => 'decimal:2',
         'image_position_x' => 'integer',
         'image_position_y' => 'integer',
+        'layout_settings' => 'array',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'sort_order' => 'integer',

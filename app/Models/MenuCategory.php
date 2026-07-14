@@ -16,12 +16,13 @@ class MenuCategory extends Model
         'name', 'slug', 'description', 'subtitle', 'tagline', 'tagline_sub',
         'image', 'title_image', 'subtitle_image', 'tagline_image',
         'icon', 'color', 'color_secondary', 'layout', 'background_position',
-        'sort_order', 'is_active',
+        'visual_settings', 'sort_order', 'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'visual_settings' => 'array',
     ];
 
     protected static function booted(): void

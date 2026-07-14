@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Link } from '@inertiajs/vue3';
 import { RotateCcw } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -40,7 +41,7 @@ function reset() {
 <template>
     <div class="tc-field">
         <div class="mb-2 flex items-center justify-between">
-            <label class="!mb-0">Encuadre de la imagen</label>
+            <label class="!mb-0">Encuadre interno</label>
             <button
                 type="button"
                 class="flex items-center gap-1 text-xs text-[var(--tc-blue)] hover:underline"
@@ -49,6 +50,15 @@ function reset() {
                 <RotateCcw class="h-3 w-3" /> Restaurar encuadre
             </button>
         </div>
+        <p class="-mt-1 mb-2 text-xs text-gray-400">
+            Solo recorta la imagen dentro de su caja. Para mover el platillo
+            dentro de la página, usa el
+            <Link
+                href="/admin/menu-editor"
+                class="text-[var(--tc-blue)] hover:underline"
+                >editor visual del menú</Link
+            >.
+        </p>
 
         <div
             class="mx-auto mb-3 aspect-square w-full max-w-56 overflow-hidden rounded-xl border border-[#f0e8d8] bg-gray-100"
@@ -65,7 +75,7 @@ function reset() {
         <div class="grid grid-cols-2 gap-3">
             <div>
                 <label class="text-xs text-gray-500"
-                    >Posición X ({{ positionX }}%)</label
+                    >Encuadre interno X ({{ positionX }}%)</label
                 >
                 <input
                     type="range"
@@ -83,7 +93,7 @@ function reset() {
             </div>
             <div>
                 <label class="text-xs text-gray-500"
-                    >Posición Y ({{ positionY }}%)</label
+                    >Encuadre interno Y ({{ positionY }}%)</label
                 >
                 <input
                     type="range"

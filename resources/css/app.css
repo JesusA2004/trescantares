@@ -8501,11 +8501,14 @@ body,
         max-width: none;
     }
 
-    .tc-mp-grid--pozole > .tc-mp-pozole-main {
+    /* Descendiente (no hijo directo): .tc-mp-pozole-main puede vivir dentro
+       de un wrapper posicionador (MenuEditableVisual) cuando el editor
+       visual le asigna una posición libre. */
+    .tc-mp-grid--pozole .tc-mp-pozole-main {
         gap: clamp(28px, 4vw, 56px);
     }
 
-    .tc-mp-grid--pozole > .tc-mp-pozole-main .tc-mp-pozole-photo {
+    .tc-mp-grid--pozole .tc-mp-pozole-main .tc-mp-pozole-photo {
         max-width: calc(clamp(460px, 37vw, 720px) * var(--tc-mp-size-mult, 1));
     }
 
@@ -8513,11 +8516,11 @@ body,
         font-size: clamp(2.4rem, 3.2vw, 3.4rem);
     }
 
-    .tc-mp-grid--pozole > .tc-mp-accompaniment {
+    .tc-mp-grid--pozole .tc-mp-accompaniment {
         gap: clamp(24px, 4vw, 48px);
     }
 
-    .tc-mp-grid--pozole > .tc-mp-accompaniment .tc-mp-accompaniment-photo {
+    .tc-mp-grid--pozole .tc-mp-accompaniment .tc-mp-accompaniment-photo {
         max-width: calc(clamp(370px, 29vw, 560px) * var(--tc-mp-size-mult, 1));
     }
 }
@@ -8560,27 +8563,36 @@ body,
     align-items: start;
 }
 
-.tc-mp-options-grid > :nth-child(1) {
+/* El selector incluye "> *" porque en el editor visual cada opción puede
+   venir envuelta en el wrapper posicionador MenuEditableVisual
+   (display:contents en modo flujo) — el grid-column/grid-row debe caer sobre
+   el hijo real promovido al grid, no sobre el wrapper sin caja propia. */
+.tc-mp-options-grid > :nth-child(1),
+.tc-mp-options-grid > :nth-child(1) > * {
     grid-column: 1;
     grid-row: 1;
 }
 
-.tc-mp-options-grid > :nth-child(2) {
+.tc-mp-options-grid > :nth-child(2),
+.tc-mp-options-grid > :nth-child(2) > * {
     grid-column: 3;
     grid-row: 1;
 }
 
-.tc-mp-options-grid > :nth-child(3) {
+.tc-mp-options-grid > :nth-child(3),
+.tc-mp-options-grid > :nth-child(3) > * {
     grid-column: 1;
     grid-row: 2;
 }
 
-.tc-mp-options-grid > :nth-child(4) {
+.tc-mp-options-grid > :nth-child(4),
+.tc-mp-options-grid > :nth-child(4) > * {
     grid-column: 2;
     grid-row: 2;
 }
 
-.tc-mp-options-grid > :nth-child(5) {
+.tc-mp-options-grid > :nth-child(5),
+.tc-mp-options-grid > :nth-child(5) > * {
     grid-column: 3;
     grid-row: 2;
 }
@@ -8714,7 +8726,8 @@ body,
     }
 
     /* orden en BD: Chilaquiles, Enchiladas, Quesabirria */
-    .tc-mp-birria-sides > :nth-child(1) {
+    .tc-mp-birria-sides > :nth-child(1),
+    .tc-mp-birria-sides > :nth-child(1) > * {
         grid-column: 2;
     }
 
@@ -8722,11 +8735,13 @@ body,
         max-width: calc(clamp(410px, 32vw, 600px) * var(--tc-mp-size-mult, 1));
     }
 
-    .tc-mp-birria-sides > :nth-child(2) {
+    .tc-mp-birria-sides > :nth-child(2),
+    .tc-mp-birria-sides > :nth-child(2) > * {
         grid-column: 1;
     }
 
-    .tc-mp-birria-sides > :nth-child(3) {
+    .tc-mp-birria-sides > :nth-child(3),
+    .tc-mp-birria-sides > :nth-child(3) > * {
         grid-column: 3;
         margin-top: clamp(24px, 5vw, 64px);
     }
@@ -8740,7 +8755,8 @@ body,
     padding: 16px 0;
 }
 
-.tc-mp-fusion-row + .tc-mp-fusion-row {
+.tc-mp-fusion-row + .tc-mp-fusion-row,
+.tc-mp-fusion-list > * + * .tc-mp-fusion-row {
     border-top: 1px solid rgba(20, 78, 143, 0.18);
 }
 
@@ -8771,7 +8787,8 @@ body,
         gap: 6px;
     }
 
-    .tc-mp-fusion-list .tc-mp-fusion-row:nth-child(n + 3) {
+    .tc-mp-fusion-list .tc-mp-fusion-row:nth-child(n + 3),
+    .tc-mp-fusion-list > :nth-child(n + 3) .tc-mp-fusion-row {
         border-top: 1px solid rgba(20, 78, 143, 0.18);
     }
 
@@ -8833,12 +8850,12 @@ body,
         gap: clamp(20px, 3vw, 36px) clamp(16px, 2.4vw, 30px);
     }
 
-    .tc-mp-grid--comal > .tc-mp-comal-sope {
+    .tc-mp-grid--comal .tc-mp-comal-sope {
         justify-content: center;
         gap: clamp(20px, 3vw, 40px);
     }
 
-    .tc-mp-grid--comal > .tc-mp-comal-sope .tc-mp-alt-photo {
+    .tc-mp-grid--comal .tc-mp-comal-sope .tc-mp-alt-photo {
         max-width: calc(clamp(370px, 29vw, 560px) * var(--tc-mp-size-mult, 1));
     }
 }
@@ -8884,17 +8901,20 @@ body,
         align-items: center;
     }
 
-    .tc-mp-dessert-list > :nth-child(1) {
+    .tc-mp-dessert-list > :nth-child(1),
+    .tc-mp-dessert-list > :nth-child(1) > * {
         grid-area: pay;
         justify-self: end;
     }
 
-    .tc-mp-dessert-list > :nth-child(2) {
+    .tc-mp-dessert-list > :nth-child(2),
+    .tc-mp-dessert-list > :nth-child(2) > * {
         grid-area: arroz;
         justify-self: start;
     }
 
-    .tc-mp-dessert-list > :nth-child(3) {
+    .tc-mp-dessert-list > :nth-child(3),
+    .tc-mp-dessert-list > :nth-child(3) > * {
         grid-area: flan;
         justify-self: end;
     }

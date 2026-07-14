@@ -61,10 +61,18 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                 }"
             >
                 <section v-if="category.layout === 'portada'">
-                    <component :is="layoutFor(category)" :category="category" />
+                    <component
+                        :is="layoutFor(category)"
+                        :category="category"
+                        :breakpoint="viewport"
+                    />
                 </section>
                 <section v-else class="tc-mp-page">
-                    <component :is="layoutFor(category)" :category="category" />
+                    <component
+                        :is="layoutFor(category)"
+                        :category="category"
+                        :breakpoint="viewport"
+                    />
                 </section>
             </div>
         </div>

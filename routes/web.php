@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\JobsAdminController;
+use App\Http\Controllers\Admin\MenuEditorController;
 use App\Http\Controllers\Admin\MenuItemController;
 use App\Http\Controllers\Admin\ModuleController;
 use App\Http\Controllers\Admin\ReportsController;
@@ -44,6 +45,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'prevent
         ->middleware(['permission:menu.view|super-admin', 'module:menu']);
     Route::post('menu-items/reorder', [MenuItemController::class, 'reorder'])->name('menu-items.reorder')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+
+    Route::get('menu-editor', [MenuEditorController::class, 'index'])->name('menu-editor.index')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::patch('menu-editor/items/{menuItem}/layout', [MenuEditorController::class, 'updateItemLayout'])->name('menu-editor.items.layout')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::patch('menu-editor/items/{menuItem}/quick', [MenuEditorController::class, 'updateItemQuick'])->name('menu-editor.items.quick')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::post('menu-editor/items/reorder', [MenuEditorController::class, 'reorderItems'])->name('menu-editor.items.reorder')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::patch('menu-editor/categories/{category}/visual-layout', [MenuEditorController::class, 'updateCategoryVisualLayout'])->name('menu-editor.categories.visual-layout')
+        ->middleware(['permission:categories.update|super-admin', 'module:categories']);
 
     Route::resource('users', UserController::class)->except(['show'])
         ->middleware(['permission:users.view|super-admin', 'module:users']);

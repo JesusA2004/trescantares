@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import MenuEditableVisual from './MenuEditableVisual.vue';
+import { itemLayoutFor } from './types';
+import type { BreakpointLayout, LayoutSettings, MenuBreakpoint } from './types';
 
 interface PhotoItem {
+    id?: number;
     image_url?: string | null;
     name: string;
     alt_text?: string | null;
@@ -12,26 +16,58 @@ interface PhotoItem {
     image_fit?: string | null;
     image_align?: string | null;
     visual_size?: string | null;
+    layout_settings?: LayoutSettings | null;
 }
 
 const props = withDefaults(
     defineProps<{
         item: PhotoItem;
         cover?: boolean;
+        breakpoint?: MenuBreakpoint;
+        editable?: boolean;
+        selected?: boolean;
+        scaleFactor?: number;
     }>(),
     {
         cover: false,
+        breakpoint: 'desktop',
+        editable: false,
+        selected: false,
+        scaleFactor: 1,
     },
 );
+
+const emit = defineEmits<{
+    select: [key: string];
+    commit: [key: string, breakpoint: MenuBreakpoint, layout: BreakpointLayout];
+}>();
+
+// Solo los platillos reales (con id) tienen layout_settings — el hero de
+// bebidas_promo, por ejemplo, pasa un objeto sintético sin id y se queda sin
+// movimiento real (nada que mover: es la imagen de la categoría, no un item).
+const elementKey = computed(() =>
+    props.item.id ? `item-${props.item.id}` : 'item-none',
+);
+const isInteractive = computed(() => props.editable && !!props.item.id);
+const layout = computed(() =>
+    itemLayoutFor(
+        { layout_settings: props.item.layout_settings },
+        props.breakpoint,
+    ),
+);
+
+function onCommit(key: string, bp: MenuBreakpoint, l: BreakpointLayout) {
+    emit('commit', key, bp, l);
+}
 
 const imgStyle = computed(() => {
     const zoom = Number(props.item.image_scale ?? 1);
 
     return {
         objectPosition: `${props.item.image_position_x ?? 50}% ${props.item.image_position_y ?? 50}%`,
-        // image_scale es únicamente zoom/recorte interno de la imagen; el
-        // tamaño real que ocupa en el layout lo da .tc-mp-photo--sm/md/lg
-        // (ver wrapStyle/wrapClass) para no solapar elementos vecinos.
+        // image_scale es únicamente zoom/recorte interno de la imagen — el
+        // movimiento real del wrapper (.tc-mp-photo) lo maneja
+        // MenuEditableVisual vía move_x/move_y/width/z_index.
         transform: `scale(${zoom})`,
     };
 });
@@ -67,10 +103,19 @@ const fit = computed(() =>
 </script>
 
 <template>
-    <div
+    <MenuEditableVisual
+        :element-key="elementKey"
+        :label="item.name"
+        :layout="layout"
+        :breakpoint="breakpoint"
+        :editable="isInteractive"
+        :selected="selected"
+        :scale-factor="scaleFactor"
         class="tc-mp-photo"
         :class="[sizeClass, { 'tc-mp-photo--cover': fit === 'cover' }]"
         :style="wrapStyle"
+        @select="emit('select', $event)"
+        @commit="onCommit"
     >
         <img
             v-if="item.image_url"
@@ -87,5 +132,5 @@ const fit = computed(() =>
             class="tc-mp-caption-img"
             loading="lazy"
         />
-    </div>
+    </MenuEditableVisual>
 </template>

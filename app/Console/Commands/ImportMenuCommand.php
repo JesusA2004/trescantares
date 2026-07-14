@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ImportMenuCommand extends Command
 {
-    protected $signature = 'menu:import-initial';
+    protected $signature = 'menu:import-initial {--reset-layout : Restaura layout_settings/visual_settings a sus valores base, descartando los ajustes hechos desde el editor visual}';
 
     protected $description = 'Importa (de forma idempotente) las categorías y platillos reales del menú Tres Cantares desde los recursos versionados en database/seeders/assets/menu';
 
@@ -124,12 +124,23 @@ class ImportMenuCommand extends Command
             $this->line("  ✓ {$category->name} ({$catData['slug']}) — ".count($items).' platillo(s)');
         }
 
+        if ($this->option('reset-layout')) {
+            MenuItem::query()->update(['layout_settings' => null]);
+            MenuCategory::query()->update(['visual_settings' => null]);
+            $this->warn('--reset-layout: se restauraron todas las posiciones del editor visual a sus valores base.');
+        }
+
         $this->newLine();
         $this->info('Importación completada.');
 
         return self::SUCCESS;
     }
 
+    /**
+     * A propósito ninguno de estos arrays incluye layout_settings/visual_settings:
+     * updateOrCreate() solo pisa las claves presentes, así que los ajustes hechos
+     * desde el editor visual sobreviven a reimportar. Ver --reset-layout.
+     */
     private function categoryDefinitions(): array
     {
         return [
