@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,13 +12,22 @@ use Illuminate\Support\Str;
 
 class MenuItem extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'menu_category_id', 'name', 'slug', 'description', 'price',
-        'image', 'badge', 'ingredients', 'is_featured', 'is_active', 'sort_order',
+        'menu_category_id', 'zone', 'name', 'slug', 'description',
+        'price', 'price_label', 'price_secondary', 'price_secondary_label', 'presentation',
+        'image', 'alt_text', 'image_position_x', 'image_position_y', 'image_scale', 'image_fit',
+        'image_align', 'visual_size', 'caption_image',
+        'badge', 'choice_label', 'ingredients', 'is_featured', 'is_active', 'sort_order',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'price_secondary' => 'decimal:2',
+        'image_scale' => 'decimal:2',
+        'image_position_x' => 'integer',
+        'image_position_y' => 'integer',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
@@ -71,6 +81,13 @@ class MenuItem extends Model
         // Fallback to legacy single image field
         return $this->image
             ? Storage::url($this->image).'?v='.$this->updated_at->timestamp
+            : null;
+    }
+
+    public function getCaptionImageUrlAttribute(): ?string
+    {
+        return $this->caption_image
+            ? Storage::url($this->caption_image).'?v='.$this->updated_at->timestamp
             : null;
     }
 }

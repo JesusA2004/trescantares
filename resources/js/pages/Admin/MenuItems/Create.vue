@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ImagePlus, Star, Trash2, X } from 'lucide-vue-next';
+import { ImagePlus, Star, X } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 import AdminFormSection from '@/components/admin/AdminFormSection.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import TcImagePositionEditor from '@/components/tc/TcImagePositionEditor.vue';
 import TcInput from '@/components/tc/TcInput.vue';
 import TcSelect from '@/components/tc/TcSelect.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
 import TcTextarea from '@/components/tc/TcTextarea.vue';
+import { ZONE_SUGGESTIONS } from './zones';
 
 const props = defineProps<{
     categories: { id: number; name: string }[];
@@ -17,14 +19,26 @@ const categoryOptions = props.categories.map((c) => ({ value: c.id, label: c.nam
 
 const form = useForm({
     menu_category_id: '' as string | number,
+    zone: '',
     name: '',
     description: '',
     badge: '',
+    choice_label: '',
     price: '' as string | number,
+    price_label: '',
+    price_secondary: '' as string | number,
+    price_secondary_label: '',
+    presentation: '',
     ingredients: '',
+    alt_text: '',
+    image_position_x: 50,
+    image_position_y: 50,
+    image_scale: 1,
+    image_fit: 'contain',
+    image_align: 'center',
+    visual_size: 'md',
     is_featured: false,
     is_active: true,
-    sort_order: 0,
     images: [] as File[],
     primary_image_index: 0,
 });
@@ -38,10 +52,15 @@ interface Preview {
 const previews = ref<Preview[]>([]);
 const dropzone = ref<HTMLDivElement>();
 
+const primaryPreviewUrl = computed(() => previews.value.find((p) => p.isPrimary)?.url ?? previews.value[0]?.url ?? null);
+
 function handleFiles(files: FileList | File[]) {
     const arr = Array.from(files);
     arr.forEach((file) => {
-        if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) return;
+        if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) {
+return;
+}
+
         const url = URL.createObjectURL(file);
         previews.value.push({ url, file, isPrimary: previews.value.length === 0 });
         form.images.push(file);
@@ -51,13 +70,20 @@ function handleFiles(files: FileList | File[]) {
 
 function onFileInput(e: Event) {
     const input = e.target as HTMLInputElement;
-    if (input.files) handleFiles(input.files);
+
+    if (input.files) {
+handleFiles(input.files);
+}
+
     input.value = '';
 }
 
 function onDrop(e: DragEvent) {
     e.preventDefault();
-    if (e.dataTransfer?.files) handleFiles(e.dataTransfer.files);
+
+    if (e.dataTransfer?.files) {
+handleFiles(e.dataTransfer.files);
+}
 }
 
 function removeImage(idx: number) {
@@ -65,14 +91,18 @@ function removeImage(idx: number) {
     const wasPrimary = previews.value[idx].isPrimary;
     previews.value.splice(idx, 1);
     form.images.splice(idx, 1);
+
     if (wasPrimary && previews.value.length > 0) {
         previews.value[0].isPrimary = true;
     }
+
     form.primary_image_index = previews.value.findIndex((p) => p.isPrimary);
 }
 
 function setPrimary(idx: number) {
-    previews.value.forEach((p, i) => { p.isPrimary = i === idx; });
+    previews.value.forEach((p, i) => {
+        p.isPrimary = i === idx;
+    });
     form.primary_image_index = idx;
 }
 
@@ -114,7 +144,7 @@ function submit() {
                         >
                             <ImagePlus class="w-8 h-8 text-amber-300 mx-auto mb-2" />
                             <p class="text-sm text-gray-500">Arrastra imágenes o haz clic</p>
-                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, WEBP · máx 4 MB por imagen</p>
+                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, WEBP · máx 6 MB por imagen</p>
                         </div>
                         <input
                             ref="fileInput"
@@ -135,13 +165,11 @@ function submit() {
                             >
                                 <img :src="preview.url" :alt="`Imagen ${idx + 1}`" class="w-full aspect-square object-cover" />
                                 <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                                <!-- Primary badge -->
                                 <div v-if="preview.isPrimary" class="absolute top-1.5 left-1.5">
                                     <span class="tc-badge tc-badge-blue text-[10px] flex items-center gap-1">
                                         <Star class="w-2.5 h-2.5" fill="currentColor" /> Principal
                                     </span>
                                 </div>
-                                <!-- Actions -->
                                 <div class="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
                                         v-if="!preview.isPrimary"
@@ -164,9 +192,25 @@ function submit() {
                             </div>
                         </div>
 
-                        <p class="text-xs text-gray-400 mt-2">
-                            La imagen marcada con ⭐ se mostrará en el menú público.
-                        </p>
+                        <p class="text-xs text-gray-400 mt-2">La imagen marcada con ⭐ se mostrará en el menú público.</p>
+                    </div>
+
+                    <div class="tc-admin-card p-5">
+                        <TcImagePositionEditor
+                            :preview-url="primaryPreviewUrl"
+                            :position-x="form.image_position_x"
+                            :position-y="form.image_position_y"
+                            :scale="form.image_scale"
+                            :fit="form.image_fit"
+                            :align="form.image_align"
+                            :visual-size="form.visual_size"
+                            @update:position-x="form.image_position_x = $event"
+                            @update:position-y="form.image_position_y = $event"
+                            @update:scale="form.image_scale = $event"
+                            @update:fit="form.image_fit = $event"
+                            @update:align="form.image_align = $event"
+                            @update:visual-size="form.visual_size = $event"
+                        />
                     </div>
                 </div>
 
@@ -190,13 +234,21 @@ function submit() {
                             placeholder="Ej: Enchiladas verdes, Pozole rojo…"
                             :error="form.errors.name"
                         />
-                        <TcTextarea
-                            id="description"
-                            v-model="form.description"
-                            label="Descripción"
-                            placeholder="Describe brevemente el platillo…"
-                            :rows="3"
-                        />
+                        <TcTextarea id="description" v-model="form.description" label="Descripción" placeholder="Describe brevemente el platillo…" :rows="2" />
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TcInput id="alt_text" v-model="form.alt_text" label="Texto alternativo" placeholder="Descripción para accesibilidad" />
+                            <div class="tc-field">
+                                <label for="zone">Zona / columna en la plantilla</label>
+                                <input id="zone" v-model="form.zone" list="zone-suggestions" class="tc-input" placeholder="Ej: main, side, option…" />
+                                <datalist id="zone-suggestions">
+                                    <option v-for="z in ZONE_SUGGESTIONS" :key="z" :value="z" />
+                                </datalist>
+                                <p class="text-xs text-gray-400 mt-0.5">Determina en qué parte de la página se ubica este platillo.</p>
+                            </div>
+                        </div>
+                    </AdminFormSection>
+
+                    <AdminFormSection title="Precio">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="tc-field">
                                 <label for="price">Precio <span class="text-[var(--tc-pink)]">*</span></label>
@@ -216,42 +268,29 @@ function submit() {
                                 </div>
                                 <p v-if="form.errors.price" class="text-xs text-[var(--tc-pink)] mt-0.5">{{ form.errors.price }}</p>
                             </div>
-                            <TcInput
-                                id="badge"
-                                v-model="form.badge"
-                                label="Etiqueta"
-                                placeholder="Ej: Nuevo, Popular, Chef's pick…"
-                                hint="Badge visible en el menú"
-                            />
+                            <TcInput id="price_label" v-model="form.price_label" label="Etiqueta del precio" placeholder="Ej: Blanco, Copa, Litro…" />
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <TcInput id="price_secondary" v-model="form.price_secondary" type="number" min="0" step="0.01" label="Precio secundario" placeholder="Ej: precio de botella" />
+                            <TcInput id="price_secondary_label" v-model="form.price_secondary_label" label="Etiqueta del precio secundario" placeholder="Ej: Botella, Medio litro…" />
+                            <TcInput id="presentation" v-model="form.presentation" label="Presentación / unidad" placeholder="Ej: 700 ml" />
                         </div>
                     </AdminFormSection>
 
                     <AdminFormSection title="Detalles">
-                        <TcTextarea
-                            id="ingredients"
-                            v-model="form.ingredients"
-                            label="Ingredientes"
-                            placeholder="Ej: pollo, chile ancho, crema, queso…"
-                            :rows="2"
-                        />
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TcInput id="badge" v-model="form.badge" label="Insignia" placeholder="Ej: Nuevo, Popular, Chef's pick…" />
+                            <TcInput id="choice_label" v-model="form.choice_label" label="Etiqueta de elección" placeholder="Ej: TÚ ELIGES" />
+                        </div>
+                        <TcTextarea id="ingredients" v-model="form.ingredients" label="Ingredientes / opciones" placeholder="Ej: pollo, chile ancho, crema, queso…" :rows="2" />
                     </AdminFormSection>
 
                     <AdminFormSection title="Configuración">
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <TcInput
-                                id="sort_order"
-                                v-model="form.sort_order"
-                                type="number"
-                                label="Orden"
-                                hint="Menor número = primero"
-                            />
-                            <div class="flex items-end pb-1">
-                                <TcSwitch v-model="form.is_active" label="Activo" description="Visible en el menú" />
-                            </div>
-                            <div class="flex items-end pb-1">
-                                <TcSwitch v-model="form.is_featured" label="Destacado" description="Aparece como especial" />
-                            </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TcSwitch v-model="form.is_active" label="Activo" description="Visible en el menú" />
+                            <TcSwitch v-model="form.is_featured" label="Destacado" description="Aparece como especial" />
                         </div>
+                        <p class="text-xs text-gray-400">El orden dentro de la categoría se controla arrastrando los platillos en el listado.</p>
                     </AdminFormSection>
 
                     <div class="flex gap-3">

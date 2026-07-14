@@ -37,9 +37,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'prevent-cache'])->group(function () {
     Route::resource('categories', CategoryController::class)->except(['show'])
         ->middleware(['permission:categories.view|super-admin', 'module:categories']);
+    Route::post('categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder')
+        ->middleware(['permission:categories.update|super-admin', 'module:categories']);
 
     Route::resource('menu-items', MenuItemController::class)->except(['show'])
         ->middleware(['permission:menu.view|super-admin', 'module:menu']);
+    Route::post('menu-items/reorder', [MenuItemController::class, 'reorder'])->name('menu-items.reorder')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
 
     Route::resource('users', UserController::class)->except(['show'])
         ->middleware(['permission:users.view|super-admin', 'module:users']);

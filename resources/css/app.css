@@ -7121,3 +7121,776 @@ body,
     border-color: #d0c4b0 !important;
     color: #3d2f1e !important;
 }
+
+/* ==========================================================================
+   MENÚ PÚBLICO — reproducción fiel del diseño editorial (10 páginas PDF)
+   Namespace: tc-mp-* ("menu public") — independiente del sistema anterior
+   ========================================================================== */
+
+.tc-mp {
+    background-color: var(--tc-paper);
+    background-image: url('/storage/menu/design/fondo.png');
+    background-repeat: repeat;
+    background-size: 900px auto;
+}
+
+/* Los títulos del menú llevan su propio color de marca por categoría (vía
+   --tc-mp-h inline): se restaura sobre la regla global que fuerza
+   `color: inherit` en encabezados dentro de .tc-public-layout en modo oscuro. */
+.dark .tc-mp h1,
+.dark .tc-mp h2,
+.dark .tc-mp h3,
+.dark .tc-mp h4,
+.dark .tc-mp h5,
+.dark .tc-mp h6 {
+    color: var(--tc-mp-h, inherit) !important;
+}
+
+/* ---- Navegación sticky ---- */
+.tc-mp-nav-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(247, 243, 234, 0.94);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(20, 78, 143, 0.15);
+}
+
+.tc-mp-nav {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tc-mp-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.tc-mp-nav-pill {
+    flex: 0 0 auto;
+    font-family: var(--tc-font-body);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--tc-blue);
+    background: #fff;
+    border: 1.5px solid rgba(20, 78, 143, 0.25);
+    border-radius: 999px;
+    padding: 7px 14px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        border-color 0.2s;
+}
+
+.tc-mp-nav-pill:hover {
+    border-color: var(--tc-pink);
+}
+
+.tc-mp-nav-pill--active {
+    background: var(--tc-pink);
+    border-color: var(--tc-pink);
+    color: #fff;
+}
+
+/* ---- Contenedor de página editorial ---- */
+.tc-mp-page {
+    position: relative;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 28px 14px;
+}
+
+.tc-mp-page + .tc-mp-page {
+    padding-top: 0;
+}
+
+.tc-mp-frame {
+    position: relative;
+    border: 1.5px solid var(--tc-pink);
+    padding: 5px;
+    background: var(--tc-paper-light);
+    background-image: url('/storage/menu/design/fondo.png');
+    background-repeat: repeat;
+    background-size: 700px auto;
+}
+
+.tc-mp-frame-inner {
+    position: relative;
+    border: 1.5px solid var(--tc-blue);
+    padding: 28px 20px 34px;
+    min-height: 260px;
+}
+
+@media (min-width: 480px) {
+    .tc-mp-frame-inner {
+        padding: 34px 32px 42px;
+    }
+}
+
+/* Ornamentos de esquina */
+.tc-mp-corner {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.9;
+}
+
+.tc-mp-corner--tl {
+    top: -4px;
+    left: -4px;
+}
+
+.tc-mp-corner--tr {
+    top: -4px;
+    right: -4px;
+    transform: scaleX(-1);
+}
+
+.tc-mp-corner--bl {
+    bottom: -4px;
+    left: -4px;
+    transform: scaleY(-1);
+}
+
+.tc-mp-corner--br {
+    bottom: -4px;
+    right: -4px;
+    transform: scale(-1, -1);
+}
+
+.tc-mp-dot-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 18px 0;
+}
+
+.tc-mp-dot-divider-line {
+    height: 1px;
+    flex: 1 1 auto;
+    max-width: 140px;
+    background: currentColor;
+    opacity: 0.55;
+}
+
+/* ---- Bloques de título ---- */
+.tc-mp-title-img {
+    display: block;
+    margin: 0 auto;
+    max-width: 92%;
+    height: auto;
+}
+
+.tc-mp-title-text {
+    font-family: var(--tc-font-display);
+    text-align: center;
+    font-size: clamp(2.4rem, 11vw, 3.6rem);
+    line-height: 1;
+    letter-spacing: 0.01em;
+    margin: 0 auto;
+}
+
+.tc-mp-subtitle-img {
+    display: block;
+    margin: 0 auto;
+    max-width: 78%;
+    height: auto;
+}
+
+.tc-mp-subtitle-text {
+    font-family: var(--tc-font-display);
+    text-align: center;
+    font-size: clamp(1.5rem, 7vw, 2.1rem);
+}
+
+.tc-mp-tagline-img {
+    display: block;
+    margin: 0 auto;
+    max-width: 70%;
+    height: auto;
+}
+
+.tc-mp-tagline-text {
+    font-family: var(--tc-font-display);
+    text-align: center;
+    font-size: clamp(1.3rem, 6vw, 1.7rem);
+    line-height: 1.15;
+}
+
+.tc-mp-section-label {
+    font-family: var(--tc-font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: clamp(1.4rem, 6vw, 1.9rem);
+    text-align: center;
+}
+
+/* ---- Fotografías de platillos (recortes PNG transparentes, sin tarjetas) ----
+   Los archivos ya vienen recortados y con sombra incluida: se muestran a su
+   proporción natural (object-fit: contain) — nunca se recortan ni deforman. */
+.tc-mp-photo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tc-mp-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Fotografía rectangular real (no es recorte transparente): portada y hero de bebidas */
+.tc-mp-photo--cover {
+    overflow: hidden;
+    border-radius: 14px;
+}
+
+.tc-mp-photo--cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ---- Tipografía de producto ---- */
+.tc-mp-name {
+    font-family: var(--tc-font-display);
+    text-transform: uppercase;
+    line-height: 1.05;
+}
+
+.tc-mp-choice {
+    font-family: var(--tc-font-body);
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--tc-pink);
+}
+
+.tc-mp-ingredients {
+    font-family: var(--tc-font-body);
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--tc-blue);
+}
+
+.tc-mp-price {
+    font-family: var(--tc-font-display);
+    line-height: 1;
+}
+
+.tc-mp-price-unit {
+    font-family: var(--tc-font-body);
+    font-weight: 700;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+}
+
+.tc-mp-badge {
+    display: inline-block;
+    font-family: var(--tc-font-body);
+    font-weight: 800;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--tc-green);
+    border-radius: 999px;
+    padding: 3px 10px;
+}
+
+/* ==== PORTADA ==== */
+.tc-mp-cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1080 / 1920;
+    max-height: 100svh;
+    overflow: hidden;
+    background: #7a1030;
+}
+
+.tc-mp-cover > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.tc-mp-cover-scroll {
+    position: absolute;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    font-family: var(--tc-font-body);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    opacity: 0.85;
+    animation: tc-mp-bounce 2s ease-in-out infinite;
+}
+
+@keyframes tc-mp-bounce {
+    0%,
+    100% {
+        transform: translate(-50%, 0);
+    }
+    50% {
+        transform: translate(-50%, 6px);
+    }
+}
+
+/* ==== POZOLE ==== */
+.tc-mp-pozole-main {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-content: center;
+}
+
+.tc-mp-pozole-photo {
+    width: 46%;
+    max-width: 220px;
+}
+
+.tc-mp-pozole-price-block {
+    text-align: center;
+    flex: 1 1 auto;
+}
+
+.tc-mp-accompaniment {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.tc-mp-accompaniment-photo {
+    width: 50%;
+    max-width: 240px;
+}
+
+/* ==== PANCITA ==== */
+.tc-mp-pancita-main {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 6px;
+}
+
+.tc-mp-pancita-main-photo {
+    width: 64%;
+    max-width: 280px;
+}
+
+.tc-mp-pancita-price {
+    text-align: center;
+    margin: 10px 0 14px;
+}
+
+.tc-mp-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 8px;
+    max-width: 340px;
+    margin: 0 auto;
+    align-items: start;
+}
+
+.tc-mp-options-grid > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.tc-mp-options-grid > :nth-child(2) {
+    grid-column: 3;
+    grid-row: 1;
+}
+
+.tc-mp-options-grid > :nth-child(3) {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.tc-mp-options-grid > :nth-child(4) {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.tc-mp-options-grid > :nth-child(5) {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.tc-mp-option-item {
+    text-align: center;
+}
+
+.tc-mp-option-photo {
+    width: 100%;
+    max-width: 96px;
+    margin: 0 auto 6px;
+}
+
+.tc-mp-option-label {
+    font-family: var(--tc-font-body);
+    font-weight: 800;
+    font-size: 0.78rem;
+    color: var(--tc-pink);
+}
+
+.tc-mp-footer-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.tc-mp-footer-photo {
+    width: 42%;
+}
+
+/* ==== BIRRIA / lista alterna con foto ==== */
+.tc-mp-hero-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+}
+
+.tc-mp-hero-photo {
+    width: 48%;
+    max-width: 230px;
+}
+
+.tc-mp-alt-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 16px 0;
+}
+
+.tc-mp-alt-row--reverse {
+    flex-direction: row-reverse;
+}
+
+.tc-mp-alt-photo {
+    width: 46%;
+    flex: 0 0 auto;
+}
+
+.tc-mp-alt-text {
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+/* ==== FUSIONES ==== */
+.tc-mp-fusion-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0;
+}
+
+.tc-mp-fusion-row + .tc-mp-fusion-row {
+    border-top: 1px solid rgba(20, 78, 143, 0.18);
+}
+
+.tc-mp-fusion-photo {
+    width: 40%;
+    flex: 0 0 auto;
+}
+
+.tc-mp-fusion-text {
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+/* ==== COMAL ==== */
+.tc-mp-comal-main {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.tc-mp-comal-main-photo {
+    width: 78%;
+    max-width: 320px;
+}
+
+/* ==== POSTRES ==== */
+.tc-mp-dessert-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+}
+
+.tc-mp-dessert-row--reverse {
+    flex-direction: row-reverse;
+}
+
+.tc-mp-dessert-photo {
+    width: 44%;
+    flex: 0 0 auto;
+}
+
+.tc-mp-dessert-text {
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+/* ==== BEBIDAS promo ==== */
+.tc-mp-promo-hero {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto 14px;
+}
+
+.tc-mp-promo-banner {
+    max-width: 80%;
+    margin: 12px auto;
+    display: block;
+}
+
+.tc-mp-promo-prices {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.tc-mp-promo-price-item {
+    text-align: center;
+}
+
+/* ==== BEBIDAS tabla ==== */
+.tc-mp-table-group {
+    margin-bottom: 18px;
+}
+
+.tc-mp-table-group-title {
+    font-family: var(--tc-font-display);
+    text-transform: uppercase;
+    color: var(--tc-green);
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+}
+
+.tc-mp-table-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--tc-font-body);
+    color: var(--tc-blue);
+    padding: 3px 0;
+    font-size: 0.92rem;
+}
+
+.tc-mp-table-row-name {
+    font-weight: 600;
+}
+
+.tc-mp-table-row-prices {
+    display: flex;
+    gap: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.tc-mp-table-columns {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0 28px;
+}
+
+@media (min-width: 460px) {
+    .tc-mp-table-columns--2 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .tc-mp-table-columns--split {
+        grid-template-columns: 1fr 1fr;
+        grid-auto-flow: column;
+        grid-template-rows: repeat(3, auto);
+    }
+}
+
+.tc-mp-table-head {
+    display: flex;
+    justify-content: flex-end;
+    gap: 18px;
+    font-family: var(--tc-font-display);
+    color: var(--tc-green);
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.tc-mp-table-head span {
+    width: 62px;
+    text-align: right;
+}
+
+/* ==== DESTILADOS ==== */
+.tc-mp-spirit-group-title {
+    font-family: var(--tc-font-display);
+    text-transform: uppercase;
+    color: var(--tc-green);
+    font-size: 1.6rem;
+    margin: 16px 0 6px;
+}
+
+.tc-mp-spirit-head {
+    display: flex;
+    justify-content: flex-end;
+    gap: 18px;
+    font-family: var(--tc-font-body);
+    font-weight: 800;
+    color: var(--tc-pink);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(219, 52, 101, 0.25);
+    margin-bottom: 4px;
+}
+
+.tc-mp-spirit-head span {
+    width: 78px;
+    text-align: right;
+}
+
+.tc-mp-spirit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.tc-mp-spirit-name {
+    font-family: var(--tc-font-body);
+    font-weight: 600;
+    color: var(--tc-blue);
+    font-size: 0.9rem;
+}
+
+.tc-mp-spirit-presentation {
+    font-style: italic;
+    opacity: 0.7;
+    font-size: 0.78em;
+}
+
+.tc-mp-spirit-prices {
+    display: flex;
+    gap: 18px;
+    flex: 0 0 auto;
+    font-family: var(--tc-font-body);
+    font-weight: 700;
+    color: var(--tc-blue);
+    font-size: 0.88rem;
+    white-space: nowrap;
+}
+
+.tc-mp-spirit-prices span {
+    width: 78px;
+    text-align: right;
+}
+
+.tc-mp-social-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 22px;
+    color: var(--tc-blue);
+}
+
+.tc-mp-social-row a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+}
+
+.tc-mp-social-handle {
+    font-family: var(--tc-font-body);
+    font-weight: 700;
+    color: #1f1f1f;
+}
+
+/* ---- Botón volver arriba ---- */
+.tc-mp-scroll-top {
+    position: fixed;
+    right: 18px;
+    bottom: 22px;
+    z-index: 50;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--tc-blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(20, 78, 143, 0.35);
+    border: none;
+    cursor: pointer;
+}
+
+.tc-mp-fade-enter-active,
+.tc-mp-fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.tc-mp-fade-enter-from,
+.tc-mp-fade-leave-to {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tc-mp-cover-scroll {
+        animation: none;
+    }
+}
+
+/* ---- Responsive: apilar filas alternas en móvil angosto ---- */
+@media (max-width: 380px) {
+    .tc-mp-alt-row,
+    .tc-mp-dessert-row,
+    .tc-mp-fusion-row {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .tc-mp-alt-photo,
+    .tc-mp-dessert-photo,
+    .tc-mp-fusion-photo {
+        width: 62%;
+    }
+}

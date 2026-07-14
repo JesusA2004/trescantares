@@ -31,8 +31,12 @@ class MenuController extends Controller
             ->map(function ($category) {
                 return array_merge($category->toArray(), [
                     'image_url' => $category->image_url,
+                    'title_image_url' => $category->title_image_url,
+                    'subtitle_image_url' => $category->subtitle_image_url,
+                    'tagline_image_url' => $category->tagline_image_url,
                     'items' => $category->items->map(fn ($item) => array_merge($item->toArray(), [
                         'image_url' => $item->image_url,
+                        'caption_image_url' => $item->caption_image_url,
                     ])),
                 ]);
             });

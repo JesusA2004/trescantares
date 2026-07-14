@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ImagePlus, Star, X } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 import AdminFormSection from '@/components/admin/AdminFormSection.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import TcImagePositionEditor from '@/components/tc/TcImagePositionEditor.vue';
+import TcImageUpload from '@/components/tc/TcImageUpload.vue';
 import TcInput from '@/components/tc/TcInput.vue';
 import TcSelect from '@/components/tc/TcSelect.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
 import TcTextarea from '@/components/tc/TcTextarea.vue';
+import { ZONE_SUGGESTIONS } from './zones';
 
 interface GalleryImage {
     id: number;
@@ -21,16 +24,28 @@ const props = defineProps<{
     item: {
         id: number;
         name: string;
-        slug: string;
         menu_category_id: number;
+        zone: string | null;
         description: string | null;
         badge: string | null;
+        choice_label: string | null;
         price: string | number;
+        price_label: string | null;
+        price_secondary: string | number | null;
+        price_secondary_label: string | null;
+        presentation: string | null;
         image_url: string | null;
+        alt_text: string | null;
+        image_position_x: number;
+        image_position_y: number;
+        image_scale: string | number;
+        image_fit: string;
+        image_align: string | null;
+        visual_size: string | null;
+        caption_image_url: string | null;
         ingredients: string | null;
         is_featured: boolean;
         is_active: boolean;
-        sort_order: number;
         gallery: GalleryImage[];
     };
     categories: { id: number; name: string }[];
@@ -40,30 +55,53 @@ const categoryOptions = props.categories.map((c) => ({ value: c.id, label: c.nam
 
 const form = useForm({
     menu_category_id: props.item.menu_category_id,
+    zone: props.item.zone ?? '',
     name: props.item.name,
     description: props.item.description ?? '',
     badge: props.item.badge ?? '',
+    choice_label: props.item.choice_label ?? '',
     price: props.item.price,
+    price_label: props.item.price_label ?? '',
+    price_secondary: props.item.price_secondary ?? '',
+    price_secondary_label: props.item.price_secondary_label ?? '',
+    presentation: props.item.presentation ?? '',
     ingredients: props.item.ingredients ?? '',
+    alt_text: props.item.alt_text ?? '',
+    image_position_x: props.item.image_position_x ?? 50,
+    image_position_y: props.item.image_position_y ?? 50,
+    image_scale: Number(props.item.image_scale ?? 1),
+    image_fit: props.item.image_fit ?? 'contain',
+    image_align: props.item.image_align ?? 'center',
+    visual_size: props.item.visual_size ?? 'md',
     is_featured: props.item.is_featured,
     is_active: props.item.is_active,
-    sort_order: props.item.sort_order,
     _method: 'PUT',
     delete_image_ids: [] as number[],
-    primary_image_id: props.item.gallery.find((g) => g.is_primary)?.id ?? null as number | null,
+    primary_image_id: (props.item.gallery.find((g) => g.is_primary)?.id ?? null) as number | null,
     new_images: [] as File[],
+    caption_image: null as File | null,
 });
 
-// Gallery state (existing images)
 const gallery = ref<GalleryImage[]>(props.item.gallery.map((g) => ({ ...g })));
 
-// New image previews
-interface NewPreview { url: string; file: File }
+interface NewPreview {
+    url: string;
+    file: File;
+}
 const newPreviews = ref<NewPreview[]>([]);
+
+const primaryPreviewUrl = computed(() => {
+    const primary = gallery.value.find((g) => g.is_primary && !form.delete_image_ids.includes(g.id));
+
+    return primary?.image_url ?? newPreviews.value[0]?.url ?? props.item.image_url ?? null;
+});
 
 function handleFiles(files: FileList | File[]) {
     Array.from(files).forEach((file) => {
-        if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) return;
+        if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) {
+return;
+}
+
         newPreviews.value.push({ url: URL.createObjectURL(file), file });
         form.new_images.push(file);
     });
@@ -71,22 +109,36 @@ function handleFiles(files: FileList | File[]) {
 
 function onFileInput(e: Event) {
     const input = e.target as HTMLInputElement;
-    if (input.files) handleFiles(input.files);
+
+    if (input.files) {
+handleFiles(input.files);
+}
+
     input.value = '';
 }
 
 function onDrop(e: DragEvent) {
     e.preventDefault();
-    if (e.dataTransfer?.files) handleFiles(e.dataTransfer.files);
+
+    if (e.dataTransfer?.files) {
+handleFiles(e.dataTransfer.files);
+}
 }
 
 function markDeleteExisting(id: number) {
-    if (!form.delete_image_ids.includes(id)) form.delete_image_ids.push(id);
-    if (form.primary_image_id === id) form.primary_image_id = null;
+    if (!form.delete_image_ids.includes(id)) {
+form.delete_image_ids.push(id);
+}
+
+    if (form.primary_image_id === id) {
+form.primary_image_id = null;
+}
 }
 
 function setPrimaryExisting(id: number) {
-    gallery.value.forEach((g) => { g.is_primary = g.id === id; });
+    gallery.value.forEach((g) => {
+        g.is_primary = g.id === id;
+    });
     form.primary_image_id = id;
 }
 
@@ -134,9 +186,7 @@ function submit() {
                                 v-for="img in gallery"
                                 :key="img.id"
                                 class="relative group rounded-xl overflow-hidden border-2 transition-all"
-                                :class="[
-                                    isMarkedDelete(img.id) ? 'border-red-300 opacity-40' : img.is_primary ? 'border-[var(--tc-blue)]' : 'border-transparent',
-                                ]"
+                                :class="[isMarkedDelete(img.id) ? 'border-red-300 opacity-40' : img.is_primary ? 'border-[var(--tc-blue)]' : 'border-transparent']"
                             >
                                 <img :src="img.image_url" :alt="img.alt_text ?? item.name" class="w-full aspect-square object-cover" />
                                 <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
@@ -170,19 +220,13 @@ function submit() {
                             </div>
                         </div>
 
-                        <!-- Fallback legacy image -->
                         <div v-else-if="item.image_url" class="mb-4">
                             <p class="text-xs text-gray-500 mb-2">Imagen actual (legacy):</p>
                             <img :src="item.image_url" :alt="item.name" class="w-full max-h-40 object-cover rounded-xl" />
                         </div>
 
-                        <!-- New images previews -->
                         <div v-if="newPreviews.length" class="grid grid-cols-2 gap-2 mb-3">
-                            <div
-                                v-for="(preview, idx) in newPreviews"
-                                :key="preview.url"
-                                class="relative group rounded-xl overflow-hidden border-2 border-green-300"
-                            >
+                            <div v-for="(preview, idx) in newPreviews" :key="preview.url" class="relative group rounded-xl overflow-hidden border-2 border-green-300">
                                 <img :src="preview.url" alt="Nueva imagen" class="w-full aspect-square object-cover" />
                                 <div class="absolute top-1.5 left-1.5">
                                     <span class="tc-badge tc-badge-green text-[10px]">Nueva</span>
@@ -197,7 +241,6 @@ function submit() {
                             </div>
                         </div>
 
-                        <!-- Dropzone -->
                         <div
                             class="border-2 border-dashed border-amber-200 rounded-xl p-4 text-center cursor-pointer hover:border-[var(--tc-blue)] hover:bg-blue-50/30 transition-colors"
                             @dragover.prevent
@@ -207,45 +250,59 @@ function submit() {
                             <ImagePlus class="w-5 h-5 text-amber-300 mx-auto mb-1" />
                             <p class="text-xs text-gray-500">Agregar más imágenes</p>
                         </div>
-                        <input
-                            ref="newFileInput"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            multiple
-                            class="hidden"
-                            @change="onFileInput"
-                        />
+                        <input ref="newFileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple class="hidden" @change="onFileInput" />
 
-                        <p class="text-xs text-gray-400 mt-2">
-                            Haz click en ⭐ para cambiar la imagen principal. La imagen marcada se muestra en el menú.
-                        </p>
+                        <p class="text-xs text-gray-400 mt-2">Haz click en ⭐ para cambiar la imagen principal. La imagen marcada se muestra en el menú.</p>
+                    </div>
+
+                    <div class="tc-admin-card p-5">
+                        <TcImagePositionEditor
+                            :preview-url="primaryPreviewUrl"
+                            :position-x="form.image_position_x"
+                            :position-y="form.image_position_y"
+                            :scale="form.image_scale"
+                            :fit="form.image_fit"
+                            :align="form.image_align"
+                            :visual-size="form.visual_size"
+                            @update:position-x="form.image_position_x = $event"
+                            @update:position-y="form.image_position_y = $event"
+                            @update:scale="form.image_scale = $event"
+                            @update:fit="form.image_fit = $event"
+                            @update:align="form.image_align = $event"
+                            @update:visual-size="form.visual_size = $event"
+                        />
+                    </div>
+
+                    <div class="tc-admin-card p-5">
+                        <TcImageUpload
+                            label="Imagen de leyenda (opcional)"
+                            hint="Gráfico decorativo asociado a este platillo (ej. una frase manuscrita)"
+                            :current-url="item.caption_image_url"
+                            :max-mb="4"
+                            @change="(f) => (form.caption_image = f)"
+                        />
                     </div>
                 </div>
 
                 <!-- Right: form fields -->
                 <div class="xl:col-span-2 space-y-4">
                     <AdminFormSection title="Información básica">
-                        <TcSelect
-                            id="category"
-                            v-model="form.menu_category_id"
-                            label="Categoría"
-                            required
-                            :options="categoryOptions"
-                            :error="form.errors.menu_category_id"
-                        />
-                        <TcInput
-                            id="name"
-                            v-model="form.name"
-                            label="Nombre del platillo"
-                            required
-                            :error="form.errors.name"
-                        />
-                        <TcTextarea
-                            id="description"
-                            v-model="form.description"
-                            label="Descripción"
-                            :rows="3"
-                        />
+                        <TcSelect id="category" v-model="form.menu_category_id" label="Categoría" required :options="categoryOptions" :error="form.errors.menu_category_id" />
+                        <TcInput id="name" v-model="form.name" label="Nombre del platillo" required :error="form.errors.name" />
+                        <TcTextarea id="description" v-model="form.description" label="Descripción" :rows="2" />
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TcInput id="alt_text" v-model="form.alt_text" label="Texto alternativo" />
+                            <div class="tc-field">
+                                <label for="zone">Zona / columna en la plantilla</label>
+                                <input id="zone" v-model="form.zone" list="zone-suggestions" class="tc-input" placeholder="Ej: main, side, option…" />
+                                <datalist id="zone-suggestions">
+                                    <option v-for="z in ZONE_SUGGESTIONS" :key="z" :value="z" />
+                                </datalist>
+                            </div>
+                        </div>
+                    </AdminFormSection>
+
+                    <AdminFormSection title="Precio">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="tc-field">
                                 <label for="price">Precio <span class="text-[var(--tc-pink)]">*</span></label>
@@ -264,39 +321,29 @@ function submit() {
                                 </div>
                                 <p v-if="form.errors.price" class="text-xs text-[var(--tc-pink)] mt-0.5">{{ form.errors.price }}</p>
                             </div>
-                            <TcInput
-                                id="badge"
-                                v-model="form.badge"
-                                label="Etiqueta"
-                                placeholder="Ej: Nuevo, Popular…"
-                            />
+                            <TcInput id="price_label" v-model="form.price_label" label="Etiqueta del precio" />
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <TcInput id="price_secondary" v-model="form.price_secondary" type="number" min="0" step="0.01" label="Precio secundario" />
+                            <TcInput id="price_secondary_label" v-model="form.price_secondary_label" label="Etiqueta del precio secundario" />
+                            <TcInput id="presentation" v-model="form.presentation" label="Presentación / unidad" />
                         </div>
                     </AdminFormSection>
 
                     <AdminFormSection title="Detalles">
-                        <TcTextarea
-                            id="ingredients"
-                            v-model="form.ingredients"
-                            label="Ingredientes"
-                            :rows="2"
-                        />
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TcInput id="badge" v-model="form.badge" label="Insignia" />
+                            <TcInput id="choice_label" v-model="form.choice_label" label="Etiqueta de elección" />
+                        </div>
+                        <TcTextarea id="ingredients" v-model="form.ingredients" label="Ingredientes / opciones" :rows="2" />
                     </AdminFormSection>
 
                     <AdminFormSection title="Configuración">
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <TcInput
-                                id="sort_order"
-                                v-model="form.sort_order"
-                                type="number"
-                                label="Orden"
-                            />
-                            <div class="flex items-end pb-1">
-                                <TcSwitch v-model="form.is_active" label="Activo" description="Visible en el menú" />
-                            </div>
-                            <div class="flex items-end pb-1">
-                                <TcSwitch v-model="form.is_featured" label="Destacado" description="Aparece como especial" />
-                            </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TcSwitch v-model="form.is_active" label="Activo" description="Visible en el menú" />
+                            <TcSwitch v-model="form.is_featured" label="Destacado" description="Aparece como especial" />
                         </div>
+                        <p class="text-xs text-gray-400">El orden dentro de la categoría se controla arrastrando los platillos en el listado.</p>
                     </AdminFormSection>
 
                     <div class="flex gap-3">

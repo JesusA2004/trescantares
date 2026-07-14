@@ -1,44 +1,92 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Pencil, Search, Tag, Trash2 } from 'lucide-vue-next';
+import { GripVertical, Pencil, Search, Tag, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AdminEmptyState from '@/components/admin/AdminEmptyState.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import Can from '@/components/admin/Can.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
+import { useDragSort } from '@/composables/useDragSort';
+
+interface CategoryRow {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    image_url: string | null;
+    icon: string | null;
+    color: string | null;
+    layout: string;
+    sort_order: number;
+    is_active: boolean;
+    items_count: number;
+}
 
 const props = defineProps<{
-    categories: {
-        id: number;
-        name: string;
-        slug: string;
-        description: string | null;
-        image_url: string | null;
-        icon: string | null;
-        color: string | null;
-        sort_order: number;
-        is_active: boolean;
-        items_count: number;
-    }[];
+    categories: CategoryRow[];
 }>();
 
 const confirmDelete = ref<number | null>(null);
 const search = ref('');
 const filterActive = ref<'all' | 'active' | 'inactive'>('all');
+const list = ref<CategoryRow[]>([...props.categories]);
+const listEl = ref<HTMLElement>();
 
 const filtered = computed(() => {
-    let list = props.categories;
+    let items = list.value;
     const q = search.value.trim().toLowerCase();
-    if (q) list = list.filter((c) => c.name.toLowerCase().includes(q) || c.slug.includes(q));
-    if (filterActive.value === 'active') list = list.filter((c) => c.is_active);
-    if (filterActive.value === 'inactive') list = list.filter((c) => !c.is_active);
-    return list;
+
+    if (q) {
+items = items.filter((c) => c.name.toLowerCase().includes(q) || c.slug.includes(q));
+}
+
+    if (filterActive.value === 'active') {
+items = items.filter((c) => c.is_active);
+}
+
+    if (filterActive.value === 'inactive') {
+items = items.filter((c) => !c.is_active);
+}
+
+    return items;
 });
+
+const isFiltering = computed(() => search.value.trim() !== '' || filterActive.value !== 'all');
+
+const { registerZone, start, dragging, saving } = useDragSort<CategoryRow>((zones) => {
+    const ordered = zones.main ?? list.value;
+    list.value = ordered;
+    router.post(
+        '/admin/categories/reorder',
+        {
+            categories: ordered.map((c, idx) => ({ id: c.id, sort_order: idx + 1 })),
+        },
+        { preserveScroll: true, preserveState: true },
+    );
+});
+
+function bindZone(el: HTMLElement | null) {
+    if (el) {
+        listEl.value = el;
+        registerZone('main', list.value, el);
+    }
+}
+
+function onHandleDown(cat: CategoryRow, e: PointerEvent) {
+    if (isFiltering.value) {
+return;
+}
+
+    start(cat, 'main', e);
+}
 
 function deleteCategory(id: number) {
     router.delete(`/admin/categories/${id}`, {
-        onSuccess: () => { confirmDelete.value = null; },
+        onSuccess: () => {
+            confirmDelete.value = null;
+            list.value = list.value.filter((c) => c.id !== id);
+        },
     });
 }
 </script>
@@ -71,31 +119,52 @@ function deleteCategory(id: number) {
                 <option value="active">Solo activas</option>
                 <option value="inactive">Solo inactivas</option>
             </select>
-            <span v-if="filtered.length !== categories.length" class="text-xs text-gray-400">
-                {{ filtered.length }} de {{ categories.length }}
+            <span v-if="saving" class="text-xs text-[var(--tc-blue)] flex items-center gap-1">Guardando orden…</span>
+            <span v-else-if="isFiltering && filtered.length !== list.length" class="text-xs text-gray-400">
+                {{ filtered.length }} de {{ list.length }}
             </span>
         </div>
+
+        <p v-if="isFiltering" class="text-xs text-amber-600 -mt-3">
+            Quita los filtros de búsqueda para poder reordenar las categorías arrastrándolas.
+        </p>
 
         <!-- Table -->
         <div class="tc-admin-table-wrap">
             <table class="tc-admin-table">
                 <thead>
                     <tr>
+                        <th class="w-8"></th>
                         <th>Imagen</th>
                         <th>Nombre</th>
+                        <th class="hidden sm:table-cell">Plantilla</th>
                         <th>Platillos</th>
-                        <th class="hidden md:table-cell">Orden</th>
                         <th>Estado</th>
                         <th class="text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody :ref="(el) => bindZone(el as HTMLElement)">
                     <template v-if="filtered.length > 0">
-                        <tr v-for="cat in filtered" :key="cat.id">
+                        <tr
+                            v-for="cat in filtered"
+                            :key="cat.id"
+                            data-drag-row
+                            :class="{ 'opacity-40': dragging?.item.id === cat.id }"
+                        >
+                            <td>
+                                <button
+                                    v-if="!isFiltering"
+                                    type="button"
+                                    class="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none"
+                                    aria-label="Arrastrar para reordenar"
+                                    @pointerdown="onHandleDown(cat, $event)"
+                                >
+                                    <GripVertical class="w-4 h-4" />
+                                </button>
+                            </td>
                             <td>
                                 <div class="w-11 h-11 rounded-lg overflow-hidden bg-gray-100 border border-[#f0e8d8] flex-shrink-0">
-                                    <img v-if="cat.image_url" :src="cat.image_url" :alt="cat.name"
-                                        class="w-full h-full object-cover hover:scale-110 transition-transform duration-300" />
+                                    <img v-if="cat.image_url" :src="cat.image_url" :alt="cat.name" class="w-full h-full object-cover" />
                                     <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
                                         <Tag class="w-5 h-5" />
                                     </div>
@@ -105,12 +174,14 @@ function deleteCategory(id: number) {
                                 <p class="font-semibold text-gray-900">{{ cat.name }}</p>
                                 <p class="text-xs text-gray-400">{{ cat.slug }}</p>
                             </td>
+                            <td class="hidden sm:table-cell">
+                                <span class="tc-badge tc-badge-blue text-[10px]">{{ cat.layout }}</span>
+                            </td>
                             <td>
                                 <span class="tc-badge" :class="cat.items_count > 0 ? 'tc-badge-blue' : 'tc-badge-gray'">
                                     {{ cat.items_count }} platillo{{ cat.items_count !== 1 ? 's' : '' }}
                                 </span>
                             </td>
-                            <td class="hidden md:table-cell text-gray-500 text-sm tabular-nums">{{ cat.sort_order }}</td>
                             <td><StatusBadge :active="cat.is_active" /></td>
                             <td class="text-right">
                                 <div class="flex items-center justify-end gap-1">
@@ -129,16 +200,14 @@ function deleteCategory(id: number) {
                         </tr>
                     </template>
                     <tr v-else>
-                        <td colspan="6" class="p-0">
+                        <td colspan="7" class="p-0">
                             <AdminEmptyState
                                 :title="search ? 'Sin resultados' : 'Sin categorías'"
                                 :description="search ? `No hay categorías que coincidan con '${search}'.` : 'Crea la primera categoría para organizar el menú.'"
                             >
                                 <template #action>
                                     <Can permission="categories.create">
-                                        <Link href="/admin/categories/create" class="tc-btn-primary">
-                                            + Crear categoría
-                                        </Link>
+                                        <Link href="/admin/categories/create" class="tc-btn-primary"> + Crear categoría </Link>
                                     </Can>
                                 </template>
                             </AdminEmptyState>
