@@ -24,15 +24,15 @@ const props = withDefaults(
     },
 );
 
-const SIZE_MULTIPLIER: Record<string, number> = { sm: 0.82, md: 1, lg: 1.2 };
-
 const imgStyle = computed(() => {
-    const sizeMult = SIZE_MULTIPLIER[props.item.visual_size ?? 'md'] ?? 1;
     const zoom = Number(props.item.image_scale ?? 1);
 
     return {
         objectPosition: `${props.item.image_position_x ?? 50}% ${props.item.image_position_y ?? 50}%`,
-        transform: `scale(${zoom * sizeMult})`,
+        // image_scale es únicamente zoom/recorte interno de la imagen; el
+        // tamaño real que ocupa en el layout lo da .tc-mp-photo--sm/md/lg
+        // (ver wrapStyle/wrapClass) para no solapar elementos vecinos.
+        transform: `scale(${zoom})`,
     };
 });
 
@@ -53,11 +53,17 @@ const wrapStyle = computed(() => {
     return {};
 });
 
+// visual_size cambia el ancho real reservado para la fotografía (vía la
+// variable --tc-mp-size-mult que multiplican las reglas width/max-width de
+// cada sección), no un transform — así el layout reserva el espacio real y
+// no se solapa con lo que está al lado.
+const sizeClass = computed(() => `tc-mp-photo--${props.item.visual_size ?? 'md'}`);
+
 const fit = computed(() => (props.cover ? 'cover' : (props.item.image_fit ?? 'contain')));
 </script>
 
 <template>
-    <div class="tc-mp-photo" :class="{ 'tc-mp-photo--cover': fit === 'cover' }" :style="wrapStyle">
+    <div class="tc-mp-photo" :class="[sizeClass, { 'tc-mp-photo--cover': fit === 'cover' }]" :style="wrapStyle">
         <img
             v-if="item.image_url"
             :src="item.image_url"

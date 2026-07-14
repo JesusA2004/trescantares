@@ -7146,59 +7146,201 @@ body,
     color: var(--tc-mp-h, inherit) !important;
 }
 
-/* ---- Navegación sticky ---- */
-.tc-mp-nav-wrap {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    background: rgba(247, 243, 234, 0.94);
-    backdrop-filter: blur(6px);
-    border-bottom: 1px solid rgba(20, 78, 143, 0.15);
-}
-
-.tc-mp-nav {
-    max-width: 1100px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.tc-mp-nav::-webkit-scrollbar {
+/* ---- Navegación lateral (estilo menú de videojuego) ----
+   Nunca ocupa espacio en el flujo del documento (siempre position: fixed),
+   así la portada arranca en el primer píxel sin barra encima. */
+.tc-mp-sidenav {
     display: none;
 }
 
-.tc-mp-nav-pill {
-    flex: 0 0 auto;
+@media (min-width: 1024px) {
+    .tc-mp-sidenav {
+        display: flex;
+        flex-direction: column;
+        gap: clamp(14px, 1.6vw, 20px);
+        position: fixed;
+        left: clamp(16px, 2.2vw, 36px);
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 40;
+        max-height: 80vh;
+        overflow-y: auto;
+        scrollbar-width: none;
+    }
+
+    .tc-mp-sidenav::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.tc-mp-sidenav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: none;
+    border: none;
+    padding: 1px 0;
+    cursor: pointer;
     font-family: var(--tc-font-body);
     font-weight: 700;
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
+    font-size: 0.76rem;
+    letter-spacing: 0.09em;
     text-transform: uppercase;
     color: var(--tc-blue);
-    background: #fff;
-    border: 1.5px solid rgba(20, 78, 143, 0.25);
-    border-radius: 999px;
-    padding: 7px 14px;
-    white-space: nowrap;
-    cursor: pointer;
+    opacity: 0.32;
     transition:
-        background-color 0.2s,
-        color 0.2s,
-        border-color 0.2s;
+        opacity 0.25s ease,
+        transform 0.25s ease;
 }
 
-.tc-mp-nav-pill:hover {
-    border-color: var(--tc-pink);
+.tc-mp-sidenav-item:hover,
+.tc-mp-sidenav-item:focus-visible {
+    opacity: 0.7;
+    transform: translateX(4px);
+    outline: none;
 }
 
-.tc-mp-nav-pill--active {
+.tc-mp-sidenav-item--active {
+    opacity: 0.95;
+}
+
+.tc-mp-sidenav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.45;
+    flex: 0 0 auto;
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+}
+
+.tc-mp-sidenav-item--active .tc-mp-sidenav-dot {
+    opacity: 1;
+    transform: scale(1.7);
     background: var(--tc-pink);
-    border-color: var(--tc-pink);
-    color: #fff;
+}
+
+/* Móvil / tablet: pestaña vertical discreta que abre un drawer */
+.tc-mp-navtab {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 45;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    background: rgba(247, 243, 234, 0.6);
+    color: var(--tc-blue);
+    font-family: var(--tc-font-body);
+    font-weight: 800;
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 14px 5px;
+    border: none;
+    border-radius: 0 10px 10px 0;
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.tc-mp-navtab:hover,
+.tc-mp-navtab:focus-visible {
+    opacity: 0.85;
+    outline: none;
+}
+
+@media (min-width: 1024px) {
+    .tc-mp-navtab {
+        display: none;
+    }
+}
+
+.tc-mp-navdrawer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 48;
+    background: rgba(20, 16, 12, 0.35);
+}
+
+.tc-mp-navdrawer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 49;
+    width: min(72vw, 260px);
+    background: rgba(247, 243, 234, 0.98);
+    backdrop-filter: blur(6px);
+    padding: 26px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.15);
+}
+
+.tc-mp-navdrawer-item {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 8px 0;
+    font-family: var(--tc-font-body);
+    font-weight: 700;
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--tc-blue);
+    opacity: 0.55;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.tc-mp-navdrawer-item--active {
+    opacity: 1;
+    color: var(--tc-pink);
+}
+
+@media (min-width: 1024px) {
+    .tc-mp-navdrawer-overlay,
+    .tc-mp-navdrawer {
+        display: none;
+    }
+}
+
+.tc-mp-navdrawer-enter-active,
+.tc-mp-navdrawer-leave-active {
+    transition: transform 0.25s ease;
+}
+
+.tc-mp-navdrawer-enter-from,
+.tc-mp-navdrawer-leave-to {
+    transform: translateX(-100%);
+}
+
+.tc-mp-navdrawer-overlay-enter-active,
+.tc-mp-navdrawer-overlay-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.tc-mp-navdrawer-overlay-enter-from,
+.tc-mp-navdrawer-overlay-leave-to {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tc-mp-sidenav-item,
+    .tc-mp-sidenav-dot,
+    .tc-mp-navtab,
+    .tc-mp-navdrawer-item,
+    .tc-mp-navdrawer-enter-active,
+    .tc-mp-navdrawer-leave-active,
+    .tc-mp-navdrawer-overlay-enter-active,
+    .tc-mp-navdrawer-overlay-leave-active {
+        transition: none;
+    }
 }
 
 /* ---- Contenedor de página editorial ----
@@ -7369,14 +7511,52 @@ body,
     font-size: clamp(2rem, 7vw, 3.2rem);
 }
 
+/* Escritorio: los rótulos gráficos (la mayoría de las secciones) son
+   palabras cortas — no deben estirarse a un ancho de sección de 1200px+
+   solo porque el contenedor es ancho. Se limita a un tope en px, no un
+   porcentaje puro. El título largo de texto (Cantaritos, Mojitos y
+   Cervezas, sin rótulo gráfico propio) sí debe crecer y ser protagonista. */
+@media (min-width: 1024px) {
+    .tc-mp-title-img {
+        max-width: min(65%, 460px);
+    }
+
+    .tc-mp-subtitle-img {
+        max-width: min(55%, 340px);
+    }
+
+    .tc-mp-tagline-img {
+        max-width: min(50%, 300px);
+    }
+
+    .tc-mp-title-text {
+        font-size: clamp(2.6rem, 3vw, 3.8rem);
+    }
+
+    .tc-mp-title-text--promo {
+        font-size: clamp(2.8rem, 4.4vw, 4.4rem);
+    }
+}
+
+@media (min-width: 1440px) {
+    .tc-mp-title-img {
+        max-width: min(52%, 520px);
+    }
+}
+
 /* ---- Fotografías de platillos (recortes PNG transparentes, sin tarjetas) ----
    Los archivos ya vienen recortados y con sombra incluida: se muestran a su
-   proporción natural (object-fit: contain) — nunca se recortan ni deforman. */
+   proporción natural (object-fit: contain) — nunca se recortan ni deforman.
+   overflow: visible por defecto para que un visual_size grande o un zoom no
+   recorte el PNG; solo las fotografías --cover (portada/hero bebidas, que sí
+   son fotografía rectangular real) deben recortarse. */
 .tc-mp-photo {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: visible;
+    --tc-mp-size-mult: 1;
 }
 
 .tc-mp-photo img {
@@ -7385,6 +7565,20 @@ body,
     height: auto;
     max-height: 100%;
     object-fit: contain;
+}
+
+/* visual_size: multiplica el ancho REAL reservado en el layout (no un
+   transform), para que el espacio de la celda crezca de verdad. */
+.tc-mp-photo--sm {
+    --tc-mp-size-mult: 0.72;
+}
+
+.tc-mp-photo--md {
+    --tc-mp-size-mult: 1;
+}
+
+.tc-mp-photo--lg {
+    --tc-mp-size-mult: 1.35;
 }
 
 /* Fotografía rectangular real (no es recorte transparente): portada y hero de bebidas */
@@ -7574,7 +7768,7 @@ body,
 
 .tc-mp-pozole-photo {
     width: 46%;
-    max-width: clamp(200px, 30vw, 380px);
+    max-width: calc(clamp(200px, 30vw, 380px) * var(--tc-mp-size-mult, 1));
 }
 
 .tc-mp-pozole-price-block {
@@ -7592,57 +7786,39 @@ body,
 
 .tc-mp-accompaniment-photo {
     width: 50%;
-    max-width: clamp(200px, 26vw, 320px);
+    max-width: calc(clamp(200px, 26vw, 320px) * var(--tc-mp-size-mult, 1));
 }
 
-/* Composición editorial de escritorio: pozole grande a la izquierda,
-   acompañamiento (tacos dorados) como segundo bloque a la derecha. */
+/* Escritorio: NO se parte en dos columnas (eso invertía el orden visual —
+   "Acompáñalo" terminaba después de los tacos). Se conserva el orden vertical
+   exacto del PDF (título → pozole+precio → "Tú eliges" → "Acompáñalo" →
+   tacos dorados), solo que con fotografías mucho más grandes y protagonistas
+   dentro de un ancho de lectura cómodo. `.tc-mp-grid--pozole` ya no es un
+   grid: es simplemente el contenedor centrado de la sección. */
 @media (min-width: 1024px) {
     .tc-mp-grid--pozole {
-        display: grid;
-        grid-template-columns: 1.1fr 1fr;
-        grid-template-areas:
-            'title title'
-            'main accompaniment'
-            'subtitle subtitle'
-            'divider divider'
-            'ornament ornament';
-        column-gap: clamp(32px, 5vw, 72px);
-        row-gap: clamp(12px, 2vw, 24px);
-        align-items: center;
-    }
-
-    .tc-mp-grid--pozole > .tc-mp-title-img,
-    .tc-mp-grid--pozole > .tc-mp-title-text {
-        grid-area: title;
+        max-width: 1200px;
+        margin-inline: auto;
     }
 
     .tc-mp-grid--pozole > .tc-mp-pozole-main {
-        grid-area: main;
-        margin-top: 0;
-        justify-content: flex-end;
+        gap: clamp(28px, 4vw, 56px);
     }
 
     .tc-mp-grid--pozole > .tc-mp-pozole-main .tc-mp-pozole-photo {
-        max-width: clamp(260px, 20vw, 340px);
+        max-width: calc(clamp(420px, 34vw, 660px) * var(--tc-mp-size-mult, 1));
     }
 
-    .tc-mp-grid--pozole > .tc-mp-subtitle-img {
-        grid-area: subtitle;
-    }
-
-    .tc-mp-grid--pozole > .tc-mp-dot-divider {
-        grid-area: divider;
+    .tc-mp-grid--pozole .tc-mp-pozole-price-block .tc-mp-price--xl {
+        font-size: clamp(2.4rem, 3.2vw, 3.4rem);
     }
 
     .tc-mp-grid--pozole > .tc-mp-accompaniment {
-        grid-area: accompaniment;
-        margin-top: 0;
-        justify-content: flex-start;
+        gap: clamp(24px, 4vw, 48px);
     }
 
-    .tc-mp-grid--pozole > .tc-mp-area-ornament {
-        grid-area: ornament;
+    .tc-mp-grid--pozole > .tc-mp-accompaniment .tc-mp-accompaniment-photo {
+        max-width: calc(clamp(340px, 27vw, 520px) * var(--tc-mp-size-mult, 1));
     }
 }
 
@@ -7662,7 +7838,7 @@ body,
 
 .tc-mp-pancita-main-photo {
     width: 64%;
-    max-width: clamp(220px, 30vw, 360px);
+    max-width: calc(clamp(220px, 30vw, 360px) * var(--tc-mp-size-mult, 1));
 }
 
 .tc-mp-pancita-price {
@@ -7722,7 +7898,7 @@ body,
 
 .tc-mp-option-photo {
     width: 100%;
-    max-width: clamp(80px, 7vw, 130px);
+    max-width: calc(clamp(80px, 12vw, 230px) * var(--tc-mp-size-mult, 1));
     margin: 0 auto 6px;
 }
 
@@ -7742,47 +7918,27 @@ body,
 
 .tc-mp-footer-photo {
     width: 42%;
-    max-width: clamp(160px, 18vw, 240px);
+    max-width: calc(clamp(280px, 22vw, 420px) * var(--tc-mp-size-mult, 1));
 }
 
-/* Escritorio: pancita protagonista a la izquierda, opciones distribuidas
-   en varias columnas a la derecha (no todo pequeño al centro). */
+/* Escritorio: la pancita sigue siendo el centro visual con las opciones
+   distribuidas alrededor (pentagono: Panal/Panza arriba, Pata/Libro a los
+   lados, Callo abajo) — igual que en móvil pero a mayor escala, NO partido
+   en columnas hero/opciones independientes. */
 @media (min-width: 1024px) {
     .tc-mp-grid--pancita {
-        display: grid;
-        grid-template-columns: 1fr 1.3fr;
-        grid-template-areas:
-            'title title'
-            'hero options'
-            'tagline tagline'
-            'footer footer';
-        column-gap: clamp(32px, 5vw, 80px);
-        row-gap: clamp(16px, 2vw, 28px);
-        align-items: center;
-    }
-
-    .tc-mp-grid--pancita > .tc-mp-title-img,
-    .tc-mp-grid--pancita > .tc-mp-title-text {
-        grid-area: title;
-    }
-
-    .tc-mp-grid--pancita > .tc-mp-pancita-hero {
-        grid-area: hero;
-        margin-top: 0;
+        max-width: 900px;
+        margin-inline: auto;
     }
 
     .tc-mp-grid--pancita > .tc-mp-options-grid {
-        grid-area: options;
-        max-width: none;
-    }
-
-    .tc-mp-grid--pancita > .tc-mp-pancita-tagline {
-        grid-area: tagline;
+        max-width: 640px;
+        gap: clamp(20px, 3vw, 36px) clamp(16px, 2.4vw, 30px);
     }
 
     .tc-mp-grid--pancita > .tc-mp-footer-row {
-        grid-area: footer;
         justify-content: center;
+        gap: clamp(20px, 3vw, 40px);
     }
 }
 
@@ -7797,7 +7953,7 @@ body,
 
 .tc-mp-hero-photo {
     width: 48%;
-    max-width: clamp(210px, 28vw, 340px);
+    max-width: calc(clamp(210px, 28vw, 340px) * var(--tc-mp-size-mult, 1));
 }
 
 .tc-mp-alt-row {
@@ -7814,6 +7970,7 @@ body,
 .tc-mp-alt-photo {
     width: 46%;
     flex: 0 0 auto;
+    max-width: calc(clamp(220px, 24vw, 340px) * var(--tc-mp-size-mult, 1));
 }
 
 .tc-mp-alt-text {
@@ -7821,24 +7978,13 @@ body,
     text-align: center;
 }
 
-/* Birria: los 3 complementarios (chilaquiles/enchiladas/quesabirria) dejan de
-   ser filas alternadas apiladas y pasan a una cuadrícula editorial que usa
-   el ancho completo. */
 @media (min-width: 768px) {
     .tc-mp-birria-sides {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 20px 28px;
     }
-}
 
-@media (min-width: 1024px) {
-    .tc-mp-birria-sides {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (min-width: 768px) {
     .tc-mp-birria-sides .tc-mp-alt-row,
     .tc-mp-birria-sides .tc-mp-alt-row--reverse {
         flex-direction: column;
@@ -7848,11 +7994,46 @@ body,
 
     .tc-mp-birria-sides .tc-mp-alt-photo {
         width: 68%;
+        max-width: calc(clamp(280px, 22vw, 420px) * var(--tc-mp-size-mult, 1));
         margin: 0 auto;
     }
 
     .tc-mp-birria-sides .tc-mp-alt-text {
         text-align: center;
+    }
+}
+
+/* Escritorio: composición asimétrica (no 3 tarjetas idénticas). Birria
+   principal mucho más grande arriba; abajo, chilaquiles ocupa la columna
+   central más ancha (protagonista de "y más…"), enchiladas a la izquierda y
+   quesabirria a la derecha ligeramente más abajo. */
+@media (min-width: 1024px) {
+    .tc-mp-hero-photo {
+        max-width: calc(clamp(420px, 34vw, 660px) * var(--tc-mp-size-mult, 1));
+    }
+
+    .tc-mp-birria-sides {
+        grid-template-columns: 1fr 1.3fr 1fr;
+        align-items: start;
+        gap: 24px clamp(20px, 3vw, 40px);
+    }
+
+    /* orden en BD: Chilaquiles, Enchiladas, Quesabirria */
+    .tc-mp-birria-sides > :nth-child(1) {
+        grid-column: 2;
+    }
+
+    .tc-mp-birria-sides > :nth-child(1) .tc-mp-alt-photo {
+        max-width: calc(clamp(380px, 30vw, 560px) * var(--tc-mp-size-mult, 1));
+    }
+
+    .tc-mp-birria-sides > :nth-child(2) {
+        grid-column: 1;
+    }
+
+    .tc-mp-birria-sides > :nth-child(3) {
+        grid-column: 3;
+        margin-top: clamp(24px, 5vw, 64px);
     }
 }
 
@@ -7870,7 +8051,7 @@ body,
 
 .tc-mp-fusion-photo {
     width: 40%;
-    max-width: clamp(140px, 16vw, 220px);
+    max-width: calc(clamp(140px, 16vw, 220px) * var(--tc-mp-size-mult, 1));
     flex: 0 0 auto;
 }
 
@@ -7879,7 +8060,8 @@ body,
     text-align: center;
 }
 
-/* Desktop: 2x2 en vez de lista vertical larga */
+/* Desktop: 2x2 en vez de lista vertical larga, imágenes protagonistas y poco
+   aire entre imagen y nombre. */
 @media (min-width: 768px) {
     .tc-mp-fusion-list {
         display: grid;
@@ -7888,12 +8070,25 @@ body,
     }
 
     .tc-mp-fusion-list .tc-mp-fusion-row {
+        flex-direction: column;
         border-top: none;
-        padding: 20px 0;
+        padding: 12px 0;
+        gap: 6px;
     }
 
     .tc-mp-fusion-list .tc-mp-fusion-row:nth-child(n + 3) {
         border-top: 1px solid rgba(20, 78, 143, 0.18);
+    }
+
+    .tc-mp-fusion-list .tc-mp-fusion-photo {
+        width: 78%;
+        max-width: calc(clamp(220px, 18vw, 320px) * var(--tc-mp-size-mult, 1));
+    }
+}
+
+@media (min-width: 1024px) {
+    .tc-mp-fusion-list .tc-mp-fusion-photo {
+        max-width: calc(clamp(300px, 21vw, 410px) * var(--tc-mp-size-mult, 1));
     }
 }
 
@@ -7913,7 +8108,7 @@ body,
 
 .tc-mp-comal-main-photo {
     width: 78%;
-    max-width: clamp(240px, 30vw, 380px);
+    max-width: calc(clamp(240px, 30vw, 380px) * var(--tc-mp-size-mult, 1));
 }
 
 .tc-mp-comal-name-block {
@@ -7929,40 +8124,32 @@ body,
     margin-top: 22px;
 }
 
-/* Escritorio: quesadilla protagonista + rellenos a un lado, sopes como
-   bloque de cierre a todo lo ancho. */
+/* Escritorio: la quesadilla sigue siendo la imagen protagonista, con los
+   rellenos envolviéndola igual que en móvil (una sola composición, no
+   "quesadilla izquierda / opciones derecha"), solo que a mayor escala. El
+   sope se conserva como bloque de cierre. */
 @media (min-width: 1024px) {
     .tc-mp-grid--comal {
-        display: grid;
-        grid-template-columns: 1fr 1.3fr;
-        grid-template-areas:
-            'title title'
-            'hero options'
-            'sope sope';
-        column-gap: clamp(32px, 5vw, 80px);
-        row-gap: clamp(16px, 2vw, 28px);
-        align-items: center;
+        max-width: 900px;
+        margin-inline: auto;
     }
 
-    .tc-mp-grid--comal > .tc-mp-title-img,
-    .tc-mp-grid--comal > .tc-mp-title-text {
-        grid-area: title;
-    }
-
-    .tc-mp-grid--comal > .tc-mp-comal-hero {
-        grid-area: hero;
-        margin-top: 0;
+    .tc-mp-grid--comal .tc-mp-comal-main-photo {
+        max-width: calc(clamp(360px, 27vw, 530px) * var(--tc-mp-size-mult, 1));
     }
 
     .tc-mp-grid--comal > .tc-mp-options-grid {
-        grid-area: options;
-        max-width: none;
+        max-width: 640px;
+        gap: clamp(20px, 3vw, 36px) clamp(16px, 2.4vw, 30px);
     }
 
     .tc-mp-grid--comal > .tc-mp-comal-sope {
-        grid-area: sope;
-        margin-top: 0;
         justify-content: center;
+        gap: clamp(20px, 3vw, 40px);
+    }
+
+    .tc-mp-grid--comal > .tc-mp-comal-sope .tc-mp-alt-photo {
+        max-width: calc(clamp(340px, 27vw, 520px) * var(--tc-mp-size-mult, 1));
     }
 }
 
@@ -7980,7 +8167,7 @@ body,
 
 .tc-mp-dessert-photo {
     width: 44%;
-    max-width: clamp(160px, 20vw, 260px);
+    max-width: calc(clamp(160px, 20vw, 260px) * var(--tc-mp-size-mult, 1));
     flex: 0 0 auto;
 }
 
@@ -7989,13 +8176,37 @@ body,
     text-align: center;
 }
 
-/* Escritorio: los 3 postres se distribuyen horizontalmente, imágenes grandes */
+/* Escritorio: composición diagonal como en el PDF (Pay arriba/derecha,
+   Arroz con leche al centro/izquierda, Flan abajo/derecha) — no 3 columnas
+   idénticas. Orden en BD: Pay de Limón, Arroz con Leche, Flan Napolitano. */
 @media (min-width: 1024px) {
     .tc-mp-dessert-list {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 24px clamp(24px, 4vw, 48px);
-        align-items: start;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            '. pay'
+            'arroz arroz'
+            '. flan';
+        row-gap: clamp(20px, 3vw, 44px);
+        column-gap: clamp(24px, 4vw, 56px);
+        max-width: 980px;
+        margin-inline: auto;
+        align-items: center;
+    }
+
+    .tc-mp-dessert-list > :nth-child(1) {
+        grid-area: pay;
+        justify-self: end;
+    }
+
+    .tc-mp-dessert-list > :nth-child(2) {
+        grid-area: arroz;
+        justify-self: start;
+    }
+
+    .tc-mp-dessert-list > :nth-child(3) {
+        grid-area: flan;
+        justify-self: end;
     }
 
     .tc-mp-dessert-list .tc-mp-dessert-row,
@@ -8005,8 +8216,8 @@ body,
     }
 
     .tc-mp-dessert-list .tc-mp-dessert-photo {
-        width: 72%;
-        max-width: clamp(200px, 16vw, 280px);
+        width: 74%;
+        max-width: calc(clamp(340px, 24.5vw, 470px) * var(--tc-mp-size-mult, 1));
         margin: 0 auto;
     }
 }
@@ -8014,7 +8225,7 @@ body,
 /* ==== BEBIDAS promo ==== */
 .tc-mp-promo-hero {
     width: 100%;
-    max-width: clamp(280px, 34vw, 520px);
+    max-width: calc(clamp(280px, 34vw, 520px) * var(--tc-mp-size-mult, 1));
     margin: 14px auto;
 }
 
@@ -8022,6 +8233,7 @@ body,
     max-width: clamp(240px, 28vw, 420px);
     margin: 12px auto;
     display: block;
+    position: relative;
 }
 
 .tc-mp-promo-prices {
@@ -8036,30 +8248,41 @@ body,
     text-align: center;
 }
 
-/* Escritorio: foto/promoción a un lado, precios al otro, aprovechando el ancho */
+/* Escritorio: la fotografía es el centro visual (título arriba, foto enorme
+   al centro, promoción superpuesta sin tapar las bebidas, precios en fila
+   abajo) — no se parte en foto/precios lado a lado. */
 @media (min-width: 1024px) {
     .tc-mp-grid--bebidas-promo {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-areas:
-            'title title'
-            'media prices';
-        column-gap: clamp(32px, 5vw, 72px);
-        align-items: center;
+        max-width: 1100px;
+        margin-inline: auto;
+        text-align: center;
     }
 
-    .tc-mp-grid--bebidas-promo > .tc-mp-title-text,
-    .tc-mp-grid--bebidas-promo > .tc-mp-title-img {
-        grid-area: title;
+    .tc-mp-grid--bebidas-promo .tc-mp-promo-hero {
+        max-width: calc(clamp(500px, 46vw, 880px) * var(--tc-mp-size-mult, 1));
+        margin-top: 20px;
     }
 
-    .tc-mp-grid--bebidas-promo > .tc-mp-promo-media {
-        grid-area: media;
+    .tc-mp-grid--bebidas-promo .tc-mp-promo-media {
+        position: relative;
     }
 
-    .tc-mp-grid--bebidas-promo > .tc-mp-promo-prices {
-        grid-area: prices;
-        justify-content: flex-start;
+    .tc-mp-grid--bebidas-promo .tc-mp-promo-banner {
+        max-width: clamp(260px, 20vw, 340px);
+        margin-top: -1.5rem;
+    }
+
+    .tc-mp-grid--bebidas-promo .tc-mp-promo-prices {
+        gap: clamp(28px, 4vw, 56px);
+        margin-top: 20px;
+    }
+
+    .tc-mp-grid--bebidas-promo .tc-mp-promo-price-item .tc-mp-choice {
+        font-size: 1rem;
+    }
+
+    .tc-mp-grid--bebidas-promo .tc-mp-promo-price-item .tc-mp-price {
+        font-size: clamp(1.6rem, 2.2vw, 2rem);
     }
 }
 
@@ -8116,19 +8339,28 @@ body,
     }
 }
 
-/* Escritorio: columnas reales y amplias en vez de una tabla angosta */
+/* Escritorio: columnas reales y amplias en vez de una tabla angosta.
+   BUG corregido: `--2` envuelve exactamente 2 hijos (cerveza+sin_alcohol /
+   complementos+calientes+frase), así que SIEMPRE debe quedarse en 2
+   columnas — antes se forzaba a 3 y dejaba una tercera columna vacía.
+   `--split` sí reparte 6 items de "con alcohol" y ahí sí aprovecha 3. */
 @media (min-width: 1024px) {
     .tc-mp-table-columns {
         gap: 0 clamp(28px, 4vw, 64px);
     }
 
-    .tc-mp-table-columns--2 {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
     .tc-mp-table-columns--split {
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(2, auto);
+    }
+
+    .tc-mp-table-row {
+        font-size: clamp(0.92rem, 1vw, 1.05rem);
+        padding: 4px 0;
+    }
+
+    .tc-mp-table-group-title {
+        font-size: clamp(1.4rem, 1.6vw, 1.6rem);
     }
 }
 
@@ -8176,7 +8408,10 @@ body,
     text-align: right;
 }
 
-/* Escritorio: tres columnas (tequila/mezcal/ron), dos en tablet */
+/* Dos columnas desde tablet hasta laptop (768–1499px): con nombre +
+   presentación + precio copa + precio botella, 3 columnas quedarían
+   demasiado angostas antes de ese ancho. Tres columnas solo cuando sobra
+   espacio real (>=1500px). */
 @media (min-width: 768px) {
     .tc-mp-spirit-groups {
         display: grid;
@@ -8184,15 +8419,25 @@ body,
         column-gap: clamp(24px, 4vw, 48px);
         align-items: start;
     }
-}
-
-@media (min-width: 1024px) {
-    .tc-mp-spirit-groups {
-        grid-template-columns: repeat(3, 1fr);
-    }
 
     .tc-mp-spirit-group > .tc-mp-spirit-group-title {
         margin-top: 0;
+    }
+}
+
+@media (min-width: 1500px) {
+    .tc-mp-spirit-groups {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .tc-mp-spirit-name {
+        font-size: clamp(0.9rem, 1vw, 1.02rem);
+    }
+
+    .tc-mp-tagline-img--sm {
+        max-width: 340px;
     }
 }
 

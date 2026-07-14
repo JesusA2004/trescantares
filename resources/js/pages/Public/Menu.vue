@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { layoutFor } from '@/components/Public/Menu/layoutRegistry';
+import MenuSideNav from '@/components/Public/Menu/MenuSideNav.vue';
 import type { MenuCategoryData } from '@/components/Public/Menu/types';
 
 const props = defineProps<{
@@ -11,7 +12,38 @@ const props = defineProps<{
 
 const navCategories = computed(() => props.categories.filter((c) => c.layout !== 'portada'));
 
+// Etiquetas cortas para la navegación lateral (el nombre completo va en aria-label).
+const SHORT_LABELS: Record<string, string> = {
+    pozole: 'Pozole',
+    pancita: 'Pancita',
+    birria: 'Birria',
+    fusiones: 'Fusiones',
+    comal: 'Comal',
+    postres: 'Postres',
+    bebidas_promo: 'Cantaritos',
+    bebidas_tabla: 'Bebidas',
+    destilados: 'Destilados',
+};
+
+const navItems = computed(() => [
+    { id: null, label: 'Inicio', fullLabel: 'Inicio' },
+    ...navCategories.value.map((cat) => ({
+        id: cat.id,
+        label: SHORT_LABELS[cat.layout] ?? cat.name,
+        fullLabel: cat.name,
+    })),
+]);
+
 const activeSectionId = ref<string | null>(null);
+const activeCategoryId = computed(() => {
+    if (!activeSectionId.value) {
+return null;
+}
+
+    const match = /^cat-(\d+)$/.exec(activeSectionId.value);
+
+    return match ? Number(match[1]) : null;
+});
 const showScrollTop = ref(false);
 
 function scrollTo(catId: number | null) {
@@ -24,7 +56,7 @@ function scrollTo(catId: number | null) {
     const el = document.getElementById(`cat-${catId}`);
 
     if (el) {
-        const offset = 48;
+        const offset = 16;
         const top = el.getBoundingClientRect().top + window.scrollY - offset;
         window.scrollTo({ top, behavior: 'smooth' });
     }
@@ -63,10 +95,6 @@ onUnmounted(() => {
 function onScroll() {
     showScrollTop.value = window.scrollY > 600;
 }
-
-function isActive(catId: number): boolean {
-    return activeSectionId.value === `cat-${catId}`;
-}
 </script>
 
 <template>
@@ -83,20 +111,7 @@ function isActive(catId: number): boolean {
     </Head>
 
     <div class="tc-mp tc-public-layout">
-        <nav v-if="navCategories.length > 0" class="tc-mp-nav-wrap" aria-label="Secciones del menú">
-            <div class="tc-mp-nav">
-                <button class="tc-mp-nav-pill" :class="{ 'tc-mp-nav-pill--active': !activeSectionId }" @click="scrollTo(null)">Inicio</button>
-                <button
-                    v-for="cat in navCategories"
-                    :key="cat.id"
-                    class="tc-mp-nav-pill"
-                    :class="{ 'tc-mp-nav-pill--active': isActive(cat.id) }"
-                    @click="scrollTo(cat.id)"
-                >
-                    {{ cat.name }}
-                </button>
-            </div>
-        </nav>
+        <MenuSideNav v-if="navCategories.length > 0" :items="navItems" :active-id="activeCategoryId" @navigate="scrollTo" />
 
         <template v-for="category in categories" :key="category.id">
             <section v-if="category.layout === 'portada'" :id="`cat-${category.id}`">
