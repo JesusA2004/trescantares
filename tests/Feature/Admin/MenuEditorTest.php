@@ -96,19 +96,19 @@ test('admin can save an item element config for a single breakpoint without touc
 
     $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
         'element' => 'image',
-        'breakpoint' => 'base',
+        'breakpoint' => 'mobile',
         'config' => elementConfig(['x' => 10, 'y' => 20, 'width' => 40, 'z_index' => 2]),
     ])->assertOk();
 
     $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
         'element' => 'image',
-        'breakpoint' => 'xl',
+        'breakpoint' => 'desktop',
         'config' => elementConfig(['x' => 180, 'y' => 120]),
     ])->assertOk();
 
     $item->refresh();
-    expect($item->layout_settings['image']['base'])->toMatchArray(['x' => 10, 'y' => 20, 'width' => 40, 'z_index' => 2]);
-    expect($item->layout_settings['image']['xl'])->toMatchArray(['x' => 180, 'y' => 120, 'width' => null, 'z_index' => 1]);
+    expect($item->layout_settings['image']['mobile'])->toMatchArray(['x' => 10, 'y' => 20, 'width' => 40, 'z_index' => 2]);
+    expect($item->layout_settings['image']['desktop'])->toMatchArray(['x' => 180, 'y' => 120, 'width' => null, 'z_index' => 1]);
 });
 
 test('admin can clear a single breakpoint from an item element', function () {
@@ -116,21 +116,21 @@ test('admin can clear a single breakpoint from an item element', function () {
     $item = MenuItem::factory()->create([
         'layout_settings' => [
             'image' => [
-                'base' => elementConfig(['x' => 1, 'y' => 1, 'width' => 40]),
-                'xl' => elementConfig(['x' => 2, 'y' => 2]),
+                'mobile' => elementConfig(['x' => 1, 'y' => 1, 'width' => 40]),
+                'desktop' => elementConfig(['x' => 2, 'y' => 2]),
             ],
         ],
     ]);
 
     $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
         'element' => 'image',
-        'breakpoint' => 'base',
+        'breakpoint' => 'mobile',
         'clear' => true,
     ])->assertOk();
 
     $item->refresh();
-    expect($item->layout_settings['image'])->not->toHaveKey('base');
-    expect($item->layout_settings['image'])->toHaveKey('xl');
+    expect($item->layout_settings['image'])->not->toHaveKey('mobile');
+    expect($item->layout_settings['image'])->toHaveKey('desktop');
 });
 
 test('viewer without menu.update permission cannot save item element', function () {
@@ -143,7 +143,7 @@ test('viewer without menu.update permission cannot save item element', function 
 
     $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
         'element' => 'image',
-        'breakpoint' => 'base',
+        'breakpoint' => 'mobile',
         'config' => elementConfig(['x' => 10, 'y' => 20, 'width' => 40]),
     ])->assertForbidden();
 });
@@ -154,12 +154,12 @@ test('admin can save a category element config per breakpoint', function () {
 
     $this->patchJson("/admin/menu-editor/categories/{$category->id}/element", [
         'element' => 'title',
-        'breakpoint' => 'md',
+        'breakpoint' => 'tablet',
         'config' => elementConfig(['x' => 12, 'y' => 4, 'width' => 60]),
     ])->assertOk();
 
     $category->refresh();
-    expect($category->visual_settings['title']['md'])->toMatchArray([
+    expect($category->visual_settings['title']['tablet'])->toMatchArray([
         'x' => 12, 'y' => 4, 'width' => 60, 'z_index' => 1,
     ]);
 });
@@ -170,12 +170,12 @@ test('a locked element config is preserved through the config payload', function
 
     $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
         'element' => 'name',
-        'breakpoint' => 'lg',
+        'breakpoint' => 'desktop',
         'config' => elementConfig(['x' => 5, 'y' => 5, 'locked' => true]),
     ])->assertOk();
 
     $item->refresh();
-    expect($item->layout_settings['name']['lg']['locked'])->toBeTrue();
+    expect($item->layout_settings['name']['desktop']['locked'])->toBeTrue();
 });
 
 test('admin can quick-edit an item without leaving the editor', function () {
@@ -215,15 +215,15 @@ test('menu:import-initial does not overwrite layout_settings or visual_settings 
     $pozole = MenuCategory::where('slug', 'pozole')->firstOrFail();
     $pozoleBlanco = MenuItem::where('slug', 'pozole-blanco')->firstOrFail();
 
-    $pozole->update(['visual_settings' => ['title' => ['base' => elementConfig(['x' => 9, 'y' => 9, 'width' => 50])]]]);
-    $pozoleBlanco->update(['layout_settings' => ['image' => ['base' => elementConfig(['x' => 7, 'y' => 7, 'width' => 45])]]]);
+    $pozole->update(['visual_settings' => ['title' => ['mobile' => elementConfig(['x' => 9, 'y' => 9, 'width' => 50])]]]);
+    $pozoleBlanco->update(['layout_settings' => ['image' => ['mobile' => elementConfig(['x' => 7, 'y' => 7, 'width' => 45])]]]);
 
     Artisan::call('menu:import-initial');
 
     $pozole->refresh();
     $pozoleBlanco->refresh();
-    expect($pozole->visual_settings['title']['base']['x'])->toBe(9);
-    expect($pozoleBlanco->layout_settings['image']['base']['x'])->toBe(7);
+    expect($pozole->visual_settings['title']['mobile']['x'])->toBe(9);
+    expect($pozoleBlanco->layout_settings['image']['mobile']['x'])->toBe(7);
 });
 
 test('menu:import-initial --reset-layout clears layout_settings and visual_settings for everyone', function () {
@@ -232,8 +232,8 @@ test('menu:import-initial --reset-layout clears layout_settings and visual_setti
 
     $pozole = MenuCategory::where('slug', 'pozole')->firstOrFail();
     $pozoleBlanco = MenuItem::where('slug', 'pozole-blanco')->firstOrFail();
-    $pozole->update(['visual_settings' => ['title' => ['base' => elementConfig(['x' => 9, 'y' => 9, 'width' => 50])]]]);
-    $pozoleBlanco->update(['layout_settings' => ['image' => ['base' => elementConfig(['x' => 7, 'y' => 7, 'width' => 45])]]]);
+    $pozole->update(['visual_settings' => ['title' => ['mobile' => elementConfig(['x' => 9, 'y' => 9, 'width' => 50])]]]);
+    $pozoleBlanco->update(['layout_settings' => ['image' => ['mobile' => elementConfig(['x' => 7, 'y' => 7, 'width' => 45])]]]);
 
     Artisan::call('menu:import-initial', ['--reset-layout' => true]);
 
@@ -261,13 +261,14 @@ test('saved x/y for a real photo item render as a real translate shift on the pu
     expect($beforeMatch[1] ?? '')->not->toContain('translate');
 
     actingAsMenuEditorAdmin();
-    // xl es el breakpoint que /menu resuelve para el ancho por defecto del
-    // cliente de pruebas de Laravel (sin JS real) — el propio helper
-    // resolveBreakpoint() de types.ts usa 'lg' como default antes de montar,
-    // que es justo el que la plantilla usa en el layout SSR sin viewport.
+    // 'desktop' (ancho de referencia 1440px) es la vista que /menu resuelve
+    // para el ancho por defecto del cliente de pruebas de Laravel (sin JS
+    // real) — useViewportWidth() usa 1440 como valor SSR-safe antes de
+    // montar, que coincide exactamente con el ancla 'desktop', así que la
+    // interpolación devuelve ese config sin mezclar con ningún otro nivel.
     $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
         'element' => 'image',
-        'breakpoint' => 'lg',
+        'breakpoint' => 'desktop',
         'config' => elementConfig(['x' => 180, 'y' => 120]),
     ])->assertOk();
 
@@ -283,7 +284,7 @@ test('saved x/y for a real photo item render as a real translate shift on the pu
     // Restaura a cero y confirma que el transform desaparece de nuevo.
     $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
         'element' => 'image',
-        'breakpoint' => 'lg',
+        'breakpoint' => 'desktop',
         'clear' => true,
     ])->assertOk();
     resetSsrStateBetweenRequests();
@@ -307,7 +308,7 @@ test('saved x/y for a category title render as a real translate shift on the pub
     actingAsMenuEditorAdmin();
     $this->patchJson("/admin/menu-editor/categories/{$category->id}/element", [
         'element' => 'title',
-        'breakpoint' => 'lg',
+        'breakpoint' => 'desktop',
         'config' => elementConfig(['x' => 60, 'y' => 30]),
     ])->assertOk();
 
@@ -326,19 +327,19 @@ test('a mobile-only config does not affect the desktop render and vice versa', f
         'is_active' => true,
         'layout_settings' => [
             'image' => [
-                'base' => elementConfig(['x' => 11, 'y' => 22]),
-                'lg' => elementConfig(['x' => 180, 'y' => 120]),
+                'mobile' => elementConfig(['x' => 11, 'y' => 22]),
+                'desktop' => elementConfig(['x' => 180, 'y' => 120]),
             ],
         ],
     ]);
 
-    // El render SSR de /menu (sin JS) resuelve el breakpoint por defecto
-    // ('lg', ver useBreakpoint.ts) — confirma que ese es el que aparece, no
-    // el de 'base', demostrando que ambos breakpoints se guardan
-    // independientes y no se pisan entre sí en el JSON persistido.
+    // El render SSR de /menu (sin JS) resuelve un ancho fijo de 1440px (ver
+    // useViewportWidth.ts) — que coincide exactamente con el ancla
+    // 'desktop', así que la interpolación devuelve ESE nivel puro y nunca se
+    // mezcla con 'mobile', demostrando que ambos se guardan independientes.
     $item->refresh();
-    expect($item->layout_settings['image']['base'])->toMatchArray(['x' => 11, 'y' => 22]);
-    expect($item->layout_settings['image']['lg'])->toMatchArray(['x' => 180, 'y' => 120]);
+    expect($item->layout_settings['image']['mobile'])->toMatchArray(['x' => 11, 'y' => 22]);
+    expect($item->layout_settings['image']['desktop'])->toMatchArray(['x' => 180, 'y' => 120]);
 
     resetSsrStateBetweenRequests();
     $html = $this->get('/menu')->assertOk()->getContent();

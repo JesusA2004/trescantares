@@ -171,7 +171,7 @@ function priceFormat(p: string | number): string {
             <div class="tc-report-filters">
                 <div class="tc-report-filter">
                     <label
-                        class="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-white/50"
+                        class="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase"
                         >Mes</label
                     >
                     <select
@@ -190,7 +190,7 @@ function priceFormat(p: string | number): string {
                 </div>
                 <div class="tc-report-filter">
                     <label
-                        class="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-white/50"
+                        class="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase"
                         >Categoría</label
                     >
                     <select
@@ -210,7 +210,7 @@ function priceFormat(p: string | number): string {
                 </div>
                 <div class="tc-report-filter">
                     <label
-                        class="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-white/50"
+                        class="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase"
                         >Estado</label
                     >
                     <select
@@ -285,11 +285,11 @@ function priceFormat(p: string | number): string {
         <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
             <div class="tc-admin-card p-5 xl:col-span-2">
                 <h3
-                    class="mb-1 text-sm font-semibold text-gray-700 dark:text-[#fff7e6]"
+                    class="mb-1 text-sm font-semibold text-gray-700"
                 >
                     Platillos por categoría
                 </h3>
-                <p class="mb-4 text-xs text-gray-400 dark:text-white/45">
+                <p class="mb-4 text-xs text-gray-400">
                     Barras muestran total · La barra interna = activos
                 </p>
                 <AdminBarChart
@@ -301,7 +301,7 @@ function priceFormat(p: string | number): string {
 
             <div class="tc-admin-card p-5">
                 <h3
-                    class="mb-4 text-sm font-semibold text-gray-700 dark:text-[#fff7e6]"
+                    class="mb-4 text-sm font-semibold text-gray-700"
                 >
                     Estado del menú
                 </h3>
@@ -316,10 +316,10 @@ function priceFormat(p: string | number): string {
         <!-- Category breakdown table -->
         <div class="tc-admin-card overflow-hidden">
             <div
-                class="border-b border-amber-100/60 bg-gradient-to-r from-amber-50/40 to-transparent px-5 py-4 dark:border-amber-400/15 dark:from-amber-400/8"
+                class="border-b border-amber-100/60 bg-gradient-to-r from-amber-50/40 to-transparent px-5 py-4"
             >
                 <h3
-                    class="text-sm font-semibold text-gray-700 dark:text-[#fff7e6]"
+                    class="text-sm font-semibold text-gray-700"
                 >
                     Desglose por categoría
                 </h3>
@@ -372,7 +372,7 @@ function priceFormat(p: string | number): string {
                                     class="flex items-center justify-center gap-1.5"
                                 >
                                     <div
-                                        class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10"
+                                        class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-100"
                                     >
                                         <div
                                             class="h-full rounded-full bg-green-400"
@@ -413,10 +413,10 @@ function priceFormat(p: string | number): string {
         <!-- Recent activity -->
         <div class="tc-admin-card overflow-hidden">
             <div
-                class="flex items-center justify-between border-b border-amber-100/60 bg-gradient-to-r from-amber-50/40 to-transparent px-5 py-4 dark:border-amber-400/15 dark:from-amber-400/8"
+                class="flex items-center justify-between border-b border-amber-100/60 bg-gradient-to-r from-amber-50/40 to-transparent px-5 py-4"
             >
                 <h3
-                    class="text-sm font-semibold text-gray-700 dark:text-[#fff7e6]"
+                    class="text-sm font-semibold text-gray-700"
                 >
                     Actividad reciente del menú
                 </h3>

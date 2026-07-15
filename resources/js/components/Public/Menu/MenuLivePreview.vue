@@ -1,25 +1,23 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { layoutFor } from './layoutRegistry';
-import type { MenuBreakpoint, MenuCategoryData } from './types';
+import { MENU_DEVICE_WIDTH } from './types';
+import type { MenuCategoryData, MenuDevice } from './types';
 
 defineProps<{
     category: MenuCategoryData;
 }>();
 
-type PreviewViewport = Extract<MenuBreakpoint, 'base' | 'lg'>;
+type PreviewDevice = Extract<MenuDevice, 'mobile' | 'desktop'>;
 
-const viewport = ref<PreviewViewport>('base');
+const device = ref<PreviewDevice>('mobile');
 
-// Ancho real que simula cada viewport y ancho aproximado del panel donde se
+// Ancho real que simula cada vista y ancho aproximado del panel donde se
 // dibuja la vista previa (se escala para caber sin scroll horizontal).
-const TARGET_WIDTH: Record<PreviewViewport, number> = {
-    base: 390,
-    lg: 1440,
-};
 const PANEL_WIDTH = 320;
 
-const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
+const targetWidth = computed(() => MENU_DEVICE_WIDTH[device.value]);
+const scale = computed(() => PANEL_WIDTH / targetWidth.value);
 </script>
 
 <template>
@@ -31,11 +29,11 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                     type="button"
                     class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
                     :class="
-                        viewport === 'base'
+                        device === 'mobile'
                             ? 'bg-white text-[var(--tc-blue)] shadow-sm'
                             : 'text-gray-500'
                     "
-                    @click="viewport = 'base'"
+                    @click="device = 'mobile'"
                 >
                     Móvil
                 </button>
@@ -43,11 +41,11 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                     type="button"
                     class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
                     :class="
-                        viewport === 'lg'
+                        device === 'desktop'
                             ? 'bg-white text-[var(--tc-blue)] shadow-sm'
                             : 'text-gray-500'
                     "
-                    @click="viewport = 'lg'"
+                    @click="device = 'desktop'"
                 >
                     Escritorio
                 </button>
@@ -56,12 +54,12 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
 
         <div
             class="tc-preview-viewport"
-            :class="viewport === 'base' ? 'mobile' : 'desktop'"
+            :class="device === 'mobile' ? 'mobile' : 'desktop'"
         >
             <div
                 class="tc-preview-scaled tc-mp tc-public-layout"
                 :style="{
-                    width: TARGET_WIDTH[viewport] + 'px',
+                    width: targetWidth + 'px',
                     transform: `scale(${scale})`,
                 }"
             >
@@ -69,14 +67,14 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                     <component
                         :is="layoutFor(category)"
                         :category="category"
-                        :breakpoint="viewport"
+                        :breakpoint="targetWidth"
                     />
                 </section>
                 <section v-else class="tc-mp-page">
                     <component
                         :is="layoutFor(category)"
                         :category="category"
-                        :breakpoint="viewport"
+                        :breakpoint="targetWidth"
                     />
                 </section>
             </div>

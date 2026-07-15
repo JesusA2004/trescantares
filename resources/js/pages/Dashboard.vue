@@ -436,12 +436,12 @@ const hasAlerts = computed(
                     >
                 </div>
                 <div
-                    class="mt-3 divide-y divide-[#f3ede0] dark:divide-white/[0.08]"
+                    class="mt-3 divide-y divide-[#f3ede0]"
                 >
                     <div
                         v-for="item in filteredItems"
                         :key="item.id"
-                        class="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[#f7f7f8] dark:hover:bg-[#262626]"
+                        class="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[#f7f7f8]"
                     >
                         <div
                             class="h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-[#f0e8d8] bg-gray-100"
@@ -525,12 +525,12 @@ const hasAlerts = computed(
                     >
                 </div>
                 <div
-                    class="mt-3 divide-y divide-[#f3ede0] dark:divide-white/[0.08]"
+                    class="mt-3 divide-y divide-[#f3ede0]"
                 >
                     <div
                         v-for="user in recentUsers"
                         :key="user.id"
-                        class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[#f7f7f8] dark:hover:bg-[#262626]"
+                        class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-[#f7f7f8]"
                     >
                         <div
                             class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"

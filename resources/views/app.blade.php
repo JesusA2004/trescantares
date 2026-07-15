@@ -1,29 +1,12 @@
 <!DOCTYPE html>
-<html lang="es" data-appearance="{{ $appearance ?? 'system' }}" class="{{ ($appearance ?? 'system') === 'dark' ? 'dark' : '' }}">
+<html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Apariencia: localStorage es fuente de verdad en cliente; cookie PHP es fallback --}}
-    <script>
-        (function() {
-            try {
-                var local = localStorage.getItem('appearance');
-                var server = '{{ $appearance ?? "system" }}';
-                var a = local || server || 'system';
-                if (a !== 'light' && a !== 'dark' && a !== 'system') a = 'system';
-                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                var shouldBeDark = (a === 'dark') || (a === 'system' && prefersDark);
-                document.documentElement.classList.toggle('dark', shouldBeDark);
-                document.documentElement.setAttribute('data-appearance', a);
-            } catch(e) {}
-        })();
-    </script>
-
     {{-- Fondo base para evitar flash --}}
     <style>
-        html { background-color: #F4F4F5; }
-        html.dark { background-color: #151515; }
+        html { background-color: #F4F4F5; color-scheme: light; }
     </style>
 
     {{-- Favicons --}}

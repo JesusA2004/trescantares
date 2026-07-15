@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ImportMenuCommand extends Command
@@ -99,30 +100,50 @@ class ImportMenuCommand extends Command
         // Todas las imágenes requeridas ya están copiadas a storage; a partir
         // de aquí toda ruta declarada en categoryDefinitions() existe.
         $categories = $this->categoryDefinitions();
+        $officialCategorySlugs = array_column($categories, 'slug');
+        $officialItemSlugs = [];
 
-        foreach ($categories as $catData) {
-            $items = $catData['items'] ?? [];
-            unset($catData['items']);
+        DB::transaction(function () use ($categories, $officialCategorySlugs, &$officialItemSlugs): void {
+            foreach ($categories as $catData) {
+                $items = $catData['items'] ?? [];
+                unset($catData['items']);
 
-            $category = MenuCategory::updateOrCreate(
-                ['slug' => $catData['slug']],
-                $catData,
-            );
-
-            foreach ($items as $i => $itemData) {
-                $itemData['menu_category_id'] = $category->id;
-                $itemData['sort_order'] = $itemData['sort_order'] ?? ($i + 1);
-                $itemData['is_active'] = $itemData['is_active'] ?? true;
-                $itemData['slug'] = $itemData['slug'] ?? str($itemData['name'])->slug()->toString();
-
-                MenuItem::updateOrCreate(
-                    ['slug' => $itemData['slug']],
-                    $itemData,
+                $category = MenuCategory::updateOrCreate(
+                    ['slug' => $catData['slug']],
+                    $catData,
                 );
+
+                foreach ($items as $i => $itemData) {
+                    $itemData['menu_category_id'] = $category->id;
+                    $itemData['sort_order'] = $itemData['sort_order'] ?? ($i + 1);
+                    $itemData['is_active'] = $itemData['is_active'] ?? true;
+                    $itemData['slug'] = $itemData['slug'] ?? str($itemData['name'])->slug()->toString();
+
+                    // updateOrCreate solo pisa las claves presentes en $itemData:
+                    // layout_settings de un platillo oficial que el admin ya
+                    // personalizó desde el editor visual sobrevive intacto.
+                    MenuItem::updateOrCreate(
+                        ['slug' => $itemData['slug']],
+                        $itemData,
+                    );
+
+                    $officialItemSlugs[] = $itemData['slug'];
+                }
+
+                $this->line("  ✓ {$category->name} ({$catData['slug']}) — ".count($items).' platillo(s)');
             }
 
-            $this->line("  ✓ {$category->name} ({$catData['slug']}) — ".count($items).' platillo(s)');
-        }
+            // Cualquier MenuItem/MenuCategory cuyo slug no pertenezca a la
+            // definición oficial es un producto demo o de un seeder anterior
+            // — se elimina para que el resultado final sea exactamente el
+            // menú del PDF, nada más.
+            $deletedItems = MenuItem::whereNotIn('slug', $officialItemSlugs)->delete();
+            $deletedCategories = MenuCategory::whereNotIn('slug', $officialCategorySlugs)->delete();
+
+            if ($deletedItems > 0 || $deletedCategories > 0) {
+                $this->warn("Limpieza: se eliminaron {$deletedItems} platillo(s) y {$deletedCategories} categoría(s) fuera del menú oficial.");
+            }
+        });
 
         if ($this->option('reset-layout')) {
             MenuItem::query()->update(['layout_settings' => null]);
@@ -131,7 +152,7 @@ class ImportMenuCommand extends Command
         }
 
         $this->newLine();
-        $this->info('Importación completada.');
+        $this->info('Importación completada: '.count($categories).' categorías, '.count($officialItemSlugs).' platillos.');
 
         return self::SUCCESS;
     }

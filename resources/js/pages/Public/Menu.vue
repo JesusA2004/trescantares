@@ -6,19 +6,31 @@ import MenuSideNav from '@/components/Public/Menu/MenuSideNav.vue';
 import {
     categoryElementFor,
     itemElementFor,
+    resolveMenuDevice,
 } from '@/components/Public/Menu/types';
 import type {
     CategoryElementKey,
     ElementConfig,
     ItemElementKey,
-    MenuBreakpoint,
     MenuCategoryData,
+    MenuDevice,
 } from '@/components/Public/Menu/types';
-import { useBreakpoint } from '@/composables/useBreakpoint';
+import { useViewportWidth } from '@/composables/useBreakpoint';
 import { useMenuPreviewChild } from '@/composables/useMenuPreviewBridge';
 import { patchJson } from '@/lib/jsonApi';
 
-const breakpoint = useBreakpoint();
+// Ancho real y continuo del viewport — cada elemento interpola su posición
+// entre Móvil/Tablet/Escritorio según este número (ver resolveElementConfig
+// en types.ts). Dentro del iframe del editor este valor SIEMPRE coincide
+// EXACTO con uno de los tres anchos de referencia (390/768/1440), así que la
+// interpolación resuelve al ancla pura, sin mezclar — por eso editor y
+// /menu son pixel-exactos entre sí.
+const viewportWidth = useViewportWidth();
+// Vista (mobile/tablet/desktop) en la que se persiste un arrastre/resize
+// hecho DENTRO del iframe — solo aplica en modo editable.
+const currentDevice = computed<MenuDevice>(() =>
+    resolveMenuDevice(viewportWidth.value),
+);
 
 const props = withDefaults(
     defineProps<{
@@ -192,7 +204,7 @@ function resolveConfig(key: string): ElementConfig | null {
             ? itemElementFor(
                   item,
                   parsed.element as ItemElementKey,
-                  breakpoint.value,
+                  viewportWidth.value,
               )
             : null;
     }
@@ -203,7 +215,7 @@ function resolveConfig(key: string): ElementConfig | null {
         ? categoryElementFor(
               category,
               parsed.element as CategoryElementKey,
-              breakpoint.value,
+              viewportWidth.value,
           )
         : null;
 }
@@ -211,7 +223,7 @@ function resolveConfig(key: string): ElementConfig | null {
 function applyLocal(
     key: string,
     config: ElementConfig | null,
-    bp: MenuBreakpoint = breakpoint.value,
+    bp: MenuDevice = currentDevice.value,
 ) {
     const parsed = parseKey(key);
 
@@ -249,7 +261,7 @@ function applyLocal(
 async function persist(
     key: string,
     config: ElementConfig | null,
-    bp: MenuBreakpoint = breakpoint.value,
+    bp: MenuDevice = currentDevice.value,
 ) {
     const parsed = parseKey(key);
 
@@ -317,12 +329,12 @@ const bridge = useMenuPreviewChild({
         selectedKey.value = key;
     },
     onUpdateConfig: (key, config, bp) => {
-        applyLocal(key, config, bp ?? breakpoint.value);
-        void persist(key, config, bp ?? breakpoint.value);
+        applyLocal(key, config, bp ?? currentDevice.value);
+        void persist(key, config, bp ?? currentDevice.value);
     },
     onClearElement: (key, bp) => {
-        applyLocal(key, null, bp ?? breakpoint.value);
-        void persist(key, null, bp ?? breakpoint.value);
+        applyLocal(key, null, bp ?? currentDevice.value);
+        void persist(key, null, bp ?? currentDevice.value);
     },
     onScrollToCategory: (categoryId) => {
         scrollToCategoryId(categoryId);
@@ -386,7 +398,7 @@ function onElementCommit(key: string, config: ElementConfig) {
                 <component
                     :is="layoutFor(category)"
                     :category="category"
-                    :breakpoint="breakpoint"
+                    :breakpoint="viewportWidth"
                     :editable="editable"
                     :selected-key="selectedKey"
                     @select="onElementSelect"
@@ -397,7 +409,7 @@ function onElementCommit(key: string, config: ElementConfig) {
                 <component
                     :is="layoutFor(category)"
                     :category="category"
-                    :breakpoint="breakpoint"
+                    :breakpoint="viewportWidth"
                     :editable="editable"
                     :selected-key="selectedKey"
                     @select="onElementSelect"

@@ -1,15 +1,11 @@
 import Swal from 'sweetalert2';
 
-function isDark(): boolean {
-    return document.documentElement.classList.contains('dark');
-}
-
 function swalBase() {
     return {
-        background: isDark() ? '#202020' : '#FFFFFF',
-        color: isDark() ? '#F5F5F5' : '#1D1D1F',
-        confirmButtonColor: isDark() ? '#6D4CFF' : '#6D4CFF',
-        cancelButtonColor: isDark() ? '#313131' : '#E4E4E7',
+        background: '#FFFFFF',
+        color: '#1D1D1F',
+        confirmButtonColor: '#6D4CFF',
+        cancelButtonColor: '#E4E4E7',
         customClass: {
             confirmButton: 'tc-swal-btn-confirm',
             cancelButton: 'tc-swal-btn-cancel',
@@ -35,8 +31,8 @@ export function useNotify() {
         toast.fire({
             icon: 'success',
             title: message,
-            background: isDark() ? '#262626' : '#FFFFFF',
-            color: isDark() ? '#86efac' : '#15803d',
+            background: '#FFFFFF',
+            color: '#15803d',
         });
     }
 
@@ -44,8 +40,8 @@ export function useNotify() {
         toast.fire({
             icon: 'error',
             title: message,
-            background: isDark() ? '#262626' : '#FFFFFF',
-            color: isDark() ? '#fca5a5' : '#b91c1c',
+            background: '#FFFFFF',
+            color: '#b91c1c',
         });
     }
 
@@ -53,8 +49,8 @@ export function useNotify() {
         toast.fire({
             icon: 'warning',
             title: message,
-            background: isDark() ? '#262626' : '#FFFFFF',
-            color: isDark() ? '#fde047' : '#92400e',
+            background: '#FFFFFF',
+            color: '#92400e',
         });
     }
 
@@ -62,8 +58,8 @@ export function useNotify() {
         toast.fire({
             icon: 'info',
             title: message,
-            background: isDark() ? '#262626' : '#FFFFFF',
-            color: isDark() ? '#F5F5F5' : '#1D1D1F',
+            background: '#FFFFFF',
+            color: '#1D1D1F',
         });
     }
 

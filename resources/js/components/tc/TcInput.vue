@@ -35,7 +35,7 @@ const model = defineModel<string | number>();
         </p>
         <p
             v-else-if="hint"
-            class="mt-0.5 text-xs text-gray-400 dark:text-white/55"
+            class="mt-0.5 text-xs text-gray-400"
         >
             {{ hint }}
         </p>

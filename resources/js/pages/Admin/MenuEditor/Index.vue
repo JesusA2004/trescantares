@@ -1,6 +1,34 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import {
+    AlignHorizontalJustifyCenter,
+    AlignLeft,
+    AlignVerticalJustifyCenter,
+    ArrowDownToLine,
+    ArrowUpToLine,
+    ChevronLeft,
+    ChevronRight,
+    CircleAlert,
+    CircleCheckBig,
+    ExternalLink,
+    GripVertical,
+    Image as ImageIcon,
+    LoaderCircle,
+    Lock,
+    LockOpen,
+    Monitor,
+    Redo2,
+    RotateCcw,
+    Search,
+    Settings2,
+    Smartphone,
+    Tablet,
+    Tag,
+    Type as TypeIcon,
+    Undo2,
+    ZoomIn,
+} from 'lucide-vue-next';
+import {
     computed,
     onMounted,
     onUnmounted,
@@ -11,20 +39,20 @@ import {
 } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import {
-    BREAKPOINT_ORDER,
     CATEGORY_ELEMENT_LABELS,
     ITEM_ELEMENT_LABELS,
+    MENU_DEVICE_ORDER,
+    MENU_DEVICE_WIDTH,
     categoryElementFor,
     hasOwnElementConfig,
     itemElementFor,
-    resolveBreakpoint,
 } from '@/components/Public/Menu/types';
 import type {
     CategoryElementKey,
     ElementConfig,
     ItemElementKey,
-    MenuBreakpoint,
     MenuCategoryData,
+    MenuDevice,
     MenuItemData,
 } from '@/components/Public/Menu/types';
 import TcInput from '@/components/tc/TcInput.vue';
@@ -33,6 +61,7 @@ import TcSwitch from '@/components/tc/TcSwitch.vue';
 import { useAutosave } from '@/composables/useAutosave';
 import { useDragSort } from '@/composables/useDragSort';
 import { useMenuPreviewParent } from '@/composables/useMenuPreviewBridge';
+import { useNotify } from '@/composables/useNotify';
 import { patchJson, postJson } from '@/lib/jsonApi';
 import { zonesForLayout } from '@/pages/Admin/MenuItems/zones';
 
@@ -52,61 +81,58 @@ const categories = reactive<MenuCategoryData[]>(
 );
 
 const previewUrl = '/admin/menu-editor/preview';
+const notify = useNotify();
 
 /* ------------------------------------------------------------------ */
-/* Viewport real (breakpoints Tailwind reales, no una simulación de 3)  */
+/* Las tres vistas configurables — nada de sm/md/lg/xl/2xl visible      */
 /* ------------------------------------------------------------------ */
 
-const BREAKPOINT_PRESETS: {
-    key: MenuBreakpoint;
+interface DevicePreset {
+    key: MenuDevice;
     label: string;
     width: number;
-}[] = [
-    { key: 'base', label: 'Móvil', width: 390 },
-    { key: 'sm', label: 'SM', width: 640 },
-    { key: 'md', label: 'Tablet', width: 768 },
-    { key: 'lg', label: 'Laptop', width: 1024 },
-    { key: 'xl', label: 'Desktop', width: 1280 },
-    { key: '2xl', label: 'Pantalla grande', width: 1536 },
-];
-const WIDTH_PRESETS = [
-    375, 390, 412, 640, 768, 1024, 1280, 1366, 1440, 1536, 1920,
+    height: number;
+    icon: typeof Smartphone;
+}
+
+const DEVICES: DevicePreset[] = [
+    { key: 'mobile', label: 'Móvil', width: MENU_DEVICE_WIDTH.mobile, height: 844, icon: Smartphone },
+    { key: 'tablet', label: 'Tablet', width: MENU_DEVICE_WIDTH.tablet, height: 1024, icon: Tablet },
+    { key: 'desktop', label: 'Escritorio', width: MENU_DEVICE_WIDTH.desktop, height: 900, icon: Monitor },
 ];
 
-// El ancho del iframe ES el ancho real de su documento — Menu.vue resuelve
-// su propio breakpoint leyendo window.innerWidth del iframe (vía
-// useBreakpoint), así que cambiar este número cambia de verdad qué
-// breakpoint de Tailwind aplica adentro, exactamente igual que /menu.
-const viewportWidth = ref(390);
-const activeBreakpoint = computed(() => resolveBreakpoint(viewportWidth.value));
+const selectedDevice = ref<MenuDevice>('mobile');
+const activeDevice = computed(
+    () => DEVICES.find((d) => d.key === selectedDevice.value) ?? DEVICES[0],
+);
 
 // El zoom es puramente visual (transform:scale sobre un envoltorio), nunca
 // se aplica al iframe mismo — así las coordenadas guardadas nunca dependen
-// del zoom, tal como exige el WYSIWYG real. PANEL_WIDTH se fija por encima
-// del ancho máximo permitido (2200) para que zoom=100% signifique SIEMPRE
-// tamaño real 1:1 (baseScale=1) — el panel simplemente permite scroll
-// horizontal en viewports anchos en vez de reducir la escala en automático,
-// así "100%" nunca miente sobre el tamaño real renderizado.
+// del zoom. Al cambiar de vista se elige un zoom inicial razonable según el
+// espacio disponible en pantalla (cálculo puntual, no un observador
+// reactivo — nunca se vuelve a tocar el tamaño del iframe a partir de esto).
 const zoom = ref(100);
-const PANEL_WIDTH = 2600;
-const baseScale = computed(() =>
-    Math.min(1, PANEL_WIDTH / viewportWidth.value),
-);
-const scale = computed(() => baseScale.value * (zoom.value / 100));
 
-// Alto FIJO del iframe (nunca medido/realimentado desde su propio
-// contenido): el menú público usa secciones con min-height:100vh (la
-// portada) — si el alto del iframe se ajustara a partir de su propio
-// scrollHeight, ese 100vh crecería junto con el iframe en un bucle de
-// realimentación sin límite (100vh de un iframe es relativo a SU PROPIA
-// altura). Un valor generoso y estático evita el bucle; el panel exterior
-// ya tiene overflow:auto para lo que sobre. En móvil el contenido se apila
-// en una sola columna y necesita más alto que en escritorio.
-const contentHeight = computed(() =>
-    activeBreakpoint.value === 'base' || activeBreakpoint.value === 'sm'
-        ? 11000
-        : 7000,
+function pickInitialZoom(device: DevicePreset): number {
+    if (typeof window === 'undefined') {
+        return 100;
+    }
+
+    const reserved = 240 + 300 + 96; // sidebar + inspector + paddings/gaps
+    const available = Math.max(280, window.innerWidth - reserved);
+
+    return Math.min(100, Math.max(30, Math.round((available / device.width) * 100)));
+}
+
+watch(
+    selectedDevice,
+    () => {
+        zoom.value = pickInitialZoom(activeDevice.value);
+    },
+    { immediate: true },
 );
+
+const scale = computed(() => zoom.value / 100);
 
 /* ------------------------------------------------------------------ */
 /* Iframe WYSIWYG + puente postMessage                                  */
@@ -150,7 +176,7 @@ function scheduleIframeReload() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Secciones (categorías) — navegación                                  */
+/* Secciones (categorías) — navegación + búsqueda                       */
 /* ------------------------------------------------------------------ */
 
 const activeCategoryId = ref<number | null>(categories[0]?.id ?? null);
@@ -160,6 +186,45 @@ const activeCategory = computed(
 const activeIndex = computed(() =>
     categories.findIndex((c) => c.id === activeCategoryId.value),
 );
+
+const searchQuery = ref('');
+
+function normalize(text: string): string {
+    return text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '');
+}
+
+const visibleCategories = computed(() => {
+    const q = normalize(searchQuery.value.trim());
+
+    if (!q) {
+        return categories;
+    }
+
+    return categories.filter(
+        (cat) =>
+            normalize(cat.name).includes(q) ||
+            cat.items.some((item) => normalize(item.name).includes(q)),
+    );
+});
+
+const visibleItems = computed(() => {
+    if (!activeCategory.value) {
+        return [];
+    }
+
+    const q = normalize(searchQuery.value.trim());
+
+    if (!q) {
+        return activeCategory.value.items;
+    }
+
+    return activeCategory.value.items.filter((item) =>
+        normalize(item.name).includes(q),
+    );
+});
 
 function goToIndex(idx: number) {
     if (idx < 0 || idx >= categories.length) {
@@ -245,11 +310,12 @@ function findCategoryGlobal(id: number): MenuCategoryData | null {
     return categories.find((c) => c.id === id) ?? null;
 }
 
-function resolveConfig(key: string, bp: MenuBreakpoint): ElementConfig {
+function resolveConfig(key: string, device: MenuDevice): ElementConfig {
     const parsed = parseKey(key);
+    const width = MENU_DEVICE_WIDTH[device];
 
     if (!parsed) {
-        return itemElementFor({ layout_settings: null }, 'container', bp);
+        return itemElementFor({ layout_settings: null }, 'container', width);
     }
 
     if (parsed.kind === 'item') {
@@ -258,7 +324,7 @@ function resolveConfig(key: string, bp: MenuBreakpoint): ElementConfig {
         return itemElementFor(
             { layout_settings: item?.layout_settings },
             parsed.element as ItemElementKey,
-            bp,
+            width,
         );
     }
 
@@ -267,11 +333,11 @@ function resolveConfig(key: string, bp: MenuBreakpoint): ElementConfig {
     return categoryElementFor(
         { visual_settings: category?.visual_settings },
         parsed.element as CategoryElementKey,
-        bp,
+        width,
     );
 }
 
-function hasOwnConfig(key: string, bp: MenuBreakpoint): boolean {
+function hasOwnConfig(key: string, device: MenuDevice): boolean {
     const parsed = parseKey(key);
 
     if (!parsed) {
@@ -283,7 +349,7 @@ function hasOwnConfig(key: string, bp: MenuBreakpoint): boolean {
 
         return hasOwnElementConfig(
             item?.layout_settings?.[parsed.element as ItemElementKey],
-            bp,
+            device,
         );
     }
 
@@ -291,14 +357,14 @@ function hasOwnConfig(key: string, bp: MenuBreakpoint): boolean {
 
     return hasOwnElementConfig(
         category?.visual_settings?.[parsed.element as CategoryElementKey],
-        bp,
+        device,
     );
 }
 
 function applyMirror(
     key: string,
     config: ElementConfig | null,
-    bp: MenuBreakpoint,
+    device: MenuDevice,
 ) {
     const parsed = parseKey(key);
 
@@ -321,9 +387,9 @@ function applyMirror(
     const elementSettings = { ...(settings[parsed.element] ?? {}) };
 
     if (config) {
-        elementSettings[bp] = config;
+        elementSettings[device] = config;
     } else {
-        delete elementSettings[bp];
+        delete elementSettings[device];
     }
 
     if (Object.keys(elementSettings).length) {
@@ -339,15 +405,16 @@ function applyMirror(
  * las funciones que inician el cambio). */
 function applyChange(
     key: string,
-    bp: MenuBreakpoint,
+    device: MenuDevice,
     config: ElementConfig | null,
 ) {
-    applyMirror(key, config, bp);
+    applyMirror(key, config, device);
+    pulseSaving();
 
     if (config) {
-        bridge.updateConfig(key, config, bp);
+        bridge.updateConfig(key, config, device);
     } else {
-        bridge.clearElement(key, bp);
+        bridge.clearElement(key, device);
     }
 }
 
@@ -420,6 +487,22 @@ const TEXT_ELEMENTS = new Set([
     'tagline_sub',
 ]);
 
+function iconForElement(key: string) {
+    if (IMAGE_ELEMENTS.has(key)) {
+        return ImageIcon;
+    }
+
+    if (key === 'price' || key === 'price_secondary') {
+        return Tag;
+    }
+
+    if (key === 'description' || key === 'ingredients') {
+        return AlignLeft;
+    }
+
+    return TypeIcon;
+}
+
 const selectedKind = computed<'image' | 'text' | 'container'>(() => {
     const parsed = selectedKey.value ? parseKey(selectedKey.value) : null;
 
@@ -440,12 +523,12 @@ const selectedKind = computed<'image' | 'text' | 'container'>(() => {
 
 const inspectorConfig = computed<ElementConfig | null>(() =>
     selectedKey.value
-        ? resolveConfig(selectedKey.value, activeBreakpoint.value)
+        ? resolveConfig(selectedKey.value, selectedDevice.value)
         : null,
 );
 const selectedHasOwnConfig = computed(() =>
     selectedKey.value
-        ? hasOwnConfig(selectedKey.value, activeBreakpoint.value)
+        ? hasOwnConfig(selectedKey.value, selectedDevice.value)
         : false,
 );
 
@@ -461,7 +544,7 @@ function onSelectFromSidebar(key: string) {
 
 interface UndoAction {
     key: string;
-    bp: MenuBreakpoint;
+    device: MenuDevice;
     prev: ElementConfig | null;
     next: ElementConfig | null;
 }
@@ -487,7 +570,7 @@ function undo() {
     }
 
     redoStack.value.push(action);
-    applyChange(action.key, action.bp, action.prev);
+    applyChange(action.key, action.device, action.prev);
 }
 
 function redo() {
@@ -498,7 +581,7 @@ function redo() {
     }
 
     undoStack.value.push(action);
-    applyChange(action.key, action.bp, action.next);
+    applyChange(action.key, action.device, action.next);
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -525,10 +608,30 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 // que la barra lateral/inspector no queden desincronizados, y registramos
 // el deshacer.
 function onIframeCommit(key: string, config: ElementConfig) {
-    const bp = activeBreakpoint.value;
-    const prev = hasOwnConfig(key, bp) ? resolveConfig(key, bp) : null;
-    applyMirror(key, config, bp);
-    recordUndo({ key, bp, prev, next: config });
+    const device = selectedDevice.value;
+    const prev = hasOwnConfig(key, device) ? resolveConfig(key, device) : null;
+    applyMirror(key, config, device);
+    recordUndo({ key, device, prev, next: config });
+    pulseSaving();
+}
+
+/* ------------------------------------------------------------------ */
+/* Estado de guardado visible en la barra superior                      */
+/* ------------------------------------------------------------------ */
+
+const positionSaveStatus = ref<'idle' | 'saving' | 'saved'>('idle');
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function pulseSaving() {
+    positionSaveStatus.value = 'saving';
+
+    if (saveTimer) {
+        clearTimeout(saveTimer);
+    }
+
+    saveTimer = setTimeout(() => {
+        positionSaveStatus.value = 'saved';
+    }, 500);
 }
 
 /* ------------------------------------------------------------------ */
@@ -547,16 +650,17 @@ function updateInspectorField<K extends keyof ElementConfig>(
     }
 
     const key = selectedKey.value;
-    const bp = activeBreakpoint.value;
+    const device = selectedDevice.value;
 
     if (inspectorBurstPrev === undefined) {
-        inspectorBurstPrev = hasOwnConfig(key, bp)
-            ? resolveConfig(key, bp)
+        inspectorBurstPrev = hasOwnConfig(key, device)
+            ? resolveConfig(key, device)
             : null;
     }
 
-    const next = { ...resolveConfig(key, bp), [field]: value };
-    applyMirror(key, next, bp);
+    const next = { ...resolveConfig(key, device), [field]: value };
+    applyMirror(key, next, device);
+    pulseSaving();
 
     if (inspectorDebounce) {
         clearTimeout(inspectorDebounce);
@@ -566,8 +670,8 @@ function updateInspectorField<K extends keyof ElementConfig>(
         inspectorDebounce = null;
         const prev = inspectorBurstPrev ?? null;
         inspectorBurstPrev = undefined;
-        recordUndo({ key, bp, prev, next });
-        bridge.updateConfig(key, next, bp);
+        recordUndo({ key, device, prev, next });
+        bridge.updateConfig(key, next, device);
     }, 150);
 }
 
@@ -582,11 +686,11 @@ function commitFieldNow<K extends keyof ElementConfig>(
     }
 
     const key = selectedKey.value;
-    const bp = activeBreakpoint.value;
-    const prev = hasOwnConfig(key, bp) ? resolveConfig(key, bp) : null;
-    const next = { ...resolveConfig(key, bp), [field]: value };
-    recordUndo({ key, bp, prev, next });
-    applyChange(key, bp, next);
+    const device = selectedDevice.value;
+    const prev = hasOwnConfig(key, device) ? resolveConfig(key, device) : null;
+    const next = { ...resolveConfig(key, device), [field]: value };
+    recordUndo({ key, device, prev, next });
+    applyChange(key, device, next);
 }
 
 function toggleAutoHeight(auto: boolean) {
@@ -626,7 +730,7 @@ async function centerHorizontally() {
         return;
     }
 
-    const current = resolveConfig(selectedKey.value, activeBreakpoint.value);
+    const current = resolveConfig(selectedKey.value, selectedDevice.value);
     const dx =
         rect.parent.left +
         rect.parent.width / 2 -
@@ -645,7 +749,7 @@ async function centerVertically() {
         return;
     }
 
-    const current = resolveConfig(selectedKey.value, activeBreakpoint.value);
+    const current = resolveConfig(selectedKey.value, selectedDevice.value);
     const dy =
         rect.parent.top +
         rect.parent.height / 2 -
@@ -653,70 +757,43 @@ async function centerVertically() {
     commitFieldNow('y', Math.round(current.y + dy));
 }
 
-function restoreBreakpoint() {
+function restoreCurrentView() {
     if (!selectedKey.value || !selectedHasOwnConfig.value) {
         return;
     }
 
     const key = selectedKey.value;
-    const bp = activeBreakpoint.value;
-    const prev = resolveConfig(key, bp);
-    recordUndo({ key, bp, prev, next: null });
-    applyChange(key, bp, null);
+    const device = selectedDevice.value;
+    const prev = resolveConfig(key, device);
+    recordUndo({ key, device, prev, next: null });
+    applyChange(key, device, null);
 }
 
-function restoreAllBreakpoints() {
+async function restoreAllViews() {
     if (!selectedKey.value) {
+        return;
+    }
+
+    const confirmed = await notify.confirmDanger(
+        '¿Restaurar las tres vistas?',
+        'Se perderán los ajustes de Móvil, Tablet y Escritorio para este elemento — no se puede deshacer con un solo clic.',
+    );
+
+    if (!confirmed) {
         return;
     }
 
     const key = selectedKey.value;
 
-    for (const bp of BREAKPOINT_ORDER) {
-        if (hasOwnConfig(key, bp)) {
-            const prev = resolveConfig(key, bp);
-            recordUndo({ key, bp, prev, next: null });
-            applyChange(key, bp, null);
+    for (const device of MENU_DEVICE_ORDER) {
+        if (hasOwnConfig(key, device)) {
+            const prev = resolveConfig(key, device);
+            recordUndo({ key, device, prev, next: null });
+            applyChange(key, device, null);
         }
     }
-}
 
-function copyToNextBreakpoint() {
-    if (!selectedKey.value) {
-        return;
-    }
-
-    const key = selectedKey.value;
-    const idx = BREAKPOINT_ORDER.indexOf(activeBreakpoint.value);
-    const nextBp = BREAKPOINT_ORDER[idx + 1];
-
-    if (!nextBp) {
-        return;
-    }
-
-    const config = { ...resolveConfig(key, activeBreakpoint.value) };
-    const prev = hasOwnConfig(key, nextBp) ? resolveConfig(key, nextBp) : null;
-    recordUndo({ key, bp: nextBp, prev, next: config });
-    applyChange(key, nextBp, config);
-}
-
-function copyToAllBreakpoints() {
-    if (!selectedKey.value) {
-        return;
-    }
-
-    const key = selectedKey.value;
-    const config = resolveConfig(key, activeBreakpoint.value);
-
-    for (const bp of BREAKPOINT_ORDER) {
-        if (bp === activeBreakpoint.value) {
-            continue;
-        }
-
-        const prev = hasOwnConfig(key, bp) ? resolveConfig(key, bp) : null;
-        recordUndo({ key, bp, prev, next: { ...config } });
-        applyChange(key, bp, { ...config });
-    }
+    notify.success('Se restauraron las tres vistas.');
 }
 
 /* ------------------------------------------------------------------ */
@@ -749,6 +826,29 @@ function updateQuickField(field: string, value: unknown) {
         data: { [field]: value },
     });
 }
+
+const toolbarStatus = computed<'idle' | 'saving' | 'saved' | 'error'>(() => {
+    if (quickAutosave.status.value === 'error') {
+        return 'error';
+    }
+
+    if (
+        quickAutosave.status.value === 'saving' ||
+        quickAutosave.status.value === 'pending' ||
+        positionSaveStatus.value === 'saving'
+    ) {
+        return 'saving';
+    }
+
+    if (
+        quickAutosave.status.value === 'saved' ||
+        positionSaveStatus.value === 'saved'
+    ) {
+        return 'saved';
+    }
+
+    return 'idle';
+});
 
 /* ------------------------------------------------------------------ */
 /* Reordenar platillos de la sección activa                             */
@@ -903,53 +1003,29 @@ function toggleExpanded(id: number) {
 }
 
 function isElementLocked(key: string): boolean {
-    return !!resolveConfig(key, activeBreakpoint.value).locked;
+    return !!resolveConfig(key, selectedDevice.value).locked;
 }
 
 function toggleElementLock(key: string) {
-    const bp = activeBreakpoint.value;
-    const config = resolveConfig(key, bp);
-    const prev = hasOwnConfig(key, bp) ? config : null;
+    const device = selectedDevice.value;
+    const config = resolveConfig(key, device);
+    const prev = hasOwnConfig(key, device) ? config : null;
     const next = { ...config, locked: !config.locked };
-    recordUndo({ key, bp, prev, next });
-    applyChange(key, bp, next);
+    recordUndo({ key, device, prev, next });
+    applyChange(key, device, next);
 }
-
-/* ------------------------------------------------------------------ */
-/* Guardado — estado visible (todo lo demás ya autosalva en segundo     */
-/* plano dentro del iframe o vía useAutosave arriba)                    */
-/* ------------------------------------------------------------------ */
-
-const saveStatus = computed(() =>
-    quickAutosave.status.value === 'error' ? 'error' : 'ok',
-);
 </script>
 
 <template>
     <Head title="Editor visual del menú" />
 
-    <div class="tc-admin-page tc-menu-editor space-y-4">
+    <div class="tc-admin-page tc-menu-editor">
         <AdminPageHeader
             title="Editor visual del menú"
-            description="Mueve, redimensiona y edita cada elemento directamente sobre el menú público real"
+            description="Configura las vistas Móvil, Tablet y Escritorio. Los tamaños intermedios se adaptan automáticamente."
         >
             <template #label>Menú</template>
             <template #actions>
-                <span
-                    class="tc-badge text-[11px]"
-                    :class="
-                        saveStatus === 'error'
-                            ? 'tc-badge-pink'
-                            : 'tc-badge-blue'
-                    "
-                    >{{
-                        saveStatus === 'error'
-                            ? 'Error al guardar'
-                            : previewReady
-                              ? 'Vista previa activa'
-                              : 'Cargando…'
-                    }}</span
-                >
                 <Link href="/admin/menu-items" class="tc-btn-secondary"
                     >← Volver</Link
                 >
@@ -957,89 +1033,59 @@ const saveStatus = computed(() =>
         </AdminPageHeader>
 
         <div class="tc-editor-toolbar tc-admin-card">
-            <div
-                class="flex flex-wrap items-center gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-white/5"
-            >
+            <div class="tc-device-switch">
                 <button
-                    v-for="preset in BREAKPOINT_PRESETS"
-                    :key="preset.key"
+                    v-for="device in DEVICES"
+                    :key="device.key"
                     type="button"
-                    class="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
-                    :class="
-                        viewportWidth === preset.width
-                            ? 'bg-white text-[var(--tc-blue)] shadow-sm dark:bg-[#262626]'
-                            : 'text-gray-500'
-                    "
-                    :title="`${preset.width}px`"
-                    @click="viewportWidth = preset.width"
+                    class="tc-device-btn"
+                    :class="{ 'tc-device-btn--active': selectedDevice === device.key }"
+                    :title="`${device.label} (${device.width}px)`"
+                    @click="selectedDevice = device.key"
                 >
-                    {{ preset.label }}
+                    <component :is="device.icon" class="h-4 w-4" />
+                    {{ device.label }}
                 </button>
             </div>
 
-            <div class="flex items-center gap-1.5">
-                <label class="text-xs text-gray-500">Ancho</label>
-                <input
-                    v-model.number="viewportWidth"
-                    type="number"
-                    min="280"
-                    max="2200"
-                    list="tc-editor-width-presets"
-                    class="tc-input w-20 py-1 text-xs"
-                />
-                <datalist id="tc-editor-width-presets">
-                    <option v-for="w in WIDTH_PRESETS" :key="w" :value="w" />
-                </datalist>
-                <span class="text-xs text-gray-400"
-                    >px · {{ activeBreakpoint }}</span
-                >
+            <div class="tc-save-status" :class="`tc-save-status--${toolbarStatus}`">
+                <LoaderCircle v-if="toolbarStatus === 'saving'" class="h-3.5 w-3.5 animate-spin" />
+                <CircleCheckBig v-else-if="toolbarStatus === 'saved'" class="h-3.5 w-3.5" />
+                <CircleAlert v-else-if="toolbarStatus === 'error'" class="h-3.5 w-3.5" />
+                <span>{{
+                    toolbarStatus === 'saving'
+                        ? 'Guardando…'
+                        : toolbarStatus === 'error'
+                          ? 'Error al guardar'
+                          : toolbarStatus === 'saved'
+                            ? 'Guardado'
+                            : 'Sin cambios'
+                }}</span>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="tc-toolbar-group">
                 <button
                     type="button"
-                    class="tc-btn-secondary"
-                    :disabled="activeIndex <= 0"
-                    @click="goToIndex(activeIndex - 1)"
-                >
-                    ◀ Anterior
-                </button>
-                <span class="text-xs font-medium text-gray-500">
-                    {{ activeCategory?.name }} ({{ activeIndex + 1 }}/{{
-                        categories.length
-                    }})
-                </span>
-                <button
-                    type="button"
-                    class="tc-btn-secondary"
-                    :disabled="activeIndex >= categories.length - 1"
-                    @click="goToIndex(activeIndex + 1)"
-                >
-                    Siguiente ▶
-                </button>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button
-                    type="button"
-                    class="tc-btn-secondary"
+                    class="tc-icon-btn"
+                    title="Deshacer (Ctrl+Z)"
                     :disabled="!undoStack.length"
                     @click="undo"
                 >
-                    ↶ Deshacer
+                    <Undo2 class="h-4 w-4" />
                 </button>
                 <button
                     type="button"
-                    class="tc-btn-secondary"
+                    class="tc-icon-btn"
+                    title="Rehacer (Ctrl+Shift+Z)"
                     :disabled="!redoStack.length"
                     @click="redo"
                 >
-                    ↷ Rehacer
+                    <Redo2 class="h-4 w-4" />
                 </button>
             </div>
 
-            <div class="flex items-center gap-2">
-                <label class="text-xs text-gray-500">Zoom (solo visual)</label>
+            <div class="tc-toolbar-group">
+                <ZoomIn class="h-4 w-4 text-gray-400" />
                 <input
                     v-model.number="zoom"
                     type="range"
@@ -1047,47 +1093,77 @@ const saveStatus = computed(() =>
                     max="150"
                     step="5"
                     class="w-24"
+                    aria-label="Zoom de la vista previa"
                 />
                 <span class="w-10 text-right text-xs text-gray-500 tabular-nums"
                     >{{ zoom }}%</span
                 >
             </div>
+
+            <a
+                href="/menu"
+                target="_blank"
+                rel="noopener"
+                class="tc-btn-secondary tc-toolbar-group"
+            >
+                <ExternalLink class="h-4 w-4" /> Abrir menú público
+            </a>
         </div>
 
         <div class="tc-editor-grid">
             <!-- Izquierda: secciones + árbol de elementos + orden -->
             <aside class="tc-admin-card tc-editor-sidebar">
-                <h3
-                    class="mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase"
-                >
-                    Secciones
-                </h3>
+                <div class="tc-search-box">
+                    <Search class="h-4 w-4 text-gray-400" />
+                    <input
+                        v-model="searchQuery"
+                        type="search"
+                        placeholder="Buscar sección o platillo…"
+                        class="tc-search-input"
+                    />
+                </div>
+
+                <h3 class="tc-sidebar-heading">Secciones</h3>
                 <ul class="mb-4 space-y-0.5">
-                    <li v-for="(cat, idx) in categories" :key="cat.id">
+                    <li v-for="cat in visibleCategories" :key="cat.id">
                         <button
                             type="button"
-                            class="w-full rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors"
-                            :class="
-                                cat.id === activeCategoryId
-                                    ? 'bg-[var(--tc-blue)] text-white'
-                                    : 'text-gray-600 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/5'
-                            "
-                            @click="
-                                selectCategory(cat.id);
-                                void idx;
-                            "
+                            class="tc-section-btn"
+                            :class="{ 'tc-section-btn--active': cat.id === activeCategoryId }"
+                            @click="selectCategory(cat.id)"
                         >
                             {{ cat.name }}
                         </button>
                     </li>
+                    <li v-if="!visibleCategories.length" class="px-2 py-3 text-xs text-gray-400">
+                        Sin resultados para «{{ searchQuery }}».
+                    </li>
                 </ul>
 
-                <template v-if="activeCategory">
-                    <h3
-                        class="mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase"
+                <div class="mb-4 flex items-center gap-2">
+                    <button
+                        type="button"
+                        class="tc-btn-secondary flex-1 text-xs"
+                        :disabled="activeIndex <= 0"
+                        @click="goToIndex(activeIndex - 1)"
                     >
-                        Elementos de la sección
-                    </h3>
+                        <ChevronLeft class="mr-1 inline h-3.5 w-3.5" />Anterior
+                    </button>
+                    <span class="text-xs font-medium whitespace-nowrap text-gray-400">
+                        {{ activeIndex + 1 }}/{{ categories.length }}
+                    </span>
+                    <button
+                        type="button"
+                        class="tc-btn-secondary flex-1 text-xs"
+                        :disabled="activeIndex >= categories.length - 1"
+                        @click="goToIndex(activeIndex + 1)"
+                    >
+                        Siguiente<ChevronRight class="ml-1 inline h-3.5 w-3.5" />
+                    </button>
+                </div>
+
+                <template v-if="activeCategory">
+                    <h3 class="tc-sidebar-heading">Elementos de la sección</h3>
                     <ul class="mb-4 space-y-0.5">
                         <li
                             v-for="el in categoryElementKeys(activeCategory)"
@@ -1096,97 +1172,76 @@ const saveStatus = computed(() =>
                         >
                             <button
                                 type="button"
-                                class="flex-1 truncate rounded-lg px-2 py-1 text-left text-xs"
-                                :class="
-                                    selectedKey ===
-                                    `category-${activeCategory.id}:${el}`
-                                        ? 'bg-blue-50 text-[var(--tc-blue)] dark:bg-white/10'
-                                        : 'text-gray-600 hover:bg-gray-50 dark:text-white/70 dark:hover:bg-white/5'
-                                "
+                                class="tc-element-btn"
+                                :class="{
+                                    'tc-element-btn--active':
+                                        selectedKey === `category-${activeCategory.id}:${el}`,
+                                }"
                                 @click="
                                     onSelectFromSidebar(
                                         `category-${activeCategory.id}:${el}`,
                                     )
                                 "
                             >
-                                {{ CATEGORY_ELEMENT_LABELS[el] }}
+                                <component :is="iconForElement(el)" class="h-3.5 w-3.5 shrink-0 opacity-60" />
+                                <span class="truncate">{{ CATEGORY_ELEMENT_LABELS[el] }}</span>
                             </button>
                             <button
                                 type="button"
-                                class="px-1 text-xs opacity-70 hover:opacity-100"
+                                class="tc-lock-btn"
                                 :aria-label="
-                                    isElementLocked(
-                                        `category-${activeCategory.id}:${el}`,
-                                    )
+                                    isElementLocked(`category-${activeCategory.id}:${el}`)
                                         ? 'Desbloquear elemento'
                                         : 'Bloquear elemento'
                                 "
                                 @click="
-                                    toggleElementLock(
-                                        `category-${activeCategory.id}:${el}`,
-                                    )
+                                    toggleElementLock(`category-${activeCategory.id}:${el}`)
                                 "
                             >
-                                {{
-                                    isElementLocked(
-                                        `category-${activeCategory.id}:${el}`,
-                                    )
-                                        ? '🔒'
-                                        : '🔓'
-                                }}
+                                <Lock v-if="isElementLocked(`category-${activeCategory.id}:${el}`)" class="h-3 w-3" />
+                                <LockOpen v-else class="h-3 w-3" />
                             </button>
                         </li>
                     </ul>
                 </template>
 
-                <template v-if="activeCategory && activeCategory.items.length">
-                    <h3
-                        class="mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase"
-                    >
+                <template v-if="activeCategory && visibleItems.length">
+                    <h3 class="tc-sidebar-heading">
                         Platillos
-                        <span
-                            v-if="saving"
-                            class="ml-1 font-normal text-[var(--tc-blue)] normal-case"
-                            >guardando…</span
-                        >
+                        <span v-if="saving" class="ml-1 font-normal text-[var(--tc-blue)] normal-case">
+                            guardando…
+                        </span>
                     </h3>
-                    <ul
-                        :ref="(el) => bindReorderZone(el as HTMLElement)"
-                        class="space-y-0.5"
-                    >
+                    <ul :ref="(el) => bindReorderZone(el as HTMLElement)" class="space-y-0.5">
                         <li
-                            v-for="item in activeCategory.items"
+                            v-for="item in visibleItems"
                             :key="item.id"
                             data-drag-row
                             class="rounded-lg text-xs"
-                            :class="{
-                                'opacity-40': dragging?.item.id === item.id,
-                            }"
+                            :class="{ 'opacity-40': dragging?.item.id === item.id }"
                         >
                             <div class="flex items-center gap-1.5 px-1.5 py-1">
                                 <button
                                     type="button"
                                     class="cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing"
                                     aria-label="Arrastrar para reordenar"
-                                    @pointerdown="
-                                        onReorderHandleDown(item, $event)
-                                    "
+                                    @pointerdown="onReorderHandleDown(item, $event)"
                                 >
-                                    ⠿
+                                    <GripVertical class="h-3.5 w-3.5" />
                                 </button>
                                 <button
                                     type="button"
-                                    class="flex-1 truncate text-left text-gray-700 dark:text-white/80"
+                                    class="flex-1 truncate text-left text-gray-700"
                                     @click="toggleExpanded(item.id)"
                                 >
-                                    {{ expandedItems.has(item.id) ? '▾' : '▸' }}
+                                    <ChevronRight
+                                        class="mr-0.5 inline h-3 w-3 transition-transform"
+                                        :class="{ 'rotate-90': expandedItems.has(item.id) }"
+                                    />
                                     {{ item.name }}
                                 </button>
                             </div>
-                            <ul
-                                v-if="expandedItems.has(item.id)"
-                                class="mb-1 ml-6 space-y-0.5"
-                            >
+                            <ul v-if="expandedItems.has(item.id)" class="mb-1 ml-6 space-y-0.5">
                                 <li
                                     v-for="el in itemElementKeys(item)"
                                     :key="el"
@@ -1194,44 +1249,28 @@ const saveStatus = computed(() =>
                                 >
                                     <button
                                         type="button"
-                                        class="flex-1 truncate rounded-md px-2 py-1 text-left"
-                                        :class="
-                                            selectedKey ===
-                                            `item-${item.id}:${el}`
-                                                ? 'bg-blue-50 text-[var(--tc-blue)] dark:bg-white/10'
-                                                : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'
-                                        "
-                                        @click="
-                                            onSelectFromSidebar(
-                                                `item-${item.id}:${el}`,
-                                            )
-                                        "
+                                        class="tc-element-btn"
+                                        :class="{
+                                            'tc-element-btn--active':
+                                                selectedKey === `item-${item.id}:${el}`,
+                                        }"
+                                        @click="onSelectFromSidebar(`item-${item.id}:${el}`)"
                                     >
-                                        {{ ITEM_ELEMENT_LABELS[el] }}
+                                        <component :is="iconForElement(el)" class="h-3.5 w-3.5 shrink-0 opacity-60" />
+                                        <span class="truncate">{{ ITEM_ELEMENT_LABELS[el] }}</span>
                                     </button>
                                     <button
                                         type="button"
-                                        class="px-1 text-xs opacity-70 hover:opacity-100"
+                                        class="tc-lock-btn"
                                         :aria-label="
-                                            isElementLocked(
-                                                `item-${item.id}:${el}`,
-                                            )
+                                            isElementLocked(`item-${item.id}:${el}`)
                                                 ? 'Desbloquear elemento'
                                                 : 'Bloquear elemento'
                                         "
-                                        @click="
-                                            toggleElementLock(
-                                                `item-${item.id}:${el}`,
-                                            )
-                                        "
+                                        @click="toggleElementLock(`item-${item.id}:${el}`)"
                                     >
-                                        {{
-                                            isElementLocked(
-                                                `item-${item.id}:${el}`,
-                                            )
-                                                ? '🔒'
-                                                : '🔓'
-                                        }}
+                                        <Lock v-if="isElementLocked(`item-${item.id}:${el}`)" class="h-3 w-3" />
+                                        <LockOpen v-else class="h-3 w-3" />
                                     </button>
                                 </li>
                             </ul>
@@ -1240,23 +1279,31 @@ const saveStatus = computed(() =>
                 </template>
             </aside>
 
-            <!-- Centro: iframe con el MISMO Public/Menu.vue -->
+            <!-- Centro: iframe con el MISMO Public/Menu.vue, a tamaño real de dispositivo -->
             <div class="tc-admin-card tc-editor-canvas-wrap">
                 <div class="tc-editor-canvas-viewport">
                     <div
+                        v-if="!previewReady"
+                        class="tc-editor-skeleton"
+                        :style="{ width: activeDevice.width * scale + 'px', height: activeDevice.height * scale + 'px' }"
+                    >
+                        <LoaderCircle class="h-6 w-6 animate-spin text-gray-300" />
+                    </div>
+                    <div
                         class="tc-editor-canvas-scaled"
                         :style="{
-                            width: viewportWidth + 'px',
-                            height: contentHeight + 'px',
+                            width: activeDevice.width + 'px',
+                            height: activeDevice.height + 'px',
                             transform: `scale(${scale})`,
+                            visibility: previewReady ? 'visible' : 'hidden',
                         }"
                     >
                         <iframe
                             ref="iframeEl"
                             :src="previewUrl"
                             :style="{
-                                width: viewportWidth + 'px',
-                                height: contentHeight + 'px',
+                                width: activeDevice.width + 'px',
+                                height: activeDevice.height + 'px',
                                 border: 'none',
                                 display: 'block',
                             }"
@@ -1265,11 +1312,11 @@ const saveStatus = computed(() =>
                     </div>
                 </div>
                 <p class="mt-2 text-xs text-gray-400">
-                    Haz clic en cualquier elemento del menú (imagen, nombre,
-                    precio, título…) para seleccionarlo, arrástralo para
-                    moverlo, usa la manija inferior derecha para redimensionar y
-                    las flechas del teclado para ajustes finos (Shift = 10px).
-                    Esta vista es el menú público real a {{ viewportWidth }}px —
+                    Estás editando la vista <strong>{{ activeDevice.label }}</strong>.
+                    Haz clic en cualquier elemento del menú para seleccionarlo,
+                    arrástralo para moverlo, usa la manija inferior derecha para
+                    redimensionar y las flechas del teclado para ajustes finos
+                    (Shift = 10px). Esta vista previa es el menú público real —
                     lo que ves aquí es exactamente lo que verá el visitante.
                 </p>
             </div>
@@ -1277,76 +1324,23 @@ const saveStatus = computed(() =>
             <!-- Derecha: inspector -->
             <aside class="tc-admin-card tc-editor-inspector">
                 <template v-if="!selectedKey || !inspectorConfig">
-                    <p class="text-sm text-gray-400">
-                        Selecciona un elemento en el lienzo o en la lista de la
-                        izquierda para editarlo.
-                    </p>
+                    <div class="tc-inspector-empty">
+                        <Settings2 class="h-8 w-8 text-gray-200" />
+                        <p class="text-sm text-gray-400">
+                            Selecciona un elemento en el lienzo o en la lista de la
+                            izquierda para editarlo.
+                        </p>
+                    </div>
                 </template>
 
                 <template v-else>
-                    <h3
-                        class="mb-3 text-sm font-bold text-gray-800 dark:text-white"
-                    >
+                    <h3 class="mb-3 text-sm font-bold text-gray-800">
                         {{ selectedLabel }}
                     </h3>
 
                     <div class="mb-4 space-y-2.5">
-                        <p
-                            class="text-xs font-semibold tracking-wide text-gray-400 uppercase"
-                        >
-                            Posición y tamaño ({{ activeBreakpoint }})
-                        </p>
+                        <p class="tc-inspector-label">Tamaño</p>
                         <div class="grid grid-cols-2 gap-2">
-                            <TcInput
-                                label="X (px)"
-                                type="number"
-                                :model-value="Math.round(inspectorConfig.x)"
-                                @update:model-value="
-                                    updateInspectorField('x', Number($event))
-                                "
-                            />
-                            <TcInput
-                                label="Y (px)"
-                                type="number"
-                                :model-value="Math.round(inspectorConfig.y)"
-                                @update:model-value="
-                                    updateInspectorField('y', Number($event))
-                                "
-                            />
-                            <TcInput
-                                label="Escala"
-                                type="number"
-                                step="0.05"
-                                :model-value="inspectorConfig.scale"
-                                @update:model-value="
-                                    updateInspectorField(
-                                        'scale',
-                                        Number($event),
-                                    )
-                                "
-                            />
-                            <TcInput
-                                label="Rotación (°)"
-                                type="number"
-                                :model-value="inspectorConfig.rotation"
-                                @update:model-value="
-                                    updateInspectorField(
-                                        'rotation',
-                                        Number($event),
-                                    )
-                                "
-                            />
-                            <TcInput
-                                label="Nivel (z-index)"
-                                type="number"
-                                :model-value="inspectorConfig.z_index"
-                                @update:model-value="
-                                    updateInspectorField(
-                                        'z_index',
-                                        Number($event),
-                                    )
-                                "
-                            />
                             <div class="tc-field">
                                 <label class="tc-field-label">Ancho (px)</label>
                                 <input
@@ -1357,28 +1351,16 @@ const saveStatus = computed(() =>
                                     @input="
                                         updateInspectorField(
                                             'width',
-                                            Number(
-                                                (
-                                                    $event.target as HTMLInputElement
-                                                ).value,
-                                            ),
+                                            Number((($event.target) as HTMLInputElement).value),
                                         )
                                     "
                                 />
-                                <label
-                                    class="mt-1 flex items-center gap-1.5 text-xs text-gray-500"
-                                >
+                                <label class="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
                                     <input
                                         type="checkbox"
-                                        :checked="
-                                            inspectorConfig.width === null
-                                        "
+                                        :checked="inspectorConfig.width === null"
                                         @change="
-                                            toggleAutoWidth(
-                                                (
-                                                    $event.target as HTMLInputElement
-                                                ).checked,
-                                            )
+                                            toggleAutoWidth((($event.target) as HTMLInputElement).checked)
                                         "
                                     />
                                     Automático
@@ -1394,77 +1376,46 @@ const saveStatus = computed(() =>
                                     @input="
                                         updateInspectorField(
                                             'height',
-                                            Number(
-                                                (
-                                                    $event.target as HTMLInputElement
-                                                ).value,
-                                            ),
+                                            Number((($event.target) as HTMLInputElement).value),
                                         )
                                     "
                                 />
-                                <label
-                                    class="mt-1 flex items-center gap-1.5 text-xs text-gray-500"
-                                >
+                                <label class="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
                                     <input
                                         type="checkbox"
-                                        :checked="
-                                            inspectorConfig.height === null
-                                        "
+                                        :checked="inspectorConfig.height === null"
                                         @change="
-                                            toggleAutoHeight(
-                                                (
-                                                    $event.target as HTMLInputElement
-                                                ).checked,
-                                            )
+                                            toggleAutoHeight((($event.target) as HTMLInputElement).checked)
                                         "
                                     />
-                                    Automático (proporcional)
+                                    Proporcional
                                 </label>
                             </div>
                         </div>
 
-                        <div class="flex flex-wrap gap-1.5 pt-1">
-                            <button
-                                type="button"
-                                class="tc-btn-secondary text-xs"
-                                @click="centerHorizontally"
-                            >
-                                ↔ Centrar horizontal
+                        <p class="tc-inspector-label pt-1">Posición y capa</p>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button type="button" class="tc-btn-secondary text-xs" @click="centerHorizontally">
+                                <AlignHorizontalJustifyCenter class="mr-1 inline h-3.5 w-3.5" />Centrar H
+                            </button>
+                            <button type="button" class="tc-btn-secondary text-xs" @click="centerVertically">
+                                <AlignVerticalJustifyCenter class="mr-1 inline h-3.5 w-3.5" />Centrar V
+                            </button>
+                            <button type="button" class="tc-btn-secondary text-xs" @click="bringToFront">
+                                <ArrowUpToLine class="mr-1 inline h-3.5 w-3.5" />Al frente
+                            </button>
+                            <button type="button" class="tc-btn-secondary text-xs" @click="sendToBack">
+                                <ArrowDownToLine class="mr-1 inline h-3.5 w-3.5" />Al fondo
                             </button>
                             <button
                                 type="button"
                                 class="tc-btn-secondary text-xs"
-                                @click="centerVertically"
-                            >
-                                ↕ Centrar vertical
-                            </button>
-                            <button
-                                type="button"
-                                class="tc-btn-secondary text-xs"
-                                @click="bringToFront"
-                            >
-                                Traer al frente
-                            </button>
-                            <button
-                                type="button"
-                                class="tc-btn-secondary text-xs"
-                                @click="sendToBack"
-                            >
-                                Enviar al fondo
-                            </button>
-                            <button
-                                type="button"
-                                class="tc-btn-secondary text-xs"
-                                :class="{
-                                    'tc-badge-pink': inspectorConfig.locked,
-                                }"
+                                :class="{ 'tc-badge-pink': inspectorConfig.locked }"
                                 @click="toggleLock"
                             >
-                                {{
-                                    inspectorConfig.locked
-                                        ? '🔒 Desbloquear'
-                                        : '🔓 Bloquear'
-                                }}
+                                <Lock v-if="inspectorConfig.locked" class="mr-1 inline h-3.5 w-3.5" />
+                                <LockOpen v-else class="mr-1 inline h-3.5 w-3.5" />
+                                {{ inspectorConfig.locked ? 'Bloqueado' : 'Bloquear' }}
                             </button>
                         </div>
 
@@ -1473,79 +1424,25 @@ const saveStatus = computed(() =>
                                 type="button"
                                 class="tc-btn-secondary text-xs"
                                 :disabled="!selectedHasOwnConfig"
-                                @click="restoreBreakpoint"
+                                @click="restoreCurrentView"
                             >
-                                Restaurar este breakpoint
+                                <RotateCcw class="mr-1 inline h-3.5 w-3.5" />Restaurar {{ activeDevice.label.toLowerCase() }}
                             </button>
-                            <button
-                                type="button"
-                                class="tc-btn-secondary text-xs"
-                                @click="restoreAllBreakpoints"
-                            >
-                                Restaurar todos
-                            </button>
-                            <button
-                                type="button"
-                                class="tc-btn-secondary text-xs"
-                                @click="copyToNextBreakpoint"
-                            >
-                                Copiar → siguiente
-                            </button>
-                            <button
-                                type="button"
-                                class="tc-btn-secondary text-xs"
-                                @click="copyToAllBreakpoints"
-                            >
-                                Copiar a todos
+                            <button type="button" class="tc-btn-secondary text-xs" @click="restoreAllViews">
+                                <RotateCcw class="mr-1 inline h-3.5 w-3.5" />Restaurar las tres vistas
                             </button>
                         </div>
                     </div>
 
-                    <div
-                        v-if="selectedKind === 'text'"
-                        class="mb-4 space-y-2.5 border-t border-gray-100 pt-3 dark:border-white/10"
-                    >
-                        <p
-                            class="text-xs font-semibold tracking-wide text-gray-400 uppercase"
-                        >
-                            Texto
-                        </p>
+                    <div v-if="selectedKind === 'text'" class="mb-4 space-y-2.5 border-t border-gray-100 pt-3">
+                        <p class="tc-inspector-label">Texto</p>
                         <div class="grid grid-cols-2 gap-2">
                             <TcInput
                                 label="Tamaño de fuente"
                                 type="number"
                                 :model-value="inspectorConfig.font_size ?? ''"
                                 @update:model-value="
-                                    updateInspectorField(
-                                        'font_size',
-                                        $event === '' ? null : Number($event),
-                                    )
-                                "
-                            />
-                            <TcInput
-                                label="Interlineado"
-                                type="number"
-                                step="0.05"
-                                :model-value="inspectorConfig.line_height ?? ''"
-                                @update:model-value="
-                                    updateInspectorField(
-                                        'line_height',
-                                        $event === '' ? null : Number($event),
-                                    )
-                                "
-                            />
-                            <TcInput
-                                label="Espaciado (px)"
-                                type="number"
-                                step="0.1"
-                                :model-value="
-                                    inspectorConfig.letter_spacing ?? ''
-                                "
-                                @update:model-value="
-                                    updateInspectorField(
-                                        'letter_spacing',
-                                        $event === '' ? null : Number($event),
-                                    )
+                                    updateInspectorField('font_size', $event === '' ? null : Number($event))
                                 "
                             />
                             <TcInput
@@ -1553,10 +1450,7 @@ const saveStatus = computed(() =>
                                 type="number"
                                 :model-value="inspectorConfig.max_width ?? ''"
                                 @update:model-value="
-                                    updateInspectorField(
-                                        'max_width',
-                                        $event === '' ? null : Number($event),
-                                    )
+                                    updateInspectorField('max_width', $event === '' ? null : Number($event))
                                 "
                             />
                             <TcSelect
@@ -1568,10 +1462,7 @@ const saveStatus = computed(() =>
                                 ]"
                                 :model-value="inspectorConfig.align ?? ''"
                                 @update:model-value="
-                                    updateInspectorField(
-                                        'align',
-                                        ($event || null) as any,
-                                    )
+                                    updateInspectorField('align', ($event || null) as any)
                                 "
                             />
                             <TcInput
@@ -1579,24 +1470,14 @@ const saveStatus = computed(() =>
                                 :model-value="inspectorConfig.color ?? ''"
                                 placeholder="#144e8f"
                                 @update:model-value="
-                                    updateInspectorField(
-                                        'color',
-                                        ($event || null) as any,
-                                    )
+                                    updateInspectorField('color', ($event || null) as any)
                                 "
                             />
                         </div>
                     </div>
 
-                    <div
-                        v-if="selectedKind === 'image'"
-                        class="mb-4 space-y-2.5 border-t border-gray-100 pt-3 dark:border-white/10"
-                    >
-                        <p
-                            class="text-xs font-semibold tracking-wide text-gray-400 uppercase"
-                        >
-                            Imagen
-                        </p>
+                    <div v-if="selectedKind === 'image'" class="mb-4 space-y-2.5 border-t border-gray-100 pt-3">
+                        <p class="tc-inspector-label">Imagen</p>
                         <div class="grid grid-cols-2 gap-2">
                             <TcSelect
                                 label="Ajuste"
@@ -1606,64 +1487,106 @@ const saveStatus = computed(() =>
                                 ]"
                                 :model-value="inspectorConfig.fit ?? ''"
                                 @update:model-value="
-                                    updateInspectorField(
-                                        'fit',
-                                        ($event || null) as any,
-                                    )
-                                "
-                            />
-                            <TcInput
-                                label="Zoom interno"
-                                type="number"
-                                step="0.05"
-                                :model-value="inspectorConfig.inner_scale ?? ''"
-                                @update:model-value="
-                                    updateInspectorField(
-                                        'inner_scale',
-                                        $event === '' ? null : Number($event),
-                                    )
-                                "
-                            />
-                            <TcInput
-                                label="Posición X (%)"
-                                type="number"
-                                :model-value="inspectorConfig.object_x ?? ''"
-                                @update:model-value="
-                                    updateInspectorField(
-                                        'object_x',
-                                        $event === '' ? null : Number($event),
-                                    )
-                                "
-                            />
-                            <TcInput
-                                label="Posición Y (%)"
-                                type="number"
-                                :model-value="inspectorConfig.object_y ?? ''"
-                                @update:model-value="
-                                    updateInspectorField(
-                                        'object_y',
-                                        $event === '' ? null : Number($event),
-                                    )
+                                    updateInspectorField('fit', ($event || null) as any)
                                 "
                             />
                         </div>
                     </div>
 
+                    <details class="tc-advanced">
+                        <summary class="tc-advanced-summary">
+                            <Settings2 class="h-3.5 w-3.5" /> Ajustes avanzados
+                        </summary>
+                        <div class="grid grid-cols-2 gap-2 pt-2.5">
+                            <TcInput
+                                label="X (px)"
+                                type="number"
+                                :model-value="Math.round(inspectorConfig.x)"
+                                @update:model-value="updateInspectorField('x', Number($event))"
+                            />
+                            <TcInput
+                                label="Y (px)"
+                                type="number"
+                                :model-value="Math.round(inspectorConfig.y)"
+                                @update:model-value="updateInspectorField('y', Number($event))"
+                            />
+                            <TcInput
+                                label="Rotación (°)"
+                                type="number"
+                                :model-value="inspectorConfig.rotation"
+                                @update:model-value="updateInspectorField('rotation', Number($event))"
+                            />
+                            <TcInput
+                                label="Nivel (z-index)"
+                                type="number"
+                                :model-value="inspectorConfig.z_index"
+                                @update:model-value="updateInspectorField('z_index', Number($event))"
+                            />
+                            <TcInput
+                                v-if="selectedKind === 'text'"
+                                label="Interlineado"
+                                type="number"
+                                step="0.05"
+                                :model-value="inspectorConfig.line_height ?? ''"
+                                @update:model-value="
+                                    updateInspectorField('line_height', $event === '' ? null : Number($event))
+                                "
+                            />
+                            <TcInput
+                                v-if="selectedKind === 'text'"
+                                label="Espaciado (px)"
+                                type="number"
+                                step="0.1"
+                                :model-value="inspectorConfig.letter_spacing ?? ''"
+                                @update:model-value="
+                                    updateInspectorField('letter_spacing', $event === '' ? null : Number($event))
+                                "
+                            />
+                            <TcInput
+                                v-if="selectedKind === 'image'"
+                                label="Zoom interno"
+                                type="number"
+                                step="0.05"
+                                :model-value="inspectorConfig.inner_scale ?? ''"
+                                @update:model-value="
+                                    updateInspectorField('inner_scale', $event === '' ? null : Number($event))
+                                "
+                            />
+                            <TcInput
+                                v-if="selectedKind === 'image'"
+                                label="Posición X (%)"
+                                type="number"
+                                :model-value="inspectorConfig.object_x ?? ''"
+                                @update:model-value="
+                                    updateInspectorField('object_x', $event === '' ? null : Number($event))
+                                "
+                            />
+                            <TcInput
+                                v-if="selectedKind === 'image'"
+                                label="Posición Y (%)"
+                                type="number"
+                                :model-value="inspectorConfig.object_y ?? ''"
+                                @update:model-value="
+                                    updateInspectorField('object_y', $event === '' ? null : Number($event))
+                                "
+                            />
+                            <TcInput
+                                label="Escala"
+                                type="number"
+                                step="0.05"
+                                :model-value="inspectorConfig.scale"
+                                @update:model-value="updateInspectorField('scale', Number($event))"
+                            />
+                        </div>
+                    </details>
+
                     <template v-if="selectedItem">
-                        <div
-                            class="space-y-3 border-t border-gray-100 pt-3 dark:border-white/10"
-                        >
-                            <p
-                                class="text-xs font-semibold tracking-wide text-gray-400 uppercase"
-                            >
-                                Contenido
-                            </p>
+                        <div class="space-y-3 border-t border-gray-100 pt-3">
+                            <p class="tc-inspector-label">Contenido</p>
                             <TcInput
                                 label="Nombre"
                                 :model-value="selectedItem.name"
-                                @update:model-value="
-                                    updateQuickField('name', $event)
-                                "
+                                @update:model-value="updateQuickField('name', $event)"
                             />
                             <div class="grid grid-cols-2 gap-2">
                                 <TcInput
@@ -1671,48 +1594,33 @@ const saveStatus = computed(() =>
                                     type="number"
                                     step="0.01"
                                     :model-value="selectedItem.price"
-                                    @update:model-value="
-                                        updateQuickField('price', $event)
-                                    "
+                                    @update:model-value="updateQuickField('price', $event)"
                                 />
                                 <TcInput
                                     label="Precio secundario"
                                     type="number"
                                     step="0.01"
-                                    :model-value="
-                                        selectedItem.price_secondary ?? ''
-                                    "
-                                    @update:model-value="
-                                        updateQuickField(
-                                            'price_secondary',
-                                            $event,
-                                        )
-                                    "
+                                    :model-value="selectedItem.price_secondary ?? ''"
+                                    @update:model-value="updateQuickField('price_secondary', $event)"
                                 />
                             </div>
                             <TcInput
                                 label="Descripción"
                                 :model-value="selectedItem.description ?? ''"
-                                @update:model-value="
-                                    updateQuickField('description', $event)
-                                "
+                                @update:model-value="updateQuickField('description', $event)"
                             />
                             <TcSelect
                                 v-if="zoneOptions.length"
                                 label="Zona"
                                 :options="zoneOptions"
                                 :model-value="selectedItem.zone ?? ''"
-                                @update:model-value="
-                                    updateQuickField('zone', $event)
-                                "
+                                @update:model-value="updateQuickField('zone', $event)"
                             />
                             <TcSwitch
                                 label="Activo"
                                 description="Visible en el menú"
                                 :model-value="selectedItem.is_active"
-                                @update:model-value="
-                                    updateQuickField('is_active', $event)
-                                "
+                                @update:model-value="updateQuickField('is_active', $event)"
                             />
                         </div>
                     </template>
@@ -1727,29 +1635,212 @@ const saveStatus = computed(() =>
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
     padding: 10px 14px;
+    position: sticky;
+    top: 8px;
+    z-index: 30;
+}
+
+.tc-device-switch {
+    display: flex;
+    gap: 2px;
+    background: #f4f1e9;
+    border-radius: 10px;
+    padding: 3px;
+}
+
+.tc-device-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #8a8272;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.tc-device-btn:hover {
+    color: var(--tc-blue);
+}
+
+.tc-device-btn--active {
+    background: #fff;
+    color: var(--tc-blue);
+    box-shadow: 0 1px 3px rgba(20, 78, 143, 0.18);
+}
+
+.tc-save-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9ca3af;
+}
+
+.tc-save-status--saving {
+    color: var(--tc-blue);
+}
+
+.tc-save-status--saved {
+    color: var(--tc-green, #079a4a);
+}
+
+.tc-save-status--error {
+    color: var(--tc-pink);
+}
+
+.tc-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tc-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    color: #6b7280;
+    transition: background-color 0.15s ease;
+}
+
+.tc-icon-btn:hover:not(:disabled) {
+    background: #f4f1e9;
+    color: var(--tc-blue);
+}
+
+.tc-icon-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 
 .tc-editor-grid {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr) 300px;
+    grid-template-columns: 250px minmax(0, 1fr) 310px;
     gap: 16px;
     align-items: start;
+    margin-top: 12px;
+}
+
+.tc-editor-sidebar,
+.tc-editor-inspector {
+    padding: 14px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    position: sticky;
+    top: 78px;
 }
 
 @media (max-width: 1279px) {
     .tc-editor-grid {
         grid-template-columns: 1fr;
     }
+
+    /* Sticky solo tiene sentido junto al canvas en la rejilla de 3
+       columnas: en la pila de una sola columna, un panel "pegado" se monta
+       encima del panel siguiente al hacer scroll y bloquea los clics. Esta
+       regla debe ir DESPUÉS de la base (misma especificidad) para ganar la
+       cascada en este rango de ancho. */
+    .tc-editor-sidebar,
+    .tc-editor-inspector {
+        position: static;
+        max-height: none;
+    }
 }
 
-.tc-editor-sidebar,
-.tc-editor-inspector {
-    padding: 14px;
-    max-height: calc(100vh - 230px);
-    overflow-y: auto;
+.tc-search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    margin-bottom: 14px;
+    border-radius: 9px;
+    border: 1px solid #e5decf;
+    background: #fbf9f3;
+}
+
+.tc-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    font-size: 12.5px;
+    outline: none;
+}
+
+.tc-sidebar-heading {
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.tc-section-btn {
+    width: 100%;
+    border-radius: 10px;
+    padding: 7px 10px;
+    text-align: left;
+    font-size: 13px;
+    color: #57534e;
+    transition: background-color 0.15s ease;
+}
+
+.tc-section-btn:hover {
+    background: #f4f1e9;
+}
+
+.tc-section-btn--active {
+    background: var(--tc-blue);
+    color: #fff;
+}
+
+.tc-element-btn {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    border-radius: 8px;
+    padding: 5px 8px;
+    text-align: left;
+    font-size: 12px;
+    color: #78716c;
+    transition: background-color 0.15s ease;
+}
+
+.tc-element-btn:hover {
+    background: #f9fafb;
+}
+
+.tc-element-btn--active {
+    background: #eef4fb;
+    color: var(--tc-blue);
+}
+
+.tc-lock-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    color: #a8a29e;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+}
+
+.tc-lock-btn:hover {
+    opacity: 1;
 }
 
 .tc-editor-canvas-wrap {
@@ -1764,9 +1855,64 @@ const saveStatus = computed(() =>
     background: #efe9da;
     max-height: calc(100vh - 260px);
     padding: 16px;
+    display: flex;
 }
 
 .tc-editor-canvas-scaled {
     transform-origin: top left;
+    flex-shrink: 0;
+}
+
+.tc-editor-skeleton {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f4f1e9;
+    border-radius: 8px;
+}
+
+.tc-inspector-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 40px 12px;
+    text-align: center;
+}
+
+.tc-inspector-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #9ca3af;
+    text-transform: uppercase;
+}
+
+.tc-advanced {
+    margin-top: 10px;
+    border-top: 1px solid #f3f4f6;
+    padding-top: 8px;
+}
+
+.tc-advanced-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    list-style: none;
+}
+
+.tc-advanced-summary::-webkit-details-marker {
+    display: none;
+}
+
+.tc-advanced-summary:hover {
+    color: var(--tc-blue);
 }
 </style>

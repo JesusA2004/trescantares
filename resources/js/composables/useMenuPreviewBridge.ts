@@ -1,7 +1,7 @@
 import { onMounted, onUnmounted } from 'vue';
 import type {
     ElementConfig,
-    MenuBreakpoint,
+    MenuDevice,
 } from '@/components/Public/Menu/types';
 
 /**
@@ -27,7 +27,7 @@ export interface PreviewToEditorMessage {
     elementKey?: string;
     label?: string;
     config?: ElementConfig;
-    breakpoint?: MenuBreakpoint;
+    breakpoint?: MenuDevice;
     requestId?: string;
     rect?: { element: RectData; parent: RectData } | null;
 }
@@ -42,7 +42,7 @@ export interface EditorToPreviewMessage {
         | 'requestRect';
     elementKey?: string;
     config?: ElementConfig;
-    breakpoint?: MenuBreakpoint;
+    breakpoint?: MenuDevice;
     categoryId?: number | null;
     requestId?: string;
 }
@@ -57,9 +57,9 @@ export function useMenuPreviewChild(handlers: {
     onUpdateConfig?: (
         key: string,
         config: ElementConfig,
-        breakpoint?: MenuBreakpoint,
+        breakpoint?: MenuDevice,
     ) => void;
-    onClearElement?: (key: string, breakpoint?: MenuBreakpoint) => void;
+    onClearElement?: (key: string, breakpoint?: MenuDevice) => void;
     onScrollToCategory?: (categoryId: number | null) => void;
     onRequestRect?: (elementKey: string, requestId: string) => void;
 }) {
@@ -225,10 +225,10 @@ export function useMenuPreviewParent(
         updateConfig: (
             key: string,
             config: ElementConfig,
-            breakpoint?: MenuBreakpoint,
+            breakpoint?: MenuDevice,
         ) =>
             post({ type: 'updateConfig', elementKey: key, config, breakpoint }),
-        clearElement: (key: string, breakpoint?: MenuBreakpoint) =>
+        clearElement: (key: string, breakpoint?: MenuDevice) =>
             post({ type: 'clearElement', elementKey: key, breakpoint }),
         scrollToCategory: (categoryId: number | null) =>
             post({ type: 'scrollToCategory', categoryId }),

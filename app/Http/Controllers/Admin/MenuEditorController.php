@@ -16,7 +16,14 @@ use Inertia\Response;
 
 class MenuEditorController extends Controller
 {
-    private const BREAKPOINTS = ['base', 'sm', 'md', 'lg', 'xl', '2xl'];
+    /**
+     * Las tres vistas configurables que ve el administrador. El menú público
+     * interpola de forma continua entre estos tres anchos de referencia
+     * (390/768/1440px) — ver MENU_BREAKPOINT_WIDTH en types.ts. Tailwind
+     * sigue usando sm/md/lg/xl/2xl internamente para la estructura de la
+     * página, pero esas clases nunca se exponen como una vista configurable.
+     */
+    private const BREAKPOINTS = ['mobile', 'tablet', 'desktop'];
 
     private const ITEM_ELEMENTS = [
         'container', 'image', 'name', 'description', 'price', 'price_label',

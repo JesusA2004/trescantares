@@ -72,8 +72,8 @@ return;
                     class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
                     :class="
                         mod.is_enabled
-                            ? 'bg-blue-50 text-[var(--tc-blue)] dark:bg-blue-500/15 dark:text-blue-300'
-                            : 'bg-gray-100 text-gray-400 dark:bg-white/8 dark:text-white/50'
+                            ? 'bg-blue-50 text-[var(--tc-blue)]'
+                            : 'bg-gray-100 text-gray-400'
                     "
                 >
                     <Boxes class="h-5 w-5" />

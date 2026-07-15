@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useAppearance } from '@/composables/useAppearance';
 
 const props = defineProps<{
     segments: {
@@ -13,9 +12,6 @@ const props = defineProps<{
     size?: number;
     strokeWidth?: number;
 }>();
-
-const { resolvedAppearance } = useAppearance();
-const isDark = computed(() => resolvedAppearance.value === 'dark');
 
 const mounted = ref(false);
 onMounted(() => {
@@ -106,7 +102,7 @@ const hoveredIdx = ref<number | null>(null);
                     :cy="cy"
                     :r="r"
                     fill="none"
-                    :stroke="isDark ? 'rgba(109,76,255,.12)' : '#E8E8EC'"
+                    stroke="#E8E8EC"
                     :stroke-width="sw"
                 />
                 <!-- Inner glow ring -->
@@ -115,11 +111,7 @@ const hoveredIdx = ref<number | null>(null);
                     :cy="cy"
                     :r="r"
                     fill="none"
-                    :stroke="
-                        isDark
-                            ? 'rgba(255,255,255,.03)'
-                            : 'rgba(255,255,255,.5)'
-                    "
+                    stroke="rgba(255,255,255,.5)"
                     :stroke-width="sw - 6"
                 />
 
@@ -156,7 +148,7 @@ const hoveredIdx = ref<number | null>(null);
                     :cx="cx"
                     :cy="cy"
                     :r="r - sw / 2 - 2"
-                    :fill="isDark ? '#202020' : 'white'"
+                    fill="white"
                     fill-opacity="0.97"
                 />
 
@@ -167,7 +159,7 @@ const hoveredIdx = ref<number | null>(null);
                     text-anchor="middle"
                     :font-size="sz * 0.148"
                     font-weight="800"
-                    :fill="isDark ? '#F5F5F5' : '#1D1D1F'"
+                    fill="#1D1D1F"
                     font-family="sans-serif"
                     letter-spacing="-1"
                 >
@@ -178,7 +170,7 @@ const hoveredIdx = ref<number | null>(null);
                     :y="cy + 10"
                     text-anchor="middle"
                     :font-size="sz * 0.074"
-                    :fill="isDark ? '#8E8E8E' : '#8B9097'"
+                    fill="#8B9097"
                     font-family="sans-serif"
                     font-weight="500"
                 >
@@ -323,24 +315,5 @@ const hoveredIdx = ref<number | null>(null);
 .donut-center-enter-from,
 .donut-center-leave-to {
     opacity: 0;
-}
-
-/* ── Dark mode overrides ── */
-:global(.dark) .donut-legend-row.is-hovered {
-    background: rgba(109, 76, 255, 0.1);
-    border-color: rgba(109, 76, 255, 0.26);
-    transform: translateX(3px);
-}
-:global(.dark) .donut-legend-label {
-    color: #8e8e8e;
-}
-:global(.dark) .donut-legend-row.is-hovered .donut-legend-label {
-    color: #f5f5f5;
-}
-:global(.dark) .donut-legend-val {
-    color: #f5f5f5;
-}
-:global(.dark) .donut-legend-pct {
-    color: #8e8e8e;
 }
 </style>

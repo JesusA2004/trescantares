@@ -1,35 +1,51 @@
-// Breakpoints reales de Tailwind (mobile-first) — deben coincidir
-// exactamente con tailwind.config / los prefijos sm:/md:/lg:/xl:/2xl:.
-export type MenuBreakpoint = 'base' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+// El ancho REAL y continuo del viewport (px), no un bucket discreto — cada
+// elemento se posiciona interpolando entre las tres vistas configurables
+// (ver MenuDevice) según este número exacto. Sigue llamándose
+// "MenuBreakpoint" únicamente para no tener que tocar el prop `breakpoint`
+// que todas las plantillas de página (PozolePage, BirriaPage, etc.) ya
+// reciben y reenvían tal cual a itemElementFor/categoryElementFor.
+export type MenuBreakpoint = number;
 
-export const BREAKPOINT_ORDER: MenuBreakpoint[] = [
-    'base',
-    'sm',
-    'md',
-    'lg',
-    'xl',
-    '2xl',
-];
+/** Las tres vistas configurables que ve el administrador — todo lo demás
+ * (los seis breakpoints de Tailwind sm/md/lg/xl/2xl que sigue usando el CSS
+ * estructural) es invisible para él. */
+export type MenuDevice = 'mobile' | 'tablet' | 'desktop';
 
-export const BREAKPOINT_MIN_WIDTH: Record<MenuBreakpoint, number> = {
-    base: 0,
-    sm: 640,
-    md: 768,
-    lg: 1024,
-    xl: 1280,
-    '2xl': 1536,
+export const MENU_DEVICE_ORDER: MenuDevice[] = ['mobile', 'tablet', 'desktop'];
+
+/** Anchos de referencia (px) de cada vista — deben coincidir exactamente con
+ * el tamaño real del iframe del editor para que "lo que ves es lo que hay". */
+export const MENU_DEVICE_WIDTH: Record<MenuDevice, number> = {
+    mobile: 390,
+    tablet: 768,
+    desktop: 1440,
 };
 
-export function resolveBreakpoint(width: number): MenuBreakpoint {
-    let current: MenuBreakpoint = 'base';
+export const MENU_DEVICE_LABELS: Record<MenuDevice, string> = {
+    mobile: 'Móvil',
+    tablet: 'Tablet',
+    desktop: 'Escritorio',
+};
 
-    for (const bp of BREAKPOINT_ORDER) {
-        if (width >= BREAKPOINT_MIN_WIDTH[bp]) {
-            current = bp;
-        }
+/** Vista más cercana a un ancho dado — usada solo para saber en qué vista
+ * persistir un arrastre hecho dentro del iframe del editor (que siempre
+ * carga a un ancho EXACTO de 390/768/1440, así que esto resuelve siempre al
+ * ancla exacta, nunca a una zona intermedia). */
+export function resolveMenuDevice(width: number): MenuDevice {
+    const midMobileTablet =
+        (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+    const midTabletDesktop =
+        (MENU_DEVICE_WIDTH.tablet + MENU_DEVICE_WIDTH.desktop) / 2;
+
+    if (width <= midMobileTablet) {
+        return 'mobile';
     }
 
-    return current;
+    if (width <= midTabletDesktop) {
+        return 'tablet';
+    }
+
+    return 'desktop';
 }
 
 /** Configuración de posición/tamaño/tipografía/imagen de UN elemento en UN
@@ -74,33 +90,175 @@ export function defaultElementConfig(): ElementConfig {
     };
 }
 
-/** Un elemento puede tener config en cualquier subconjunto de breakpoints;
- * los breakpoints sin config heredan del inferior más cercano (cascade
- * mobile-first, igual que Tailwind). */
-export type ElementSettings = Partial<Record<MenuBreakpoint, ElementConfig>>;
+/** Un elemento tiene como máximo tres configuraciones guardadas (una por
+ * MenuDevice) — todo ancho intermedio se calcula interpolando entre ellas,
+ * nunca se guarda un cuarto/quinto/sexto valor. `_legacy_breakpoints` es un
+ * respaldo de solo lectura que deja la migración de datos del formato
+ * anterior (base/sm/md/lg/xl/2xl) — el código público nunca lo lee. */
+export type ElementSettings = Partial<Record<MenuDevice, ElementConfig>> & {
+    _legacy_breakpoints?: unknown;
+};
 
-export function resolveElementConfig(
-    settings: ElementSettings | null | undefined,
-    breakpoint: MenuBreakpoint,
-): ElementConfig {
-    const idx = BREAKPOINT_ORDER.indexOf(breakpoint);
+const INTERPOLATED_FIELDS = [
+    'x',
+    'y',
+    'scale',
+    'rotation',
+    'font_size',
+    'line_height',
+    'letter_spacing',
+    'max_width',
+    'object_x',
+    'object_y',
+    'inner_scale',
+] as const satisfies readonly (keyof ElementConfig)[];
 
-    for (let i = idx; i >= 0; i--) {
-        const found = settings?.[BREAKPOINT_ORDER[i]];
+/** Campos discretos: no tiene sentido "mezclar" un z-index o una alineación
+ * a medio camino — siempre toman el valor del ancla inferior más cercana. */
+const DISCRETE_FIELDS = [
+    'z_index',
+    'locked',
+    'align',
+    'fit',
+    'color',
+] as const satisfies readonly (keyof ElementConfig)[];
 
-        if (found) {
-            return { ...defaultElementConfig(), ...found };
+function clamp01(t: number): number {
+    return Math.min(1, Math.max(0, t));
+}
+
+function lerp(a: number, b: number, t: number): number {
+    return a + (b - a) * t;
+}
+
+/** Interpola width/height: si CUALQUIERA de las dos anclas es "automático"
+ * (null — conserva la proporción original de la imagen), el resultado se
+ * queda en automático en vez de forzar un tamaño intermedio arbitrario. */
+function lerpSize(
+    a: number | null | undefined,
+    b: number | null | undefined,
+    t: number,
+): number | null {
+    if (a === null || a === undefined || b === null || b === undefined) {
+        return null;
+    }
+
+    return lerp(a, b, t);
+}
+
+function lerpOptional(
+    a: number | null | undefined,
+    b: number | null | undefined,
+    t: number,
+): number | null {
+    const an = a ?? null;
+    const bn = b ?? null;
+
+    if (an === null && bn === null) {
+        return null;
+    }
+
+    if (an === null) {
+        return bn;
+    }
+
+    if (bn === null) {
+        return an;
+    }
+
+    return lerp(an, bn, t);
+}
+
+interface DeviceAnchor {
+    device: MenuDevice;
+    width: number;
+    config: ElementConfig;
+}
+
+function anchorsOf(settings: ElementSettings | null | undefined): DeviceAnchor[] {
+    const anchors: DeviceAnchor[] = [];
+
+    for (const device of MENU_DEVICE_ORDER) {
+        const config = settings?.[device];
+
+        if (config) {
+            anchors.push({ device, width: MENU_DEVICE_WIDTH[device], config });
         }
     }
 
-    return defaultElementConfig();
+    return anchors;
+}
+
+/**
+ * Calcula la configuración real de un elemento para un ancho de viewport
+ * arbitrario, interpolando linealmente entre las dos vistas configuradas más
+ * cercanas (spec: t = (viewportWidth - anchoInferior) / (anchoSuperior -
+ * anchoInferior), clamp 0..1). Por debajo de la vista más angosta configurada
+ * usa esa misma sin cambios; por encima de la más ancha, ídem — nunca
+ * extrapola fuera del rango que el administrador definió.
+ */
+export function resolveElementConfig(
+    settings: ElementSettings | null | undefined,
+    viewportWidth: number,
+): ElementConfig {
+    const anchors = anchorsOf(settings);
+
+    if (anchors.length === 0) {
+        return defaultElementConfig();
+    }
+
+    const first = anchors[0];
+    const last = anchors[anchors.length - 1];
+
+    if (anchors.length === 1 || viewportWidth <= first.width) {
+        return { ...defaultElementConfig(), ...first.config };
+    }
+
+    if (viewportWidth >= last.width) {
+        return { ...defaultElementConfig(), ...last.config };
+    }
+
+    let lower = first;
+    let upper = last;
+
+    for (let i = 0; i < anchors.length - 1; i++) {
+        if (viewportWidth >= anchors[i].width && viewportWidth <= anchors[i + 1].width) {
+            lower = anchors[i];
+            upper = anchors[i + 1];
+            break;
+        }
+    }
+
+    const t = clamp01(
+        (viewportWidth - lower.width) / (upper.width - lower.width),
+    );
+    const a: ElementConfig = { ...defaultElementConfig(), ...lower.config };
+    const b: ElementConfig = { ...defaultElementConfig(), ...upper.config };
+    const out: ElementConfig = { ...a };
+
+    for (const field of INTERPOLATED_FIELDS) {
+        (out as unknown as Record<string, unknown>)[field] = lerpOptional(
+            a[field] as number | null | undefined,
+            b[field] as number | null | undefined,
+            t,
+        );
+    }
+
+    out.width = lerpSize(a.width, b.width, t);
+    out.height = lerpSize(a.height, b.height, t);
+
+    for (const field of DISCRETE_FIELDS) {
+        (out as unknown as Record<string, unknown>)[field] = a[field];
+    }
+
+    return out;
 }
 
 export function hasOwnElementConfig(
     settings: ElementSettings | null | undefined,
-    breakpoint: MenuBreakpoint,
+    device: MenuDevice,
 ): boolean {
-    return !!settings?.[breakpoint];
+    return !!settings?.[device];
 }
 
 export type ItemElementKey =

@@ -11,7 +11,7 @@ defineProps<{
             <h3 class="tc-form-section-title">{{ title }}</h3>
             <p
                 v-if="description"
-                class="mt-0.5 text-xs text-gray-500 dark:text-white/60"
+                class="mt-0.5 text-xs text-gray-500"
             >
                 {{ description }}
             </p>

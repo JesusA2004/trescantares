@@ -73,7 +73,27 @@
       "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless --disable-gpu --user-data-dir=/c/Users/Jesus/AppData/Local/Temp/claude/C--wamp64-www-trescantares/534c256d-6284-4b91-a795-59d6d1d43df9/scratchpad/chrome-profile --hide-scrollbars --virtual-time-budget=6000 --window-size=1280,2400 --screenshot=/c/Users/Jesus/AppData/Local/Temp/claude/C--wamp64-www-trescantares/534c256d-6284-4b91-a795-59d6d1d43df9/scratchpad/shots/admin-categories.png http://127.0.0.1:8000/admin/categories)",
       "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless --disable-gpu --user-data-dir=/c/Users/Jesus/AppData/Local/Temp/claude/C--wamp64-www-trescantares/534c256d-6284-4b91-a795-59d6d1d43df9/scratchpad/chrome-profile --hide-scrollbars --virtual-time-budget=8000 --window-size=1280,20000 --screenshot=/c/Users/Jesus/AppData/Local/Temp/claude/C--wamp64-www-trescantares/534c256d-6284-4b91-a795-59d6d1d43df9/scratchpad/shots/admin-menuitems.png http://127.0.0.1:8000/admin/menu-items)",
       "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless --disable-gpu --user-data-dir=/c/Users/Jesus/AppData/Local/Temp/claude/C--wamp64-www-trescantares/534c256d-6284-4b91-a795-59d6d1d43df9/scratchpad/chrome-profile --hide-scrollbars --virtual-time-budget=6000 --window-size=1280,20000 --screenshot=/c/Users/Jesus/AppData/Local/Temp/claude/C--wamp64-www-trescantares/534c256d-6284-4b91-a795-59d6d1d43df9/scratchpad/shots/admin-item-create.png http://127.0.0.1:8000/admin/menu-items/create)",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(awk -F: '$1>183')",
+      "Bash(awk 'NR>=6390 && NR<=7811 {print NR\": \"$0}' resources/css/app.css)",
+      "Bash(awk -F: '$1<7812')",
+      "Bash(PYTHONIOENCODING=utf-8 python3 -c ' *)",
+      "Bash(awk '/MENÚ PÚBLICO/{exit} {print}' resources/css/app.css)",
+      "Bash(git --no-pager diff resources/js/pages/Admin/Roles/Edit.vue)",
+      "Bash(git --no-pager diff resources/js/pages/Welcome.vue)",
+      "Bash(git --no-pager diff --stat resources/js/components/ui resources/js/components/tc resources/js/components/admin resources/js/pages/Admin/Modules/Index.vue resources/js/pages/Dashboard.vue resources/js/components/AppSidebar.vue resources/js/components/AppHeader.vue resources/js/components/AppLogo.vue resources/js/components/NavFooter.vue resources/js/components/DeleteUser.vue resources/js/components/InputError.vue resources/js/components/PlaceholderPattern.vue resources/js/components/UserInfo.vue resources/js/components/TextLink.vue resources/js/layouts/auth resources/js/pages/settings/Profile.vue resources/js/pages/auth/TwoFactorChallenge.vue resources/js/pages/Admin/Reports/Index.vue)",
+      "Bash(git --no-pager diff resources/js/layouts/auth/AuthSplitLayout.vue resources/js/components/ui/badge/index.ts resources/js/components/ui/button/index.ts)",
+      "Bash(git --no-pager diff resources/js/components/tc/TcSwitch.vue resources/js/components/tc/TcInput.vue resources/js/components/tc/TcSelect.vue resources/js/components/ui/select/SelectTrigger.vue resources/js/components/ui/input-otp/InputOTPSlot.vue resources/js/components/ui/navigation-menu/NavigationMenuLink.vue resources/js/components/ui/dropdown-menu/DropdownMenuItem.vue resources/js/components/ui/checkbox/Checkbox.vue resources/js/components/ui/input/Input.vue)",
+      "Bash(git --no-pager diff resources/js/pages/Admin/Roles/Create.vue resources/js/pages/Admin/Modules/Index.vue resources/js/pages/Dashboard.vue resources/js/pages/Admin/Reports/Index.vue resources/js/pages/auth/TwoFactorChallenge.vue)",
+      "Bash(pkill -f \"inertia:start-ssr\")",
+      "Bash(nohup php artisan inertia:start-ssr)",
+      "Bash(echo \"started pid $!\")",
+      "Read(//tmp/**)",
+      "Bash(npx playwright *)",
+      "Bash(E2E_BASE_URL=http://127.0.0.1:8010 npx playwright test)",
+      "Bash(kill 505)",
+      "Bash(./vendor/bin/pest)"
     ]
   }
 }

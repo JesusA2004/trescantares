@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             SiteSettingSeeder::class,
             ModuleSeeder::class,
             AdminUserSeeder::class,
+            MenuSeeder::class,
         ]);
     }
 }

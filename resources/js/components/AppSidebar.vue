@@ -256,12 +256,12 @@ function handleLogout() {
                 >
                     <div class="px-3 py-2 text-sm">
                         <p
-                            class="font-semibold text-gray-800 dark:text-[#fff7e6]"
+                            class="font-semibold text-gray-800"
                         >
                             {{ user?.name }}
                         </p>
                         <p
-                            class="truncate text-xs text-gray-400 dark:text-white/55"
+                            class="truncate text-xs text-gray-400"
                         >
                             {{ user?.email }}
                         </p>

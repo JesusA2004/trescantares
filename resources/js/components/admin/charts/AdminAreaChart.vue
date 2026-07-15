@@ -101,15 +101,15 @@ const gradTo = computed(() => props.gradientTo ?? 'transparent');
         <!-- X-axis labels — show only first, middle, last -->
         <div class="mt-1 flex justify-between px-1">
             <span
-                class="text-[10px] text-gray-400 tabular-nums dark:text-white/55"
+                class="text-[10px] text-gray-400 tabular-nums"
                 >{{ data[0]?.label }}</span
             >
             <span
-                class="text-[10px] text-gray-400 tabular-nums dark:text-white/55"
+                class="text-[10px] text-gray-400 tabular-nums"
                 >{{ data[Math.floor(data.length / 2)]?.label }}</span
             >
             <span
-                class="text-[10px] text-gray-400 tabular-nums dark:text-white/55"
+                class="text-[10px] text-gray-400 tabular-nums"
                 >{{ data[data.length - 1]?.label }}</span
             >
         </div>

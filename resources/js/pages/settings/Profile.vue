@@ -79,7 +79,7 @@ const user = computed(() => page.props.auth.user);
                     <Link
                         :href="send()"
                         as="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current!"
                     >
                         Haz click aquí para reenviar el correo de verificación.
                     </Link>

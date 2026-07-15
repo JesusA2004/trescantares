@@ -1,27 +1,44 @@
 import type { Ref } from 'vue';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { resolveBreakpoint } from '@/components/Public/Menu/types';
-import type { MenuBreakpoint } from '@/components/Public/Menu/types';
+import { MENU_DEVICE_WIDTH } from '@/components/Public/Menu/types';
 
 /**
- * 'lg' antes de montar coincide con lo que renderiza el servidor (sin
- * acceso a window) — evita hydration mismatch; se corrige en onMounted.
+ * Ancho real y continuo del viewport (px) — cada elemento del menú
+ * interpola su posición/tamaño entre las vistas Móvil/Tablet/Escritorio
+ * usando este valor exacto (ver resolveElementConfig en types.ts).
+ *
+ * 1440 (el ancla "desktop") antes de montar coincide con lo que renderiza
+ * el servidor (sin acceso a window) — evita hydration mismatch y hace que
+ * el HTML servido por SSR use la vista de escritorio por defecto; se
+ * corrige al primer paint del cliente en onMounted.
  */
-export function useBreakpoint(): Ref<MenuBreakpoint> {
-    const breakpoint = ref<MenuBreakpoint>('lg');
+export function useViewportWidth(): Ref<number> {
+    const width = ref(MENU_DEVICE_WIDTH.desktop);
 
     function update() {
-        breakpoint.value = resolveBreakpoint(window.innerWidth);
+        width.value = window.innerWidth;
+    }
+
+    let raf = 0;
+
+    function onResize() {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(update);
     }
 
     onMounted(() => {
         update();
-        window.addEventListener('resize', update);
+        window.addEventListener('resize', onResize);
     });
 
     onBeforeUnmount(() => {
-        window.removeEventListener('resize', update);
+        cancelAnimationFrame(raf);
+        window.removeEventListener('resize', onResize);
     });
 
-    return breakpoint;
+    return width;
 }
+
+/** @deprecated usa {@link useViewportWidth} — se mantiene como alias para no
+ * romper importaciones existentes. */
+export const useBreakpoint = useViewportWidth;

@@ -134,7 +134,7 @@ function submit() {
 
         <div
             v-if="isProtected"
-            class="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300"
+            class="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
         >
             <ShieldCheck class="h-4 w-4 flex-shrink-0" />
             El rol <strong>super-admin</strong> tiene todos los permisos del
@@ -147,7 +147,7 @@ function submit() {
                 <div class="space-y-4 xl:col-span-1">
                     <div class="tc-admin-card p-5">
                         <h3
-                            class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-[#fff7e6]"
+                            class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-700"
                         >
                             <ShieldCheck
                                 class="h-4 w-4 text-[var(--tc-blue)]"
@@ -166,7 +166,7 @@ function submit() {
 
                     <div class="tc-admin-card p-5">
                         <p
-                            class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-white/50"
+                            class="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase"
                         >
                             Permisos activos
                         </p>
@@ -176,7 +176,7 @@ function submit() {
                                 >{{ totalSelected }}</span
                             >
                             <span
-                                class="pb-1 text-sm text-gray-400 dark:text-white/40"
+                                class="pb-1 text-sm text-gray-400"
                                 >/ {{ totalPermissions }}</span
                             >
                         </div>
@@ -263,7 +263,7 @@ function submit() {
                         class="tc-admin-card overflow-hidden"
                     >
                         <div
-                            class="flex items-center justify-between border-b border-amber-100/60 bg-gradient-to-r from-amber-50/60 to-transparent px-5 py-3 dark:border-amber-400/15 dark:from-amber-400/8"
+                            class="flex items-center justify-between border-b border-amber-100/60 bg-gradient-to-r from-amber-50/60 to-transparent px-5 py-3"
                             :class="{ 'cursor-pointer': !isProtected }"
                             @click="
                                 !isProtected &&
@@ -283,11 +283,11 @@ function submit() {
                                             ? 'text-[var(--tc-blue)]'
                                             : groupSomeSelected(perms)
                                               ? 'text-amber-500'
-                                              : 'text-gray-300 dark:text-white/25'
+                                              : 'text-gray-300'
                                     "
                                 />
                                 <span
-                                    class="text-sm font-semibold text-gray-800 dark:text-[#fff7e6]"
+                                    class="text-sm font-semibold text-gray-800"
                                 >
                                     {{ permissionGroupLabel(String(group)) }}
                                 </span>
@@ -365,7 +365,7 @@ function submit() {
                                     @change="togglePermission(perm.name)"
                                 />
                                 <span
-                                    class="text-sm text-gray-700 dark:text-[#fff7e6]/85"
+                                    class="text-sm text-gray-700"
                                     >{{ permissionLabel(perm.name) }}</span
                                 >
                             </label>

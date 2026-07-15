@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import MenuEditableElement from './MenuEditableElement.vue';
-import { itemElementFor } from './types';
+import { itemElementFor, MENU_DEVICE_WIDTH } from './types';
 import type {
     ElementConfig,
     ItemLayoutSettings,
@@ -33,7 +33,7 @@ const props = withDefaults(
     }>(),
     {
         cover: false,
-        breakpoint: 'lg',
+        breakpoint: MENU_DEVICE_WIDTH.desktop,
         editable: false,
         selectedKey: null,
     },

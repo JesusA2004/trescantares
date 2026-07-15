@@ -119,7 +119,7 @@ function submit() {
                 <div class="space-y-4 xl:col-span-1">
                     <div class="tc-admin-card p-5">
                         <h3
-                            class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-[#fff7e6]"
+                            class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-700"
                         >
                             <ShieldCheck
                                 class="h-4 w-4 text-[var(--tc-blue)]"
@@ -135,11 +135,11 @@ function submit() {
                             :error="form.errors.name"
                         />
                         <p
-                            class="mt-2 text-xs text-gray-400 dark:text-white/45"
+                            class="mt-2 text-xs text-gray-400"
                         >
                             Usa minúsculas y sin espacios. Ej:
                             <code
-                                class="rounded bg-amber-50 px-1 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300"
+                                class="rounded bg-amber-50 px-1 text-amber-700"
                                 >editor-menu</code
                             >
                         </p>
@@ -149,7 +149,7 @@ function submit() {
                     <div class="tc-admin-card p-5">
                         <div class="mb-3 flex items-center justify-between">
                             <p
-                                class="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-white/50"
+                                class="text-xs font-semibold tracking-wide text-gray-500 uppercase"
                             >
                                 Permisos seleccionados
                             </p>
@@ -160,7 +160,7 @@ function submit() {
                                 >{{ totalSelected }}</span
                             >
                             <span
-                                class="pb-1 text-sm text-gray-400 dark:text-white/40"
+                                class="pb-1 text-sm text-gray-400"
                                 >/ {{ totalPermissions }}</span
                             >
                         </div>
@@ -239,7 +239,7 @@ function submit() {
                     >
                         <!-- Group header -->
                         <div
-                            class="flex cursor-pointer items-center justify-between border-b border-amber-100/60 bg-gradient-to-r from-amber-50/60 to-transparent px-5 py-3 dark:border-amber-400/15 dark:from-amber-400/8"
+                            class="flex cursor-pointer items-center justify-between border-b border-amber-100/60 bg-gradient-to-r from-amber-50/60 to-transparent px-5 py-3"
                             @click="toggleGroup(String(group), perms)"
                         >
                             <div class="flex items-center gap-2.5">
@@ -255,11 +255,11 @@ function submit() {
                                             ? 'text-[var(--tc-blue)]'
                                             : groupSomeSelected(perms)
                                               ? 'text-amber-500'
-                                              : 'text-gray-300 dark:text-white/25'
+                                              : 'text-gray-300'
                                     "
                                 />
                                 <span
-                                    class="text-sm font-semibold text-gray-800 dark:text-[#fff7e6]"
+                                    class="text-sm font-semibold text-gray-800"
                                 >
                                     {{ permissionGroupLabel(String(group)) }}
                                 </span>
@@ -332,7 +332,7 @@ function submit() {
                                     @change="togglePermission(perm.name)"
                                 />
                                 <span
-                                    class="text-sm text-gray-700 dark:text-[#fff7e6]/85"
+                                    class="text-sm text-gray-700"
                                     >{{ permissionLabel(perm.name) }}</span
                                 >
                             </label>
