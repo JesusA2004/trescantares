@@ -44,8 +44,10 @@ import {
     MENU_DEVICE_ORDER,
     MENU_DEVICE_WIDTH,
     categoryElementFor,
+    categoryElementKeysFor,
     hasOwnElementConfig,
     itemElementFor,
+    toAnchorCoordinates,
 } from '@/components/Public/Menu/types';
 import type {
     CategoryElementKey,
@@ -96,15 +98,74 @@ interface DevicePreset {
 }
 
 const DEVICES: DevicePreset[] = [
-    { key: 'mobile', label: 'Móvil', width: MENU_DEVICE_WIDTH.mobile, height: 844, icon: Smartphone },
-    { key: 'tablet', label: 'Tablet', width: MENU_DEVICE_WIDTH.tablet, height: 1024, icon: Tablet },
-    { key: 'desktop', label: 'Escritorio', width: MENU_DEVICE_WIDTH.desktop, height: 900, icon: Monitor },
+    {
+        key: 'mobile',
+        label: 'Móvil',
+        width: MENU_DEVICE_WIDTH.mobile,
+        height: 844,
+        icon: Smartphone,
+    },
+    {
+        key: 'tablet',
+        label: 'Tablet',
+        width: MENU_DEVICE_WIDTH.tablet,
+        height: 1024,
+        icon: Tablet,
+    },
+    {
+        key: 'desktop',
+        label: 'Escritorio',
+        width: MENU_DEVICE_WIDTH.desktop,
+        height: 900,
+        icon: Monitor,
+    },
 ];
 
+// Escritorio deja de ser un ancho fijo de 1440px: el documento interno del
+// iframe (y la resolución de configs para ESTA misma vista) usa el ancho
+// REAL de la ventana del navegador del administrador — así lo que se edita
+// a, p. ej., 1909px (o 1366px, más angosto que el ancla) es pixel-exacto
+// con lo que ve un visitante real en un monitor de ese ancho, en vez de
+// comparar siempre contra un iframe fijo de 1440px. El ancla de 1440 sigue
+// siendo la única representación que se PERSISTE (ver toAnchorCoordinates/
+// fromAnchorCoordinates en types.ts, que ahora escalan en CUALQUIER
+// dirección) — esto solo cambia a qué ancho real se edita/previsualiza esa
+// misma configuración Escritorio. El piso de 320 es solo una salvaguarda
+// contra valores degenerados (ventana ~0px), no un ancla de diseño.
+const desktopRealWidth = ref(MENU_DEVICE_WIDTH.desktop);
+
+function updateDesktopRealWidth() {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    desktopRealWidth.value = Math.max(320, window.innerWidth);
+}
+
+onMounted(() => {
+    updateDesktopRealWidth();
+    window.addEventListener('resize', updateDesktopRealWidth);
+});
+onUnmounted(() => window.removeEventListener('resize', updateDesktopRealWidth));
+
+/** Ancho real efectivo de cada vista — mobile/tablet siempre sus anclas fijas
+ * (390/768), desktop el ancho real de la ventana (ver desktopRealWidth). Se
+ * usa tanto para dimensionar el iframe como para resolver/guardar configs
+ * (ver resolveConfig/resolveAnchorConfig), así el número que muestra el
+ * inspector SIEMPRE coincide con lo que se ve en el lienzo. */
+const effectiveDeviceWidth = computed<Record<MenuDevice, number>>(() => ({
+    mobile: MENU_DEVICE_WIDTH.mobile,
+    tablet: MENU_DEVICE_WIDTH.tablet,
+    desktop: desktopRealWidth.value,
+}));
+
 const selectedDevice = ref<MenuDevice>('mobile');
-const activeDevice = computed(
-    () => DEVICES.find((d) => d.key === selectedDevice.value) ?? DEVICES[0],
-);
+const activeDevice = computed(() => {
+    const preset =
+        DEVICES.find((d) => d.key === selectedDevice.value) ?? DEVICES[0];
+
+    return { ...preset, width: effectiveDeviceWidth.value[preset.key] };
+});
 
 // El zoom es puramente visual (transform:scale sobre un envoltorio), nunca
 // se aplica al iframe mismo — así las coordenadas guardadas nunca dependen
@@ -121,7 +182,10 @@ function pickInitialZoom(device: DevicePreset): number {
     const reserved = 240 + 300 + 96; // sidebar + inspector + paddings/gaps
     const available = Math.max(280, window.innerWidth - reserved);
 
-    return Math.min(100, Math.max(30, Math.round((available / device.width) * 100)));
+    return Math.min(
+        100,
+        Math.max(30, Math.round((available / device.width) * 100)),
+    );
 }
 
 watch(
@@ -190,10 +254,7 @@ const activeIndex = computed(() =>
 const searchQuery = ref('');
 
 function normalize(text: string): string {
-    return text
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '');
+    return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 const visibleCategories = computed(() => {
@@ -310,9 +371,8 @@ function findCategoryGlobal(id: number): MenuCategoryData | null {
     return categories.find((c) => c.id === id) ?? null;
 }
 
-function resolveConfig(key: string, device: MenuDevice): ElementConfig {
+function resolveConfigAtWidth(key: string, width: number): ElementConfig {
     const parsed = parseKey(key);
-    const width = MENU_DEVICE_WIDTH[device];
 
     if (!parsed) {
         return itemElementFor({ layout_settings: null }, 'container', width);
@@ -334,6 +394,33 @@ function resolveConfig(key: string, device: MenuDevice): ElementConfig {
         { visual_settings: category?.visual_settings },
         parsed.element as CategoryElementKey,
         width,
+    );
+}
+
+/** Config tal como se VE/EDITA en el lienzo — para 'desktop' esto usa el
+ * ancho REAL de la ventana (ver effectiveDeviceWidth), así los valores que
+ * muestra el inspector siempre coinciden con lo que hay en pantalla. */
+function resolveConfig(key: string, device: MenuDevice): ElementConfig {
+    return resolveConfigAtWidth(key, effectiveDeviceWidth.value[device]);
+}
+
+/** Config CRUDA tal como se PERSISTE (siempre en el ancla 1440, nunca en el
+ * ancho real de edición) — se usa como línea base de deshacer/rehacer para
+ * que undo/redo nunca mezcle valores ya escalados con valores ancla. Ver
+ * toAnchorCoordinates/fromAnchorCoordinates. */
+function resolveAnchorConfig(key: string, device: MenuDevice): ElementConfig {
+    return resolveConfigAtWidth(key, MENU_DEVICE_WIDTH[device]);
+}
+
+/** Convierte una config REAL (tal como se ve/edita, ver resolveConfig) a la
+ * representación ancla que se persiste — chokepoint único que deben cruzar
+ * TODAS las escrituras del inspector (updateInspectorField/commitFieldNow)
+ * antes de tocar el mirror local o enviar el cambio al iframe. */
+function toAnchor(config: ElementConfig, device: MenuDevice): ElementConfig {
+    return toAnchorCoordinates(
+        config,
+        effectiveDeviceWidth.value[device],
+        MENU_DEVICE_WIDTH[device],
     );
 }
 
@@ -609,7 +696,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 // el deshacer.
 function onIframeCommit(key: string, config: ElementConfig) {
     const device = selectedDevice.value;
-    const prev = hasOwnConfig(key, device) ? resolveConfig(key, device) : null;
+    const prev = hasOwnConfig(key, device)
+        ? resolveAnchorConfig(key, device)
+        : null;
+    // config ya llega en espacio-ancla: el iframe (Menu.vue) convierte el
+    // arrastre/resize real (medido en su propio ancho, que para Escritorio
+    // puede ser cualquier ancho real de pantalla) antes de emitir 'commit'.
     applyMirror(key, config, device);
     recordUndo({ key, device, prev, next: config });
     pulseSaving();
@@ -654,11 +746,15 @@ function updateInspectorField<K extends keyof ElementConfig>(
 
     if (inspectorBurstPrev === undefined) {
         inspectorBurstPrev = hasOwnConfig(key, device)
-            ? resolveConfig(key, device)
+            ? resolveAnchorConfig(key, device)
             : null;
     }
 
-    const next = { ...resolveConfig(key, device), [field]: value };
+    // nextReal está en el espacio REAL en que se ve/edita (coincide con lo
+    // que muestra el inspector); se convierte UNA vez a espacio-ancla antes
+    // de tocar el mirror local o enviarlo al iframe — ver toAnchor().
+    const nextReal = { ...resolveConfig(key, device), [field]: value };
+    const next = toAnchor(nextReal, device);
     applyMirror(key, next, device);
     pulseSaving();
 
@@ -687,8 +783,11 @@ function commitFieldNow<K extends keyof ElementConfig>(
 
     const key = selectedKey.value;
     const device = selectedDevice.value;
-    const prev = hasOwnConfig(key, device) ? resolveConfig(key, device) : null;
-    const next = { ...resolveConfig(key, device), [field]: value };
+    const prev = hasOwnConfig(key, device)
+        ? resolveAnchorConfig(key, device)
+        : null;
+    const nextReal = { ...resolveConfig(key, device), [field]: value };
+    const next = toAnchor(nextReal, device);
     recordUndo({ key, device, prev, next });
     applyChange(key, device, next);
 }
@@ -705,6 +804,31 @@ function toggleAutoWidth(auto: boolean) {
         'width',
         auto ? null : Math.round(inspectorConfig.value?.width ?? 200),
     );
+}
+
+/** Restaura solo los ajustes de "la imagen dentro del bloque" (encuadre) —
+ * a propósito NO toca tamaño/posición/capa del bloque en sí, que tienen sus
+ * propios botones "Restaurar {vista}"/"Restaurar las tres vistas". */
+function restoreImageAdjustments() {
+    if (!selectedKey.value) {
+        return;
+    }
+
+    const key = selectedKey.value;
+    const device = selectedDevice.value;
+    const prev = hasOwnConfig(key, device)
+        ? resolveAnchorConfig(key, device)
+        : null;
+    const nextReal: ElementConfig = {
+        ...resolveConfig(key, device),
+        fit: null,
+        inner_scale: null,
+        object_x: null,
+        object_y: null,
+    };
+    const next = toAnchor(nextReal, device);
+    recordUndo({ key, device, prev, next });
+    applyChange(key, device, next);
 }
 
 function toggleLock() {
@@ -764,7 +888,7 @@ function restoreCurrentView() {
 
     const key = selectedKey.value;
     const device = selectedDevice.value;
-    const prev = resolveConfig(key, device);
+    const prev = resolveAnchorConfig(key, device);
     recordUndo({ key, device, prev, next: null });
     applyChange(key, device, null);
 }
@@ -787,7 +911,7 @@ async function restoreAllViews() {
 
     for (const device of MENU_DEVICE_ORDER) {
         if (hasOwnConfig(key, device)) {
-            const prev = resolveConfig(key, device);
+            const prev = resolveAnchorConfig(key, device);
             recordUndo({ key, device, prev, next: null });
             applyChange(key, device, null);
         }
@@ -958,40 +1082,6 @@ function itemElementKeys(item: MenuItemData): ItemElementKey[] {
     return keys;
 }
 
-function categoryElementKeys(cat: MenuCategoryData): CategoryElementKey[] {
-    const keys: CategoryElementKey[] = ['title'];
-
-    if (cat.subtitle) {
-        keys.push('subtitle');
-    }
-
-    if (cat.tagline) {
-        keys.push('tagline');
-    }
-
-    if (cat.tagline_sub) {
-        keys.push('tagline_sub');
-    }
-
-    if (cat.title_image_url) {
-        keys.push('title_image');
-    }
-
-    if (cat.subtitle_image_url) {
-        keys.push('subtitle_image');
-    }
-
-    if (cat.tagline_image_url) {
-        keys.push('tagline_image');
-    }
-
-    if (cat.image_url) {
-        keys.push('image');
-    }
-
-    return keys;
-}
-
 const expandedItems = reactive<Set<number>>(new Set());
 
 function toggleExpanded(id: number) {
@@ -1009,8 +1099,10 @@ function isElementLocked(key: string): boolean {
 function toggleElementLock(key: string) {
     const device = selectedDevice.value;
     const config = resolveConfig(key, device);
-    const prev = hasOwnConfig(key, device) ? config : null;
-    const next = { ...config, locked: !config.locked };
+    const prev = hasOwnConfig(key, device)
+        ? resolveAnchorConfig(key, device)
+        : null;
+    const next = toAnchor({ ...config, locked: !config.locked }, device);
     recordUndo({ key, device, prev, next });
     applyChange(key, device, next);
 }
@@ -1039,8 +1131,10 @@ function toggleElementLock(key: string) {
                     :key="device.key"
                     type="button"
                     class="tc-device-btn"
-                    :class="{ 'tc-device-btn--active': selectedDevice === device.key }"
-                    :title="`${device.label} (${device.width}px)`"
+                    :class="{
+                        'tc-device-btn--active': selectedDevice === device.key,
+                    }"
+                    :title="`${device.label} (${effectiveDeviceWidth[device.key]}px)`"
                     @click="selectedDevice = device.key"
                 >
                     <component :is="device.icon" class="h-4 w-4" />
@@ -1048,10 +1142,22 @@ function toggleElementLock(key: string) {
                 </button>
             </div>
 
-            <div class="tc-save-status" :class="`tc-save-status--${toolbarStatus}`">
-                <LoaderCircle v-if="toolbarStatus === 'saving'" class="h-3.5 w-3.5 animate-spin" />
-                <CircleCheckBig v-else-if="toolbarStatus === 'saved'" class="h-3.5 w-3.5" />
-                <CircleAlert v-else-if="toolbarStatus === 'error'" class="h-3.5 w-3.5" />
+            <div
+                class="tc-save-status"
+                :class="`tc-save-status--${toolbarStatus}`"
+            >
+                <LoaderCircle
+                    v-if="toolbarStatus === 'saving'"
+                    class="h-3.5 w-3.5 animate-spin"
+                />
+                <CircleCheckBig
+                    v-else-if="toolbarStatus === 'saved'"
+                    class="h-3.5 w-3.5"
+                />
+                <CircleAlert
+                    v-else-if="toolbarStatus === 'error'"
+                    class="h-3.5 w-3.5"
+                />
                 <span>{{
                     toolbarStatus === 'saving'
                         ? 'Guardando…'
@@ -1129,13 +1235,19 @@ function toggleElementLock(key: string) {
                         <button
                             type="button"
                             class="tc-section-btn"
-                            :class="{ 'tc-section-btn--active': cat.id === activeCategoryId }"
+                            :class="{
+                                'tc-section-btn--active':
+                                    cat.id === activeCategoryId,
+                            }"
                             @click="selectCategory(cat.id)"
                         >
                             {{ cat.name }}
                         </button>
                     </li>
-                    <li v-if="!visibleCategories.length" class="px-2 py-3 text-xs text-gray-400">
+                    <li
+                        v-if="!visibleCategories.length"
+                        class="px-2 py-3 text-xs text-gray-400"
+                    >
                         Sin resultados para «{{ searchQuery }}».
                     </li>
                 </ul>
@@ -1149,7 +1261,9 @@ function toggleElementLock(key: string) {
                     >
                         <ChevronLeft class="mr-1 inline h-3.5 w-3.5" />Anterior
                     </button>
-                    <span class="text-xs font-medium whitespace-nowrap text-gray-400">
+                    <span
+                        class="text-xs font-medium whitespace-nowrap text-gray-400"
+                    >
                         {{ activeIndex + 1 }}/{{ categories.length }}
                     </span>
                     <button
@@ -1158,7 +1272,9 @@ function toggleElementLock(key: string) {
                         :disabled="activeIndex >= categories.length - 1"
                         @click="goToIndex(activeIndex + 1)"
                     >
-                        Siguiente<ChevronRight class="ml-1 inline h-3.5 w-3.5" />
+                        Siguiente<ChevronRight
+                            class="ml-1 inline h-3.5 w-3.5"
+                        />
                     </button>
                 </div>
 
@@ -1166,7 +1282,7 @@ function toggleElementLock(key: string) {
                     <h3 class="tc-sidebar-heading">Elementos de la sección</h3>
                     <ul class="mb-4 space-y-0.5">
                         <li
-                            v-for="el in categoryElementKeys(activeCategory)"
+                            v-for="el in categoryElementKeysFor(activeCategory)"
                             :key="el"
                             class="flex items-center gap-1"
                         >
@@ -1175,7 +1291,8 @@ function toggleElementLock(key: string) {
                                 class="tc-element-btn"
                                 :class="{
                                     'tc-element-btn--active':
-                                        selectedKey === `category-${activeCategory.id}:${el}`,
+                                        selectedKey ===
+                                        `category-${activeCategory.id}:${el}`,
                                 }"
                                 @click="
                                     onSelectFromSidebar(
@@ -1183,22 +1300,38 @@ function toggleElementLock(key: string) {
                                     )
                                 "
                             >
-                                <component :is="iconForElement(el)" class="h-3.5 w-3.5 shrink-0 opacity-60" />
-                                <span class="truncate">{{ CATEGORY_ELEMENT_LABELS[el] }}</span>
+                                <component
+                                    :is="iconForElement(el)"
+                                    class="h-3.5 w-3.5 shrink-0 opacity-60"
+                                />
+                                <span class="truncate">{{
+                                    CATEGORY_ELEMENT_LABELS[el]
+                                }}</span>
                             </button>
                             <button
                                 type="button"
                                 class="tc-lock-btn"
                                 :aria-label="
-                                    isElementLocked(`category-${activeCategory.id}:${el}`)
+                                    isElementLocked(
+                                        `category-${activeCategory.id}:${el}`,
+                                    )
                                         ? 'Desbloquear elemento'
                                         : 'Bloquear elemento'
                                 "
                                 @click="
-                                    toggleElementLock(`category-${activeCategory.id}:${el}`)
+                                    toggleElementLock(
+                                        `category-${activeCategory.id}:${el}`,
+                                    )
                                 "
                             >
-                                <Lock v-if="isElementLocked(`category-${activeCategory.id}:${el}`)" class="h-3 w-3" />
+                                <Lock
+                                    v-if="
+                                        isElementLocked(
+                                            `category-${activeCategory.id}:${el}`,
+                                        )
+                                    "
+                                    class="h-3 w-3"
+                                />
                                 <LockOpen v-else class="h-3 w-3" />
                             </button>
                         </li>
@@ -1208,24 +1341,34 @@ function toggleElementLock(key: string) {
                 <template v-if="activeCategory && visibleItems.length">
                     <h3 class="tc-sidebar-heading">
                         Platillos
-                        <span v-if="saving" class="ml-1 font-normal text-[var(--tc-blue)] normal-case">
+                        <span
+                            v-if="saving"
+                            class="ml-1 font-normal text-[var(--tc-blue)] normal-case"
+                        >
                             guardando…
                         </span>
                     </h3>
-                    <ul :ref="(el) => bindReorderZone(el as HTMLElement)" class="space-y-0.5">
+                    <ul
+                        :ref="(el) => bindReorderZone(el as HTMLElement)"
+                        class="space-y-0.5"
+                    >
                         <li
                             v-for="item in visibleItems"
                             :key="item.id"
                             data-drag-row
                             class="rounded-lg text-xs"
-                            :class="{ 'opacity-40': dragging?.item.id === item.id }"
+                            :class="{
+                                'opacity-40': dragging?.item.id === item.id,
+                            }"
                         >
                             <div class="flex items-center gap-1.5 px-1.5 py-1">
                                 <button
                                     type="button"
                                     class="cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing"
                                     aria-label="Arrastrar para reordenar"
-                                    @pointerdown="onReorderHandleDown(item, $event)"
+                                    @pointerdown="
+                                        onReorderHandleDown(item, $event)
+                                    "
                                 >
                                     <GripVertical class="h-3.5 w-3.5" />
                                 </button>
@@ -1236,12 +1379,19 @@ function toggleElementLock(key: string) {
                                 >
                                     <ChevronRight
                                         class="mr-0.5 inline h-3 w-3 transition-transform"
-                                        :class="{ 'rotate-90': expandedItems.has(item.id) }"
+                                        :class="{
+                                            'rotate-90': expandedItems.has(
+                                                item.id,
+                                            ),
+                                        }"
                                     />
                                     {{ item.name }}
                                 </button>
                             </div>
-                            <ul v-if="expandedItems.has(item.id)" class="mb-1 ml-6 space-y-0.5">
+                            <ul
+                                v-if="expandedItems.has(item.id)"
+                                class="mb-1 ml-6 space-y-0.5"
+                            >
                                 <li
                                     v-for="el in itemElementKeys(item)"
                                     :key="el"
@@ -1252,24 +1402,47 @@ function toggleElementLock(key: string) {
                                         class="tc-element-btn"
                                         :class="{
                                             'tc-element-btn--active':
-                                                selectedKey === `item-${item.id}:${el}`,
+                                                selectedKey ===
+                                                `item-${item.id}:${el}`,
                                         }"
-                                        @click="onSelectFromSidebar(`item-${item.id}:${el}`)"
+                                        @click="
+                                            onSelectFromSidebar(
+                                                `item-${item.id}:${el}`,
+                                            )
+                                        "
                                     >
-                                        <component :is="iconForElement(el)" class="h-3.5 w-3.5 shrink-0 opacity-60" />
-                                        <span class="truncate">{{ ITEM_ELEMENT_LABELS[el] }}</span>
+                                        <component
+                                            :is="iconForElement(el)"
+                                            class="h-3.5 w-3.5 shrink-0 opacity-60"
+                                        />
+                                        <span class="truncate">{{
+                                            ITEM_ELEMENT_LABELS[el]
+                                        }}</span>
                                     </button>
                                     <button
                                         type="button"
                                         class="tc-lock-btn"
                                         :aria-label="
-                                            isElementLocked(`item-${item.id}:${el}`)
+                                            isElementLocked(
+                                                `item-${item.id}:${el}`,
+                                            )
                                                 ? 'Desbloquear elemento'
                                                 : 'Bloquear elemento'
                                         "
-                                        @click="toggleElementLock(`item-${item.id}:${el}`)"
+                                        @click="
+                                            toggleElementLock(
+                                                `item-${item.id}:${el}`,
+                                            )
+                                        "
                                     >
-                                        <Lock v-if="isElementLocked(`item-${item.id}:${el}`)" class="h-3 w-3" />
+                                        <Lock
+                                            v-if="
+                                                isElementLocked(
+                                                    `item-${item.id}:${el}`,
+                                                )
+                                            "
+                                            class="h-3 w-3"
+                                        />
                                         <LockOpen v-else class="h-3 w-3" />
                                     </button>
                                 </li>
@@ -1285,9 +1458,14 @@ function toggleElementLock(key: string) {
                     <div
                         v-if="!previewReady"
                         class="tc-editor-skeleton"
-                        :style="{ width: activeDevice.width * scale + 'px', height: activeDevice.height * scale + 'px' }"
+                        :style="{
+                            width: activeDevice.width * scale + 'px',
+                            height: activeDevice.height * scale + 'px',
+                        }"
                     >
-                        <LoaderCircle class="h-6 w-6 animate-spin text-gray-300" />
+                        <LoaderCircle
+                            class="h-6 w-6 animate-spin text-gray-300"
+                        />
                     </div>
                     <div
                         class="tc-editor-canvas-scaled"
@@ -1312,12 +1490,17 @@ function toggleElementLock(key: string) {
                     </div>
                 </div>
                 <p class="mt-2 text-xs text-gray-400">
-                    Estás editando la vista <strong>{{ activeDevice.label }}</strong>.
-                    Haz clic en cualquier elemento del menú para seleccionarlo,
-                    arrástralo para moverlo, usa la manija inferior derecha para
-                    redimensionar y las flechas del teclado para ajustes finos
-                    (Shift = 10px). Esta vista previa es el menú público real —
-                    lo que ves aquí es exactamente lo que verá el visitante.
+                    Estás editando la vista
+                    <strong>{{ activeDevice.label }}</strong
+                    ><span v-if="selectedDevice === 'desktop'">
+                        — {{ activeDevice.width }} px (ancho real de tu
+                        ventana)</span
+                    >. Haz clic en cualquier elemento del menú para
+                    seleccionarlo, arrástralo para moverlo, usa la manija
+                    inferior derecha para redimensionar y las flechas del
+                    teclado para ajustes finos (Shift = 10px). Esta vista previa
+                    es el menú público real — lo que ves aquí es exactamente lo
+                    que verá el visitante.
                 </p>
             </div>
 
@@ -1327,8 +1510,8 @@ function toggleElementLock(key: string) {
                     <div class="tc-inspector-empty">
                         <Settings2 class="h-8 w-8 text-gray-200" />
                         <p class="text-sm text-gray-400">
-                            Selecciona un elemento en el lienzo o en la lista de la
-                            izquierda para editarlo.
+                            Selecciona un elemento en el lienzo o en la lista de
+                            la izquierda para editarlo.
                         </p>
                     </div>
                 </template>
@@ -1339,7 +1522,7 @@ function toggleElementLock(key: string) {
                     </h3>
 
                     <div class="mb-4 space-y-2.5">
-                        <p class="tc-inspector-label">Tamaño</p>
+                        <p class="tc-inspector-label">Tamaño del bloque</p>
                         <div class="grid grid-cols-2 gap-2">
                             <div class="tc-field">
                                 <label class="tc-field-label">Ancho (px)</label>
@@ -1351,16 +1534,28 @@ function toggleElementLock(key: string) {
                                     @input="
                                         updateInspectorField(
                                             'width',
-                                            Number((($event.target) as HTMLInputElement).value),
+                                            Number(
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).value,
+                                            ),
                                         )
                                     "
                                 />
-                                <label class="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                                <label
+                                    class="mt-1 flex items-center gap-1.5 text-xs text-gray-500"
+                                >
                                     <input
                                         type="checkbox"
-                                        :checked="inspectorConfig.width === null"
+                                        :checked="
+                                            inspectorConfig.width === null
+                                        "
                                         @change="
-                                            toggleAutoWidth((($event.target) as HTMLInputElement).checked)
+                                            toggleAutoWidth(
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).checked,
+                                            )
                                         "
                                     />
                                     Automático
@@ -1376,16 +1571,28 @@ function toggleElementLock(key: string) {
                                     @input="
                                         updateInspectorField(
                                             'height',
-                                            Number((($event.target) as HTMLInputElement).value),
+                                            Number(
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).value,
+                                            ),
                                         )
                                     "
                                 />
-                                <label class="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                                <label
+                                    class="mt-1 flex items-center gap-1.5 text-xs text-gray-500"
+                                >
                                     <input
                                         type="checkbox"
-                                        :checked="inspectorConfig.height === null"
+                                        :checked="
+                                            inspectorConfig.height === null
+                                        "
                                         @change="
-                                            toggleAutoHeight((($event.target) as HTMLInputElement).checked)
+                                            toggleAutoHeight(
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).checked,
+                                            )
                                         "
                                     />
                                     Proporcional
@@ -1395,27 +1602,63 @@ function toggleElementLock(key: string) {
 
                         <p class="tc-inspector-label pt-1">Posición y capa</p>
                         <div class="flex flex-wrap gap-1.5">
-                            <button type="button" class="tc-btn-secondary text-xs" @click="centerHorizontally">
-                                <AlignHorizontalJustifyCenter class="mr-1 inline h-3.5 w-3.5" />Centrar H
-                            </button>
-                            <button type="button" class="tc-btn-secondary text-xs" @click="centerVertically">
-                                <AlignVerticalJustifyCenter class="mr-1 inline h-3.5 w-3.5" />Centrar V
-                            </button>
-                            <button type="button" class="tc-btn-secondary text-xs" @click="bringToFront">
-                                <ArrowUpToLine class="mr-1 inline h-3.5 w-3.5" />Al frente
-                            </button>
-                            <button type="button" class="tc-btn-secondary text-xs" @click="sendToBack">
-                                <ArrowDownToLine class="mr-1 inline h-3.5 w-3.5" />Al fondo
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="centerHorizontally"
+                            >
+                                <AlignHorizontalJustifyCenter
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />Centrar H
                             </button>
                             <button
                                 type="button"
                                 class="tc-btn-secondary text-xs"
-                                :class="{ 'tc-badge-pink': inspectorConfig.locked }"
+                                @click="centerVertically"
+                            >
+                                <AlignVerticalJustifyCenter
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />Centrar V
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="bringToFront"
+                            >
+                                <ArrowUpToLine
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />Al frente
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="sendToBack"
+                            >
+                                <ArrowDownToLine
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />Al fondo
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                :class="{
+                                    'tc-badge-pink': inspectorConfig.locked,
+                                }"
                                 @click="toggleLock"
                             >
-                                <Lock v-if="inspectorConfig.locked" class="mr-1 inline h-3.5 w-3.5" />
-                                <LockOpen v-else class="mr-1 inline h-3.5 w-3.5" />
-                                {{ inspectorConfig.locked ? 'Bloqueado' : 'Bloquear' }}
+                                <Lock
+                                    v-if="inspectorConfig.locked"
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />
+                                <LockOpen
+                                    v-else
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />
+                                {{
+                                    inspectorConfig.locked
+                                        ? 'Bloqueado'
+                                        : 'Bloquear'
+                                }}
                             </button>
                         </div>
 
@@ -1426,15 +1669,27 @@ function toggleElementLock(key: string) {
                                 :disabled="!selectedHasOwnConfig"
                                 @click="restoreCurrentView"
                             >
-                                <RotateCcw class="mr-1 inline h-3.5 w-3.5" />Restaurar {{ activeDevice.label.toLowerCase() }}
+                                <RotateCcw
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />Restaurar
+                                {{ activeDevice.label.toLowerCase() }}
                             </button>
-                            <button type="button" class="tc-btn-secondary text-xs" @click="restoreAllViews">
-                                <RotateCcw class="mr-1 inline h-3.5 w-3.5" />Restaurar las tres vistas
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="restoreAllViews"
+                            >
+                                <RotateCcw
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />Restaurar las tres vistas
                             </button>
                         </div>
                     </div>
 
-                    <div v-if="selectedKind === 'text'" class="mb-4 space-y-2.5 border-t border-gray-100 pt-3">
+                    <div
+                        v-if="selectedKind === 'text'"
+                        class="mb-4 space-y-2.5 border-t border-gray-100 pt-3"
+                    >
                         <p class="tc-inspector-label">Texto</p>
                         <div class="grid grid-cols-2 gap-2">
                             <TcInput
@@ -1442,7 +1697,10 @@ function toggleElementLock(key: string) {
                                 type="number"
                                 :model-value="inspectorConfig.font_size ?? ''"
                                 @update:model-value="
-                                    updateInspectorField('font_size', $event === '' ? null : Number($event))
+                                    updateInspectorField(
+                                        'font_size',
+                                        $event === '' ? null : Number($event),
+                                    )
                                 "
                             />
                             <TcInput
@@ -1450,7 +1708,10 @@ function toggleElementLock(key: string) {
                                 type="number"
                                 :model-value="inspectorConfig.max_width ?? ''"
                                 @update:model-value="
-                                    updateInspectorField('max_width', $event === '' ? null : Number($event))
+                                    updateInspectorField(
+                                        'max_width',
+                                        $event === '' ? null : Number($event),
+                                    )
                                 "
                             />
                             <TcSelect
@@ -1462,7 +1723,10 @@ function toggleElementLock(key: string) {
                                 ]"
                                 :model-value="inspectorConfig.align ?? ''"
                                 @update:model-value="
-                                    updateInspectorField('align', ($event || null) as any)
+                                    updateInspectorField(
+                                        'align',
+                                        ($event || null) as any,
+                                    )
                                 "
                             />
                             <TcInput
@@ -1470,14 +1734,22 @@ function toggleElementLock(key: string) {
                                 :model-value="inspectorConfig.color ?? ''"
                                 placeholder="#144e8f"
                                 @update:model-value="
-                                    updateInspectorField('color', ($event || null) as any)
+                                    updateInspectorField(
+                                        'color',
+                                        ($event || null) as any,
+                                    )
                                 "
                             />
                         </div>
                     </div>
 
-                    <div v-if="selectedKind === 'image'" class="mb-4 space-y-2.5 border-t border-gray-100 pt-3">
-                        <p class="tc-inspector-label">Imagen</p>
+                    <div
+                        v-if="selectedKind === 'image'"
+                        class="mb-4 space-y-2.5 border-t border-gray-100 pt-3"
+                    >
+                        <p class="tc-inspector-label">
+                            Imagen dentro del bloque
+                        </p>
                         <div class="grid grid-cols-2 gap-2">
                             <TcSelect
                                 label="Ajuste"
@@ -1487,10 +1759,56 @@ function toggleElementLock(key: string) {
                                 ]"
                                 :model-value="inspectorConfig.fit ?? ''"
                                 @update:model-value="
-                                    updateInspectorField('fit', ($event || null) as any)
+                                    updateInspectorField(
+                                        'fit',
+                                        ($event || null) as any,
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Escala interna"
+                                type="number"
+                                step="0.05"
+                                :model-value="inspectorConfig.inner_scale ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'inner_scale',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Posición X (%)"
+                                type="number"
+                                :model-value="inspectorConfig.object_x ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'object_x',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Posición Y (%)"
+                                type="number"
+                                :model-value="inspectorConfig.object_y ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'object_y',
+                                        $event === '' ? null : Number($event),
+                                    )
                                 "
                             />
                         </div>
+                        <button
+                            type="button"
+                            class="tc-btn-secondary text-xs"
+                            @click="restoreImageAdjustments"
+                        >
+                            <RotateCcw
+                                class="mr-1 inline h-3.5 w-3.5"
+                            />Restaurar imagen
+                        </button>
                     </div>
 
                     <details class="tc-advanced">
@@ -1502,25 +1820,39 @@ function toggleElementLock(key: string) {
                                 label="X (px)"
                                 type="number"
                                 :model-value="Math.round(inspectorConfig.x)"
-                                @update:model-value="updateInspectorField('x', Number($event))"
+                                @update:model-value="
+                                    updateInspectorField('x', Number($event))
+                                "
                             />
                             <TcInput
                                 label="Y (px)"
                                 type="number"
                                 :model-value="Math.round(inspectorConfig.y)"
-                                @update:model-value="updateInspectorField('y', Number($event))"
+                                @update:model-value="
+                                    updateInspectorField('y', Number($event))
+                                "
                             />
                             <TcInput
                                 label="Rotación (°)"
                                 type="number"
                                 :model-value="inspectorConfig.rotation"
-                                @update:model-value="updateInspectorField('rotation', Number($event))"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'rotation',
+                                        Number($event),
+                                    )
+                                "
                             />
                             <TcInput
                                 label="Nivel (z-index)"
                                 type="number"
                                 :model-value="inspectorConfig.z_index"
-                                @update:model-value="updateInspectorField('z_index', Number($event))"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'z_index',
+                                        Number($event),
+                                    )
+                                "
                             />
                             <TcInput
                                 v-if="selectedKind === 'text'"
@@ -1529,7 +1861,10 @@ function toggleElementLock(key: string) {
                                 step="0.05"
                                 :model-value="inspectorConfig.line_height ?? ''"
                                 @update:model-value="
-                                    updateInspectorField('line_height', $event === '' ? null : Number($event))
+                                    updateInspectorField(
+                                        'line_height',
+                                        $event === '' ? null : Number($event),
+                                    )
                                 "
                             />
                             <TcInput
@@ -1537,37 +1872,14 @@ function toggleElementLock(key: string) {
                                 label="Espaciado (px)"
                                 type="number"
                                 step="0.1"
-                                :model-value="inspectorConfig.letter_spacing ?? ''"
-                                @update:model-value="
-                                    updateInspectorField('letter_spacing', $event === '' ? null : Number($event))
+                                :model-value="
+                                    inspectorConfig.letter_spacing ?? ''
                                 "
-                            />
-                            <TcInput
-                                v-if="selectedKind === 'image'"
-                                label="Zoom interno"
-                                type="number"
-                                step="0.05"
-                                :model-value="inspectorConfig.inner_scale ?? ''"
                                 @update:model-value="
-                                    updateInspectorField('inner_scale', $event === '' ? null : Number($event))
-                                "
-                            />
-                            <TcInput
-                                v-if="selectedKind === 'image'"
-                                label="Posición X (%)"
-                                type="number"
-                                :model-value="inspectorConfig.object_x ?? ''"
-                                @update:model-value="
-                                    updateInspectorField('object_x', $event === '' ? null : Number($event))
-                                "
-                            />
-                            <TcInput
-                                v-if="selectedKind === 'image'"
-                                label="Posición Y (%)"
-                                type="number"
-                                :model-value="inspectorConfig.object_y ?? ''"
-                                @update:model-value="
-                                    updateInspectorField('object_y', $event === '' ? null : Number($event))
+                                    updateInspectorField(
+                                        'letter_spacing',
+                                        $event === '' ? null : Number($event),
+                                    )
                                 "
                             />
                             <TcInput
@@ -1575,7 +1887,12 @@ function toggleElementLock(key: string) {
                                 type="number"
                                 step="0.05"
                                 :model-value="inspectorConfig.scale"
-                                @update:model-value="updateInspectorField('scale', Number($event))"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'scale',
+                                        Number($event),
+                                    )
+                                "
                             />
                         </div>
                     </details>
@@ -1586,7 +1903,9 @@ function toggleElementLock(key: string) {
                             <TcInput
                                 label="Nombre"
                                 :model-value="selectedItem.name"
-                                @update:model-value="updateQuickField('name', $event)"
+                                @update:model-value="
+                                    updateQuickField('name', $event)
+                                "
                             />
                             <div class="grid grid-cols-2 gap-2">
                                 <TcInput
@@ -1594,33 +1913,48 @@ function toggleElementLock(key: string) {
                                     type="number"
                                     step="0.01"
                                     :model-value="selectedItem.price"
-                                    @update:model-value="updateQuickField('price', $event)"
+                                    @update:model-value="
+                                        updateQuickField('price', $event)
+                                    "
                                 />
                                 <TcInput
                                     label="Precio secundario"
                                     type="number"
                                     step="0.01"
-                                    :model-value="selectedItem.price_secondary ?? ''"
-                                    @update:model-value="updateQuickField('price_secondary', $event)"
+                                    :model-value="
+                                        selectedItem.price_secondary ?? ''
+                                    "
+                                    @update:model-value="
+                                        updateQuickField(
+                                            'price_secondary',
+                                            $event,
+                                        )
+                                    "
                                 />
                             </div>
                             <TcInput
                                 label="Descripción"
                                 :model-value="selectedItem.description ?? ''"
-                                @update:model-value="updateQuickField('description', $event)"
+                                @update:model-value="
+                                    updateQuickField('description', $event)
+                                "
                             />
                             <TcSelect
                                 v-if="zoneOptions.length"
                                 label="Zona"
                                 :options="zoneOptions"
                                 :model-value="selectedItem.zone ?? ''"
-                                @update:model-value="updateQuickField('zone', $event)"
+                                @update:model-value="
+                                    updateQuickField('zone', $event)
+                                "
                             />
                             <TcSwitch
                                 label="Activo"
                                 description="Visible en el menú"
                                 :model-value="selectedItem.is_active"
-                                @update:model-value="updateQuickField('is_active', $event)"
+                                @update:model-value="
+                                    updateQuickField('is_active', $event)
+                                "
                             />
                         </div>
                     </template>

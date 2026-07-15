@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 
+/** Punto en común entre Page y FrameLocator: ambos exponen .locator(). */
+type LocatorSource = Pick<Page, 'locator'>;
+
 /**
  * Verificación WYSIWYG real en navegador: lo que se coloca en
  * /admin/menu-editor para una de las tres vistas configurables (Móvil,
@@ -27,7 +30,12 @@ const DEVICES = [
 /** Anchos intermedios reales de navegador que el administrador NUNCA
  * configura manualmente — deben quedar interpolados automáticamente entre
  * las dos vistas configurables más cercanas. */
-const INTERMEDIATE_WIDTHS = [600, 1024, 1200, 1366, 1920];
+const INTERMEDIATE_WIDTHS = [600, 1024, 1200, 1366, 1536, 1909, 1920];
+
+/** Anchos reales de escritorio (>1440, el ancla) en los que Escritorio debe
+ * verse FLUIDO (nunca congelado) — editor e iframe siempre al mismo ancho
+ * real de ventana, ver desktopRealWidth en Index.vue. */
+const WIDE_DESKTOP_WIDTHS = [1366, 1536, 1909];
 
 async function login(page: Page) {
     await page.goto('/login');
@@ -115,6 +123,116 @@ async function setInspectorXY(page: Page, x: number, y: number) {
     await page.waitForTimeout(500);
 }
 
+/** Abre el editor a un ancho REAL de ventana ≥1440 y selecciona Escritorio.
+ * El ancho de "Escritorio" ya no es un valor fijo de 1440px: usa
+ * window.innerWidth de la propia ventana del administrador (ver
+ * desktopRealWidth en Index.vue) — por eso aquí se fija el viewport ANTES
+ * de navegar, para que se lea correctamente al montar. */
+async function openEditorAtRealDesktopWidth(page: Page, width: number) {
+    await page.setViewportSize({ width, height: 1200 });
+
+    return openEditorAtDevice(page, 'Escritorio');
+}
+
+/** Campo "Ancho (px)" del bloque de tamaño del inspector (fuera del
+ * acordeón de ajustes avanzados, siempre visible) — el mismo .tc-field
+ * también contiene la casilla "Automático", así que hay que apuntar al
+ * input numérico específicamente. */
+function widthField(page: Page) {
+    return page
+        .locator('aside.tc-editor-inspector .tc-field')
+        .filter({ hasText: 'Ancho (px)' })
+        .locator('input[type="number"]');
+}
+
+function heightField(page: Page) {
+    return page
+        .locator('aside.tc-editor-inspector .tc-field')
+        .filter({ hasText: 'Alto (px)' })
+        .locator('input[type="number"]');
+}
+
+/** Casilla "Automático" del campo Ancho — el input numérico está
+ * deshabilitado mientras el ancho sea automático (null). */
+function autoWidthCheckbox(page: Page) {
+    return page
+        .locator('aside.tc-editor-inspector .tc-field')
+        .filter({ hasText: 'Ancho (px)' })
+        .locator('input[type="checkbox"]');
+}
+
+async function setInspectorWidth(page: Page, width: number) {
+    if (await autoWidthCheckbox(page).isChecked()) {
+        await autoWidthCheckbox(page).setChecked(false);
+        await page.waitForTimeout(300);
+    }
+
+    await widthField(page).fill(String(width));
+    await widthField(page).press('Tab');
+    await page.waitForTimeout(500);
+}
+
+/** Casilla "Proporcional" (alto automático) del bloque "Tamaño del bloque". */
+function proportionalCheckbox(page: Page) {
+    return page
+        .locator('aside.tc-editor-inspector .tc-field')
+        .filter({ hasText: 'Alto (px)' })
+        .locator('input[type="checkbox"]');
+}
+
+async function setProportional(page: Page, on: boolean) {
+    const checkbox = proportionalCheckbox(page);
+    const checked = await checkbox.isChecked();
+
+    if (checked !== on) {
+        await checkbox.setChecked(on);
+        await page.waitForTimeout(500);
+    }
+}
+
+/** Encuentra la clave real de la imagen de título/subtítulo/tagline de UNA
+ * categoría concreta por su contenido semántico (alt=nombre de la
+ * categoría), NUNCA por "la primera coincidencia en el DOM" — el iframe
+ * renderiza TODAS las categorías en una sola página larga, así que buscar
+ * solo por sufijo ':title_image' encuentra siempre la de Pozole (la primera
+ * categoría con imagen de título), sin importar cuál esté realmente
+ * seleccionada. Evita además adivinar IDs de base de datos. */
+async function imageElementKeyByAlt(
+    locatorSource: LocatorSource,
+    altText: string,
+): Promise<string> {
+    const key = await locatorSource
+        .locator(`img[alt="${altText}"]`)
+        .first()
+        .evaluate((img) => img.closest('[data-element-key]')?.getAttribute('data-element-key') ?? null);
+
+    expect(key, `clave de imagen encontrada para alt="${altText}"`).toBeTruthy();
+
+    return key as string;
+}
+
+/** Sección `<section id="cat-N">` que contiene la imagen de título con el
+ * alt dado — para localizar OTRAS claves de la MISMA categoría (p. ej. su
+ * subtitle_image) cuando esas otras no tienen un alt único propio. */
+function categorySectionByTitleAlt(locatorSource: LocatorSource, altText: string) {
+    return locatorSource
+        .locator('[id^="cat-"]')
+        .filter({ has: locatorSource.locator(`img[alt="${altText}"]`) });
+}
+
+/** Todas las etiquetas de elemento visibles en la barra lateral para la
+ * sección activa — usado para comprobar que no hay controles fantasma. */
+async function visibleElementLabelsFor(page: Page, categoryName: string): Promise<string[]> {
+    const sidebar = page.locator('aside.tc-editor-sidebar');
+    await sidebar.getByRole('button', { name: categoryName, exact: true }).click();
+    await page.waitForTimeout(150);
+
+    const heading = sidebar.locator('h3', { hasText: 'Elementos de la sección' });
+    const list = heading.locator('xpath=following-sibling::ul[1]');
+
+    return list.locator('button.tc-element-btn').allInnerTexts();
+}
+
 interface Rect {
     x: number;
     y: number;
@@ -152,6 +270,32 @@ async function editorRectsFor(
     }
 
     return out;
+}
+
+interface WrapperAndImg {
+    wrapper: Rect;
+    img: Rect;
+}
+
+/** Mide el wrapper [data-element-key] Y su <img> hijo directo, ambos
+ * relativos a su sección — para comprobar que redimensionar realmente
+ * mueve la IMAGEN (no solo el contenedor invisible, ver MenuEditableElement
+ * imageStyle). */
+async function wrapperAndImgRect(
+    locatorSource: LocatorSource,
+    key: string,
+): Promise<WrapperAndImg> {
+    const wrapper = await waitForStableRect(() =>
+        locatorSource.locator(`[data-element-key="${key}"]`).evaluate(measureRelativeToSection),
+    );
+    const img = await waitForStableRect(() =>
+        locatorSource
+            .locator(`[data-element-key="${key}"] img`)
+            .first()
+            .evaluate(measureRelativeToSection),
+    );
+
+    return { wrapper, img };
 }
 
 /** Sondea getBoundingClientRect() hasta que dos lecturas seguidas coinciden
@@ -259,7 +403,11 @@ for (const device of DEVICES) {
         await selectElement(page, 'Nombre');
         await setInspectorXY(page, 8, -8);
 
-        await selectCategoryElement(page, 'Pozole', 'Título');
+        // Pozole SIEMPRE tiene imagen de título en el seeder oficial — la
+        // clave real es 'title_image' (kind=image), no 'title' (que sería
+        // el <h2> de texto, y ni siquiera existe en el DOM mientras exista
+        // title_image_url — ver Corrección 1 / categoryElementKeysFor).
+        await selectCategoryElement(page, 'Pozole', 'Imagen de título');
         await setInspectorXY(page, 12, -6);
 
         // Recupera los element-key reales leyendo los atributos data- del
@@ -271,7 +419,7 @@ for (const device of DEVICES) {
         const priceEl = keys.find((k) => k?.endsWith(':price')) as string;
         const nameEl = keys.find((k) => k?.endsWith(':name')) as string;
         const titleEl = keys.find(
-            (k) => k?.startsWith('category-') && k.endsWith(':title'),
+            (k) => k?.startsWith('category-') && k.endsWith(':title_image'),
         ) as string;
 
         expect(imageEl, 'clave de imagen encontrada en el iframe').toBeTruthy();
@@ -404,3 +552,281 @@ for (const width of INTERMEDIATE_WIDTHS) {
         }
     });
 }
+
+/* ========================================================================
+ * CORRECCIÓN 1 — modelo real de título/subtítulo/tagline: sin controles
+ * fantasma, imagen y texto en claves distintas y reales.
+ * ==================================================================== */
+
+test('Pozole no muestra "Título" fantasma junto a "Imagen de título": solo aparece la clave real', async ({ page }) => {
+    await login(page);
+    await openEditorAtDevice(page, 'Móvil');
+
+    const labels = await visibleElementLabelsFor(page, 'Pozole');
+
+    // Pozole SIEMPRE tiene imagen de título en el seeder oficial — debe
+    // aparecer "Imagen de título" y NUNCA "Título" (el <h2> de texto ni
+    // siquiera existe en el DOM mientras exista title_image_url).
+    expect(labels.some((l) => l.includes('Imagen de título'))).toBe(true);
+    expect(labels.some((l) => l === 'Título')).toBe(false);
+
+    // Y el subtítulo gráfico ("Acompáñalo") debe listarse como "Imagen de
+    // subtítulo" — nunca como "Subtítulo" (que sería el control fantasma
+    // que existía antes de esta corrección).
+    expect(labels.some((l) => l.includes('Imagen de subtítulo'))).toBe(true);
+    expect(labels.some((l) => l === 'Subtítulo')).toBe(false);
+});
+
+test('Destilados no tiene título editable (la plantilla no renderiza ninguno) y no aparece como fantasma', async ({ page }) => {
+    await login(page);
+    await openEditorAtDevice(page, 'Móvil');
+
+    const labels = await visibleElementLabelsFor(page, 'Destilados');
+
+    expect(labels.some((l) => l === 'Título' || l.includes('Imagen de título'))).toBe(false);
+    // Sí debe existir su gráfico de tagline real ("Refrescar el antojo").
+    expect(labels.some((l) => l.includes('Imagen de tagline'))).toBe(true);
+});
+
+test('al seleccionar "Imagen de título" el inspector muestra controles de imagen, no "Tamaño de fuente"', async ({ page }) => {
+    await login(page);
+    await openEditorAtDevice(page, 'Móvil');
+    await selectCategoryElement(page, 'Pozole', 'Imagen de título');
+
+    const inspector = page.locator('aside.tc-editor-inspector');
+    await expect(inspector.getByText('Imagen dentro del bloque')).toBeVisible();
+    await expect(inspector.getByText('Tamaño de fuente')).toHaveCount(0);
+    await expect(inspector.locator('.tc-field').filter({ hasText: 'Ancho (px)' })).toBeVisible();
+});
+
+/* ========================================================================
+ * CORRECCIÓN 2 — el contenedor Y la imagen cambian de tamaño juntos.
+ * ==================================================================== */
+
+async function testImageResizeFlow(page: Page, categoryName: string, elementLabel: string, categoryAlt: string) {
+    await openEditorAtDevice(page, 'Escritorio');
+    await selectCategoryElement(page, categoryName, elementLabel);
+
+    const frame0 = page.frameLocator('iframe[title="Vista previa editable del menú"]');
+    const imageElementKey = await imageElementKeyByAlt(frame0, categoryAlt);
+    const before = await wrapperAndImgRect(frame0, imageElementKey);
+
+    // 1) Cambiar el ancho en el inspector debe mover la imagen, no solo el
+    // wrapper — comprobado con getBoundingClientRect() del <img> real. El
+    // margen es relativo (10%) en vez de un +20px fijo: algunos gráficos
+    // (p. ej. el título de Pancita) ya renderizan muy anchos por defecto,
+    // así que un margen absoluto pequeño sería demasiado ajustado frente al
+    // ruido normal de medición.
+    const newWidth = Math.round(before.wrapper.width * 1.4);
+    await setInspectorWidth(page, newWidth);
+
+    const frame = page.frameLocator('iframe[title="Vista previa editable del menú"]');
+    const afterResize = await wrapperAndImgRect(frame, imageElementKey);
+    const growthMargin = Math.max(20, before.wrapper.width * 0.1);
+
+    expect(afterResize.wrapper.width, 'el wrapper creció al ancho pedido').toBeGreaterThan(before.wrapper.width + growthMargin);
+    expect(
+        afterResize.img.width,
+        'la imagen (no solo el wrapper) debe haber crecido con el ancho',
+    ).toBeGreaterThan(before.img.width + growthMargin);
+    expect(
+        Math.abs(afterResize.img.width - afterResize.wrapper.width),
+        'en modo proporcional la imagen debe llenar el ancho del wrapper',
+    ).toBeLessThanOrEqual(MAX_DIFF_PX);
+
+    // 2) Proporcional activo (por defecto): el alto es automático — el
+    // wrapper no debe dejar un hueco vacío por debajo de la imagen.
+    expect(
+        Math.abs(afterResize.wrapper.height - afterResize.img.height),
+        'en modo proporcional el wrapper debe envolver la imagen sin espacio vacío',
+    ).toBeLessThanOrEqual(MAX_DIFF_PX);
+
+    // 3) Desactivar "Proporcional" (alto independiente) y fijar un alto
+    // manual — el <img> debe llenar ese alto (object-fit), no quedarse en
+    // su alto intrínseco.
+    await setProportional(page, false);
+    const manualHeight = Math.round(afterResize.wrapper.height * 1.6);
+    await heightField(page).fill(String(manualHeight));
+    await heightField(page).press('Tab');
+    await page.waitForTimeout(500);
+
+    const afterHeight = await wrapperAndImgRect(frame, imageElementKey);
+    expect(
+        Math.abs(afterHeight.img.height - afterHeight.wrapper.height),
+        'con alto independiente la imagen debe llenar el alto del bloque',
+    ).toBeLessThanOrEqual(MAX_DIFF_PX);
+
+    // 4) Reactivar proporcional — el alto vuelve a ser automático (nunca se
+    // queda "pegado" al valor manual anterior).
+    await setProportional(page, true);
+    const afterProportionalAgain = await wrapperAndImgRect(frame, imageElementKey);
+    expect(
+        Math.abs(afterProportionalAgain.wrapper.height - afterProportionalAgain.img.height),
+        'al reactivar proporcional el wrapper vuelve a envolver la imagen',
+    ).toBeLessThanOrEqual(MAX_DIFF_PX);
+
+    return { rect: afterProportionalAgain, key: imageElementKey };
+}
+
+test('Pozole — Imagen de título: redimensionar mueve la imagen real, proporcional funciona, se guarda y persiste tras F5', async ({ page }) => {
+    // Ancho EXPLÍCITO e IDÉNTICO tanto al editar como al comparar contra
+    // /menu — desktopRealWidth usa window.innerWidth, así que dejar esto al
+    // viewport por defecto de Playwright compararía dos anchos reales
+    // distintos y produciría falsos negativos por el propio CSS responsive
+    // (no por un bug real).
+    await page.setViewportSize({ width: 1440, height: 1200 });
+    await login(page);
+
+    const frame = page.frameLocator('iframe[title="Vista previa editable del menú"]');
+    const { key: titleImageKey } = await testImageResizeFlow(page, 'Pozole', 'Imagen de título', 'Pozole');
+
+    // 5) Moverla.
+    await setInspectorXY(page, 15, -12);
+
+    // 6) Guardar ya ocurrió en cada paso (autosave); recarga el EDITOR y
+    // confirma que el tamaño/posición persistieron sin salto.
+    const editorRectBeforeReload = await wrapperAndImgRect(frame, titleImageKey);
+    await page.reload();
+    await expect(page.locator('.tc-editor-toolbar')).toBeVisible();
+    await page.locator('.tc-device-btn').filter({ hasText: 'Escritorio' }).click();
+    const frameAfterReload = page.frameLocator('iframe[title="Vista previa editable del menú"]');
+    await frameAfterReload.locator('[data-element-key]').first().waitFor({ state: 'attached' });
+    await page.waitForTimeout(600);
+    const editorRectAfterReload = await wrapperAndImgRect(frameAfterReload, titleImageKey);
+
+    expectSameRect(editorRectBeforeReload.img, editorRectAfterReload.img, 'imagen de título tras recargar el editor');
+
+    // 7-10) Abre /menu al mismo ancho y compara wrapper + img.
+    await page.goto('/menu');
+    await page.waitForTimeout(300);
+    const publicMeasured = await wrapperAndImgRect(page, titleImageKey);
+
+    expectSameRect(editorRectAfterReload.wrapper, publicMeasured.wrapper, 'wrapper del título gráfico (editor vs /menu)');
+    expectSameRect(editorRectAfterReload.img, publicMeasured.img, 'imagen del título gráfico (editor vs /menu)');
+});
+
+test('Pancita — Imagen de título: mismo flujo de redimensión y comparación editor/público', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1200 });
+    await login(page);
+
+    const frame = page.frameLocator('iframe[title="Vista previa editable del menú"]');
+    const { key: titleImageKey } = await testImageResizeFlow(page, 'Pancita', 'Imagen de título', 'Pancita');
+
+    const editorRect = await wrapperAndImgRect(frame, titleImageKey);
+    await page.goto('/menu');
+    await page.waitForTimeout(300);
+    const publicRect = await wrapperAndImgRect(page, titleImageKey);
+
+    expectSameRect(editorRect.wrapper, publicRect.wrapper, 'Pancita — wrapper del título (editor vs /menu)');
+    expectSameRect(editorRect.img, publicRect.img, 'Pancita — imagen del título (editor vs /menu)');
+});
+
+test('Pozole — Acompáñalo (imagen de subtítulo): redimensionar también mueve la imagen real', async ({ page }) => {
+    await login(page);
+    await openEditorAtDevice(page, 'Escritorio');
+
+    const frame = page.frameLocator('iframe[title="Vista previa editable del menú"]');
+    // Acompáñalo no tiene alt propio distintivo (category.subtitle es null
+    // para Pozole) — se localiza por la SECCIÓN de Pozole (identificada por
+    // el alt real de su título) y, dentro de ella, la clave subtitle_image.
+    const subtitleImageKey = await categorySectionByTitleAlt(frame, 'Pozole')
+        .locator('[data-element-key$=":subtitle_image"]')
+        .first()
+        .getAttribute('data-element-key');
+    expect(subtitleImageKey, 'clave de imagen de subtítulo (Acompáñalo) encontrada').toBeTruthy();
+
+    await selectCategoryElement(page, 'Pozole', 'Imagen de subtítulo');
+    const before = await wrapperAndImgRect(frame, subtitleImageKey as string);
+
+    const newWidth = Math.round(before.wrapper.width * 1.3);
+    await setInspectorWidth(page, newWidth);
+
+    const after = await wrapperAndImgRect(frame, subtitleImageKey as string);
+    expect(after.img.width, 'Acompáñalo: la imagen creció con el wrapper').toBeGreaterThan(before.img.width + 15);
+});
+
+/* ========================================================================
+ * CORRECCIÓN 3 — Escritorio WYSIWYG real a cualquier ancho de pantalla.
+ * ==================================================================== */
+
+for (const width of WIDE_DESKTOP_WIDTHS) {
+    test(`Escritorio a ${width}px real (>1440 ancla): editor y /menu coinciden pixel a pixel`, async ({ page }) => {
+        await login(page);
+        const frame = await openEditorAtRealDesktopWidth(page, width);
+
+        // Confirma que el iframe realmente representa el ancho REAL de la
+        // ventana (no un 1440 fijo) — ver "Escritorio — Npx" discreto.
+        await expect(page.getByText(`— ${width} px`)).toBeVisible();
+
+        await expandItem(page, 'Pozole', 'Pozole Blanco');
+        await selectElement(page, 'Imagen');
+        await setInspectorXY(page, 40, -25);
+
+        const keys = await frame
+            .locator('[data-element-key]')
+            .evaluateAll((els) => els.map((el) => el.getAttribute('data-element-key')));
+        const imageEl = keys.find((k) => k?.endsWith(':image')) as string;
+        const titleImageKey = await imageElementKeyByAlt(frame, 'Pozole');
+
+        const editorRects = await editorRectsFor(frame, [imageEl, titleImageKey]);
+
+        const publicRects = await publicRectsFor(page, width, [imageEl, titleImageKey]);
+
+        for (const key of [imageEl, titleImageKey]) {
+            expectSameRect(editorRects[key], publicRects[key], `Escritorio ${width}px — ${key} (editor vs /menu)`);
+        }
+    });
+}
+
+test('el título gráfico de Escritorio NO se congela en 1440px: escala de forma fluida a un ancho real mayor', async ({ page }) => {
+    await login(page);
+    // Configura una posición EN el ancla de 1440px…
+    await openEditorAtRealDesktopWidth(page, 1440);
+    const frame440 = page.frameLocator('iframe[title="Vista previa editable del menú"]');
+    const titleImageKey = await imageElementKeyByAlt(frame440, 'Pozole');
+
+    await selectCategoryElement(page, 'Pozole', 'Imagen de título');
+    await setInspectorXY(page, 100, 50);
+    const rectAt1440 = await editorRectsFor(frame440, [titleImageKey]);
+
+    // …y confirma que a un ancho real mucho mayor (1909) la MISMA
+    // configuración Escritorio se ve proporcionalmente más grande, no
+    // exactamente del mismo tamaño en px (lo que probaría que sigue
+    // congelada en la geometría de 1440px).
+    const frame1909 = await openEditorAtRealDesktopWidth(page, 1909);
+    const rectAt1909 = await editorRectsFor(frame1909, [titleImageKey]);
+
+    const expectedRatio = 1909 / 1440;
+    const actualRatio = rectAt1909[titleImageKey].width / rectAt1440[titleImageKey].width;
+
+    expect(
+        Math.abs(actualRatio - expectedRatio),
+        `el ancho debe escalar ~${expectedRatio.toFixed(3)}x entre 1440 y 1909, no quedarse igual`,
+    ).toBeLessThan(0.05);
+});
+
+/* ========================================================================
+ * CORRECCIÓN — la navegación lateral pública no altera posiciones.
+ * ==================================================================== */
+
+test('la barra de navegación lateral (position:fixed) no desplaza ni reduce el contenido público', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1200 });
+    await page.goto('/menu');
+    await page.waitForTimeout(300);
+
+    const sidenav = page.locator('.tc-mp-sidenav');
+    await expect(sidenav).toBeVisible();
+
+    const sidenavBox = await sidenav.evaluate((el) => {
+        const cs = getComputedStyle(el);
+
+        return { position: cs.position, left: el.getBoundingClientRect().left };
+    });
+    expect(sidenavBox.position, 'la barra lateral debe ser position:fixed (fuera del flujo)').toBe('fixed');
+
+    const pageLeft = await page.locator('.tc-mp-page').first().evaluate((el) => el.getBoundingClientRect().left);
+    // .tc-mp-page debe seguir arrancando cerca del borde izquierdo real del
+    // viewport (su padding normal), no desplazado por un margin-left que
+    // reserve espacio para la barra lateral fixed.
+    expect(pageLeft, '.tc-mp-page no debe desplazarse por la barra lateral fixed').toBeLessThan(100);
+});

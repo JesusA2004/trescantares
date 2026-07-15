@@ -40,22 +40,35 @@ function onCommit(key: string, config: ElementConfig) {
     >
         <div class="tc-mp-grid--bebidas-promo">
             <MenuEditableElement
+                v-if="category.title_image_url"
+                :element-key="`category-${category.id}:title_image`"
+                label="Título Bebidas"
+                :config="
+                    categoryElementFor(category, 'title_image', breakpoint)
+                "
+                :editable="editable"
+                :selected="
+                    selectedKey === `category-${category.id}:title_image`
+                "
+                kind="image"
+                :src="category.title_image_url"
+                :alt="category.name"
+                img-class="tc-mp-title-img"
+                @select="onSelect"
+                @commit="onCommit"
+            />
+            <MenuEditableElement
+                v-else
                 :element-key="`category-${category.id}:title`"
                 label="Título Bebidas"
                 :config="categoryElementFor(category, 'title', breakpoint)"
                 :editable="editable"
                 :selected="selectedKey === `category-${category.id}:title`"
+                kind="text"
                 @select="onSelect"
                 @commit="onCommit"
             >
-                <img
-                    v-if="category.title_image_url"
-                    :src="category.title_image_url"
-                    :alt="category.name"
-                    class="tc-mp-title-img"
-                />
                 <h2
-                    v-else
                     class="tc-mp-title-text tc-mp-title-text--promo"
                     :style="{
                         color: category.color ?? undefined,
@@ -88,24 +101,26 @@ function onCommit(key: string, config: ElementConfig) {
 
                 <MenuEditableElement
                     v-if="category.subtitle_image_url"
-                    :element-key="`category-${category.id}:subtitle`"
+                    :element-key="`category-${category.id}:subtitle_image`"
                     label="Compra dos"
                     :config="
-                        categoryElementFor(category, 'subtitle', breakpoint)
+                        categoryElementFor(
+                            category,
+                            'subtitle_image',
+                            breakpoint,
+                        )
                     "
                     :editable="editable"
                     :selected="
-                        selectedKey === `category-${category.id}:subtitle`
+                        selectedKey === `category-${category.id}:subtitle_image`
                     "
+                    kind="image"
+                    :src="category.subtitle_image_url"
+                    :alt="category.subtitle ?? ''"
+                    img-class="tc-mp-promo-banner"
                     @select="onSelect"
                     @commit="onCommit"
-                >
-                    <img
-                        :src="category.subtitle_image_url"
-                        :alt="category.subtitle ?? ''"
-                        class="tc-mp-promo-banner"
-                    />
-                </MenuEditableElement>
+                />
             </div>
 
             <div class="tc-mp-promo-prices">

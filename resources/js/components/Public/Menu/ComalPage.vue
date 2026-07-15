@@ -46,22 +46,35 @@ const sope = computed(() => byZone(props.category.items, 'sope')[0]);
     >
         <div class="tc-mp-grid--comal">
             <MenuEditableElement
+                v-if="category.title_image_url"
+                :element-key="`category-${category.id}:title_image`"
+                label="Del Comal a tu Mesa"
+                :config="
+                    categoryElementFor(category, 'title_image', breakpoint)
+                "
+                :editable="editable"
+                :selected="
+                    selectedKey === `category-${category.id}:title_image`
+                "
+                kind="image"
+                :src="category.title_image_url"
+                :alt="category.name"
+                img-class="tc-mp-title-img"
+                @select="onSelect"
+                @commit="onCommit"
+            />
+            <MenuEditableElement
+                v-else
                 :element-key="`category-${category.id}:title`"
                 label="Del Comal a tu Mesa"
                 :config="categoryElementFor(category, 'title', breakpoint)"
                 :editable="editable"
                 :selected="selectedKey === `category-${category.id}:title`"
+                kind="text"
                 @select="onSelect"
                 @commit="onCommit"
             >
-                <img
-                    v-if="category.title_image_url"
-                    :src="category.title_image_url"
-                    :alt="category.name"
-                    class="tc-mp-title-img"
-                />
                 <h2
-                    v-else
                     class="tc-mp-title-text"
                     :style="{
                         color: category.color ?? undefined,

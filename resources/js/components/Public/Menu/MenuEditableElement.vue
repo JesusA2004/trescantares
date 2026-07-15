@@ -10,8 +10,20 @@ const props = withDefaults(
         config?: ElementConfig;
         editable?: boolean;
         selected?: boolean;
-        /** 'image' conserva proporción al redimensionar por defecto. */
+        /** 'image' hace que este componente renderice el <img> internamente
+         * (ver `src`) en vez de esperar contenido por slot, para poder
+         * aplicarle fit/object-position/inner_scale y el llenado 100% del
+         * bloque cuando se personaliza el tamaño — ver imageStyle. */
         kind?: 'container' | 'image' | 'text';
+        /** Solo se usa cuando kind === 'image'. Sin src, se usa el slot
+         * normal (compatibilidad con MenuItemVisual/MenuTextVisual, que
+         * manejan su propio <img>/<component> por slot). */
+        src?: string | null;
+        alt?: string;
+        /** Clase(s) del <img> por defecto (antes de personalizar tamaño) —
+         * son las que traen el tope de max-width/proporción responsiva
+         * original (tc-mp-title-img, tc-mp-subtitle-img, etc.). */
+        imgClass?: string;
     }>(),
     {
         label: '',
@@ -19,6 +31,9 @@ const props = withDefaults(
         editable: false,
         selected: false,
         kind: 'container',
+        src: null,
+        alt: '',
+        imgClass: '',
     },
 );
 
@@ -41,6 +56,24 @@ const gesture = ref<{
     dx: number;
     dy: number;
 } | null>(null);
+
+// Con ancho personalizado, la imagen interna debe LLENAR ese ancho (ver
+// imageStyle) — si no, rótulos como tc-mp-title-img (max-width:92%, sin
+// width propio) se quedan en su tamaño intrínseco y arrastrar la manija de
+// resize no mueve nada visualmente. También se activa durante un resize en
+// curso (gesture), aunque config.width siga en null, para que el PRIMER
+// resize de un elemento aún no personalizado ya se vea en vivo mientras se
+// arrastra, no solo al soltar.
+const sized = computed(
+    () => props.config.width !== null || gesture.value?.kind === 'resize',
+);
+
+// Proporcional (alto automático) mientras config.height sea null — refleja
+// el checkbox "Proporcional" del inspector (toggleAutoHeight en Index.vue).
+// En este modo el alto SIEMPRE lo decide la proporción intrínseca de la
+// imagen (height:auto), nunca un valor arrastrado; el contenedor envuelve
+// lo que resulte, sin dejar un rectángulo vacío.
+const proportional = computed(() => props.config.height === null);
 
 function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
@@ -68,6 +101,23 @@ const liveWidth = computed(() => {
               )?.getBoundingClientRect().width ?? parentWidth);
 
     return Math.max(10, baseWidthPx + gesture.value.dx);
+});
+
+// Espejo de liveWidth para el alto — pero SOLO cuando no es proporcional:
+// en modo proporcional el alto nunca se arrastra (dy se ignora a propósito,
+// ver startResize), permanece en 'auto' tanto en vivo como al guardar.
+const liveHeight = computed(() => {
+    const base = props.config.height;
+
+    if (base === null) {
+        return null;
+    }
+
+    if (gesture.value?.kind !== 'resize') {
+        return base;
+    }
+
+    return Math.max(10, base + gesture.value.dy);
 });
 
 const style = computed(() => {
@@ -101,8 +151,8 @@ const style = computed(() => {
         out.width = `${liveWidth.value}px`;
     }
 
-    if (c.height !== null) {
-        out.height = `${c.height}px`;
+    if (liveHeight.value !== null) {
+        out.height = `${liveHeight.value}px`;
     }
 
     if (c.z_index !== 1) {
@@ -111,6 +161,45 @@ const style = computed(() => {
     }
 
     return out;
+});
+
+// Estilo del <img> interno (solo kind==='image' con src) — deliberadamente
+// SEPARADO del estilo del wrapper: el wrapper puede tener scale/rotation/
+// z-index que no deben aplicarse dos veces a la imagen, y esta necesita sus
+// propios ejes (fit/object-position/inner_scale) que no tienen sentido en
+// ningún otro tipo de elemento. Antes de personalizar (sized === false) se
+// devuelve un objeto vacío a propósito: el diseño responsivo original
+// (clases tc-mp-title-img/tc-mp-subtitle-img/tc-mp-tagline-img con su
+// max-width/breakpoint propio) sigue mandando sin que ningún estilo en
+// línea lo pise. En cuanto se personaliza, el estilo en línea generado aquí
+// SIEMPRE gana sobre cualquier regla de esas clases (mayor especificidad
+// que cualquier selector de clase) — así ninguna regla CSS puede volver a
+// limitar la imagen una vez que el usuario definió un tamaño.
+const imageStyle = computed(() => {
+    if (props.kind !== 'image' || !props.src || !sized.value) {
+        return undefined;
+    }
+
+    const style: Record<string, string> = {
+        width: '100%',
+        maxWidth: '100%',
+    };
+
+    if (proportional.value) {
+        style.height = 'auto';
+    } else {
+        style.height = '100%';
+        style.objectFit = props.config.fit ?? 'contain';
+        style.objectPosition = `${props.config.object_x ?? 50}% ${props.config.object_y ?? 50}%`;
+    }
+
+    const innerScale = props.config.inner_scale ?? 1;
+
+    if (innerScale !== 1) {
+        style.transform = `scale(${innerScale})`;
+    }
+
+    return style;
 });
 
 function currentConfigFromDom(): ElementConfig {
@@ -189,17 +278,21 @@ function startResize(event: PointerEvent) {
     emit('select', props.elementKey);
 
     const baseline = currentConfigFromDom();
+    const startEl = root.value?.firstElementChild as HTMLElement | null;
     const startWidth =
-        baseline.width ??
-        (
-            root.value?.firstElementChild as HTMLElement | null
-        )?.getBoundingClientRect().width ??
-        100;
+        baseline.width ?? startEl?.getBoundingClientRect().width ?? 100;
+    const startHeight =
+        baseline.height ?? startEl?.getBoundingClientRect().height ?? 100;
     const startX = event.clientX;
+    const startY = event.clientY;
     gesture.value = { kind: 'resize', dx: 0, dy: 0 };
 
     const move = (e: PointerEvent) => {
-        gesture.value = { kind: 'resize', dx: e.clientX - startX, dy: 0 };
+        gesture.value = {
+            kind: 'resize',
+            dx: e.clientX - startX,
+            dy: e.clientY - startY,
+        };
     };
 
     const up = (e: PointerEvent) => {
@@ -208,16 +301,28 @@ function startResize(event: PointerEvent) {
         document.removeEventListener('pointercancel', up);
 
         const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
         gesture.value = null;
 
-        if (dx === 0) {
+        if (dx === 0 && dy === 0) {
             return;
         }
 
-        emit('commit', props.elementKey, {
+        const next: ElementConfig = {
             ...baseline,
             width: Math.max(10, startWidth + dx),
-        });
+        };
+
+        // El alto solo se arrastra (dy) cuando el elemento YA es "no
+        // proporcional" (baseline.height !== null, ver checkbox
+        // "Proporcional" del inspector) — en modo proporcional el alto se
+        // queda en null (automático) sin importar cuánto se mueva dy, para
+        // que la imagen conserve su proporción intrínseca real.
+        if (baseline.height !== null) {
+            next.height = Math.max(10, startHeight + dy);
+        }
+
+        emit('commit', props.elementKey, next);
     };
 
     document.addEventListener('pointermove', move);
@@ -273,6 +378,8 @@ defineExpose({ root });
             'tc-mev--editable': editable,
             'tc-mev--selected': editable && selected,
             'tc-mev--locked': editable && locked,
+            'tc-mev--sized': sized,
+            'tc-mev--image': kind === 'image',
         }"
         :style="style"
         :data-element-key="elementKey"
@@ -282,7 +389,14 @@ defineExpose({ root });
         @keydown="nudge"
         @focus="selectFromFocus"
     >
-        <slot />
+        <img
+            v-if="kind === 'image' && src"
+            :src="src"
+            :alt="alt"
+            :class="imgClass"
+            :style="imageStyle"
+        />
+        <slot v-else />
         <span
             v-if="editable && selected"
             class="tc-mev-label"

@@ -169,13 +169,88 @@ function lerpOptional(
     return lerp(an, bn, t);
 }
 
+/**
+ * Campos en px reales que deben escalar proporcionalmente al convertir entre
+ * el ancho REAL en que se editó/renderiza un elemento y el ancho de
+ * referencia (ancla) 1440px que es lo único que se persiste — ver
+ * toAnchorCoordinates/fromAnchorCoordinates. object_x/object_y son
+ * porcentajes (no px), scale/inner_scale son multiplicadores sin unidad,
+ * rotation son grados: ninguno de esos depende del ancho de viewport, así
+ * que quedan fuera de esta lista a propósito.
+ */
+const SCALABLE_PX_FIELDS = [
+    'x',
+    'y',
+    'width',
+    'height',
+    'font_size',
+    'letter_spacing',
+    'max_width',
+] as const satisfies readonly (keyof ElementConfig)[];
+
+function scaleConfigByRatio(
+    config: ElementConfig,
+    ratio: number,
+): ElementConfig {
+    if (ratio === 1 || !Number.isFinite(ratio)) {
+        return config;
+    }
+
+    const out: ElementConfig = { ...config };
+
+    for (const field of SCALABLE_PX_FIELDS) {
+        const value = config[field] as number | null | undefined;
+
+        if (value !== null && value !== undefined) {
+            (out as unknown as Record<string, number>)[field] = value * ratio;
+        }
+    }
+
+    return out;
+}
+
+/**
+ * Convierte una config medida en un viewport REAL (`editedAtWidth` — p. ej.
+ * 1909px, el ancho real de la ventana del administrador al editar la vista
+ * Escritorio) al equivalente en el ancla de referencia (`anchorWidth`,
+ * 1440px por defecto) que es lo único que se persiste. Inverso exacto de
+ * fromAnchorCoordinates: toAnchorCoordinates(fromAnchorCoordinates(c, w), w)
+ * === c (salvo error de punto flotante), la propiedad que garantizan las
+ * pruebas de ida y vuelta render→editar→guardar→render.
+ */
+export function toAnchorCoordinates(
+    config: ElementConfig,
+    editedAtWidth: number,
+    anchorWidth: number = MENU_DEVICE_WIDTH.desktop,
+): ElementConfig {
+    return scaleConfigByRatio(config, anchorWidth / editedAtWidth);
+}
+
+/**
+ * Inverso de toAnchorCoordinates: expande la config guardada en el ancla de
+ * referencia (1440px) al ancho REAL objetivo — usado tanto por el iframe del
+ * editor (Escritorio puede mostrarse a cualquier ancho real de pantalla,
+ * p. ej. 1909px) como por /menu público para cualquier visitante con un
+ * monitor más ancho que 1440px, para que la geometría personalizada no se
+ * quede "congelada" en px absolutos mientras crece el espacio disponible.
+ */
+export function fromAnchorCoordinates(
+    config: ElementConfig,
+    targetWidth: number,
+    anchorWidth: number = MENU_DEVICE_WIDTH.desktop,
+): ElementConfig {
+    return scaleConfigByRatio(config, targetWidth / anchorWidth);
+}
+
 interface DeviceAnchor {
     device: MenuDevice;
     width: number;
     config: ElementConfig;
 }
 
-function anchorsOf(settings: ElementSettings | null | undefined): DeviceAnchor[] {
+function anchorsOf(
+    settings: ElementSettings | null | undefined,
+): DeviceAnchor[] {
     const anchors: DeviceAnchor[] = [];
 
     for (const device of MENU_DEVICE_ORDER) {
@@ -210,19 +285,41 @@ export function resolveElementConfig(
     const first = anchors[0];
     const last = anchors[anchors.length - 1];
 
-    if (anchors.length === 1 || viewportWidth <= first.width) {
-        return { ...defaultElementConfig(), ...first.config };
+    // Fuera del rango configurado, el comportamiento histórico "congelaba"
+    // la geometría en px absolutos — visible en cualquier ancho real de
+    // pantalla distinto de exactamente 1440px como un bloque de tamaño fijo
+    // (con espacio en blanco creciendo alrededor si el monitor es más
+    // ancho). Solo el ancla 'desktop' (pensada para representar "pantallas
+    // grandes" en general, no exactamente 1440px) se extrapola de forma
+    // fluida en CUALQUIER dirección fuera de su ancho de referencia —
+    // mobile/tablet conservan el comportamiento congelado de siempre (fuera
+    // de alcance de este arreglo). Ver fromAnchorCoordinates/
+    // toAnchorCoordinates para el sentido inverso (guardar desde un ancho
+    // real de edición distinto de 1440).
+    if (viewportWidth <= first.width) {
+        const resolved = { ...defaultElementConfig(), ...first.config };
+
+        return first.device === 'desktop' && viewportWidth !== first.width
+            ? fromAnchorCoordinates(resolved, viewportWidth, first.width)
+            : resolved;
     }
 
-    if (viewportWidth >= last.width) {
-        return { ...defaultElementConfig(), ...last.config };
+    if (anchors.length === 1 || viewportWidth >= last.width) {
+        const resolved = { ...defaultElementConfig(), ...last.config };
+
+        return last.device === 'desktop' && viewportWidth !== last.width
+            ? fromAnchorCoordinates(resolved, viewportWidth, last.width)
+            : resolved;
     }
 
     let lower = first;
     let upper = last;
 
     for (let i = 0; i < anchors.length - 1; i++) {
-        if (viewportWidth >= anchors[i].width && viewportWidth <= anchors[i + 1].width) {
+        if (
+            viewportWidth >= anchors[i].width &&
+            viewportWidth <= anchors[i + 1].width
+        ) {
             lower = anchors[i];
             upper = anchors[i + 1];
             break;
@@ -396,3 +493,106 @@ export const CATEGORY_ELEMENT_LABELS: Record<CategoryElementKey, string> = {
     tagline_image: 'Imagen de tagline',
     image: 'Imagen de sección',
 };
+
+type CategoryElementPresence = (category: MenuCategoryData) => boolean;
+
+/**
+ * Qué claves de categoría EXISTEN REALMENTE en el DOM para cada layout —
+ * espejo deliberado de los v-if de cada *Page.vue (PozolePage.vue,
+ * PancitaPage.vue, etc.). Única fuente de verdad para el editor visual: sin
+ * esto, la barra lateral no puede saber (solo con `title_image_url`/
+ * `subtitle`/`tagline` presentes en los datos) si la plantilla concreta de
+ * ESTA categoría realmente renderiza ese elemento — p. ej. Destilados no
+ * tiene NINGÚN título editable y Postres solo muestra su `subtitle` de
+ * texto cuando NO hay título gráfico. Un título/subtítulo con imagen y su
+ * variante de texto son SIEMPRE mutuamente excluyentes (si..si-no en la
+ * plantilla), así que nunca aparecen ambos a la vez — eso es justo lo que
+ * elimina el control fantasma "Imagen de título" cuando en realidad se
+ * renderizó el <h2> de texto, y viceversa.
+ */
+const CATEGORY_LAYOUT_ELEMENTS: Record<
+    string,
+    Partial<Record<CategoryElementKey, CategoryElementPresence>>
+> = {
+    portada: {},
+    pozole: {
+        title: (c) => !c.title_image_url,
+        title_image: (c) => !!c.title_image_url,
+        subtitle_image: (c) => !!c.subtitle_image_url,
+    },
+    pancita: {
+        title: (c) => !c.title_image_url,
+        title_image: (c) => !!c.title_image_url,
+        tagline: (c) => !!c.tagline,
+        tagline_image: (c) => !!c.tagline_image_url,
+    },
+    birria: {
+        title: (c) => !c.title_image_url,
+        title_image: (c) => !!c.title_image_url,
+        tagline: (c) => !!c.tagline,
+    },
+    fusiones: {
+        title: (c) => !c.title_image_url,
+        title_image: (c) => !!c.title_image_url,
+    },
+    comal: {
+        title: (c) => !c.title_image_url,
+        title_image: (c) => !!c.title_image_url,
+    },
+    postres: {
+        title: (c) => !c.title_image_url,
+        title_image: (c) => !!c.title_image_url,
+        subtitle: (c) => !c.title_image_url && !!c.subtitle,
+        tagline_image: (c) => !!c.tagline_image_url,
+    },
+    bebidas_promo: {
+        title: (c) => !c.title_image_url,
+        title_image: (c) => !!c.title_image_url,
+        image: (c) => !!c.image_url,
+        subtitle_image: (c) => !!c.subtitle_image_url,
+    },
+    bebidas_tabla: {
+        title: (c) => !c.title_image_url,
+        title_image: (c) => !!c.title_image_url,
+        tagline_image: (c) => !!c.tagline_image_url,
+    },
+    destilados: {
+        tagline_image: (c) => !!c.tagline_image_url,
+    },
+};
+
+/** GridPage.vue — layout de reserva para cualquier `layout` no listado arriba. */
+const DEFAULT_LAYOUT_ELEMENTS: Partial<
+    Record<CategoryElementKey, CategoryElementPresence>
+> = {
+    title: (c) => !c.title_image_url,
+    title_image: (c) => !!c.title_image_url,
+};
+
+/** Orden de aparición en la barra lateral del editor. */
+const CATEGORY_ELEMENT_ORDER: CategoryElementKey[] = [
+    'title',
+    'title_image',
+    'subtitle',
+    'subtitle_image',
+    'tagline',
+    'tagline_image',
+    'image',
+];
+
+/**
+ * Claves de categoría que existen REALMENTE en el DOM para esta categoría
+ * concreta, según su layout y sus datos — nunca un control fantasma, nunca
+ * falta uno que sí se renderiza. Reemplaza cualquier heurística ad-hoc
+ * basada solo en "¿este campo de dato existe?" (ver CATEGORY_LAYOUT_ELEMENTS).
+ */
+export function categoryElementKeysFor(
+    category: MenuCategoryData,
+): CategoryElementKey[] {
+    const rules =
+        CATEGORY_LAYOUT_ELEMENTS[category.layout] ?? DEFAULT_LAYOUT_ELEMENTS;
+
+    return CATEGORY_ELEMENT_ORDER.filter(
+        (key) => rules[key]?.(category) ?? false,
+    );
+}

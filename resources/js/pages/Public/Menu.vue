@@ -4,9 +4,11 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { layoutFor } from '@/components/Public/Menu/layoutRegistry';
 import MenuSideNav from '@/components/Public/Menu/MenuSideNav.vue';
 import {
+    MENU_DEVICE_WIDTH,
     categoryElementFor,
     itemElementFor,
     resolveMenuDevice,
+    toAnchorCoordinates,
 } from '@/components/Public/Menu/types';
 import type {
     CategoryElementKey,
@@ -354,9 +356,22 @@ function onElementSelect(key: string) {
 }
 
 function onElementCommit(key: string, config: ElementConfig) {
-    applyLocal(key, config);
-    void persist(key, config);
-    bridge.post({ type: 'commit', elementKey: key, config });
+    // config llega en el espacio REAL de este documento (px reales del
+    // arrastre/resize dentro del iframe) — para 'desktop' ese ancho puede
+    // ser cualquier ancho real de pantalla (ver Index.vue/desktopRealWidth),
+    // nunca exactamente 1440. Se convierte UNA vez al ancla de referencia
+    // antes de guardarlo en el mirror local, persistirlo y espejarlo al
+    // editor padre — así todo lo que vive fuera de ESTE documento (mirror
+    // del padre, base de datos) queda siempre en el mismo espacio-ancla,
+    // sin importar a qué ancho real se hizo el arrastre.
+    const anchorConfig = toAnchorCoordinates(
+        config,
+        viewportWidth.value,
+        MENU_DEVICE_WIDTH[currentDevice.value],
+    );
+    applyLocal(key, anchorConfig);
+    void persist(key, anchorConfig);
+    bridge.post({ type: 'commit', elementKey: key, config: anchorConfig });
 }
 </script>
 

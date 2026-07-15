@@ -92,15 +92,13 @@ const groups = computed(() => [
             :config="categoryElementFor(category, 'tagline_image', breakpoint)"
             :editable="editable"
             :selected="selectedKey === `category-${category.id}:tagline_image`"
+            kind="image"
+            :src="category.tagline_image_url"
+            :alt="category.tagline_sub ?? ''"
+            img-class="tc-mp-tagline-img tc-mp-tagline-img--sm mt-[22px]"
             @select="onSelect"
             @commit="onCommit"
-        >
-            <img
-                :src="category.tagline_image_url"
-                :alt="category.tagline_sub ?? ''"
-                class="tc-mp-tagline-img tc-mp-tagline-img--sm mt-[22px]"
-            />
-        </MenuEditableElement>
+        />
 
         <div class="tc-mp-social-row">
             <a

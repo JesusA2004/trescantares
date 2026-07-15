@@ -56,22 +56,31 @@ function rowLabel(item: MenuItemData): string {
         :secondary-color="category.color_secondary ?? undefined"
     >
         <MenuEditableElement
+            v-if="category.title_image_url"
+            :element-key="`category-${category.id}:title_image`"
+            label="Título Bebidas"
+            :config="categoryElementFor(category, 'title_image', breakpoint)"
+            :editable="editable"
+            :selected="selectedKey === `category-${category.id}:title_image`"
+            kind="image"
+            :src="category.title_image_url"
+            :alt="category.name"
+            img-class="tc-mp-title-img"
+            @select="onSelect"
+            @commit="onCommit"
+        />
+        <MenuEditableElement
+            v-else
             :element-key="`category-${category.id}:title`"
             label="Título Bebidas"
             :config="categoryElementFor(category, 'title', breakpoint)"
             :editable="editable"
             :selected="selectedKey === `category-${category.id}:title`"
+            kind="text"
             @select="onSelect"
             @commit="onCommit"
         >
-            <img
-                v-if="category.title_image_url"
-                :src="category.title_image_url"
-                :alt="category.name"
-                class="tc-mp-title-img"
-            />
             <h2
-                v-else
                 class="tc-mp-title-text"
                 :style="{
                     color: category.color ?? undefined,
@@ -198,15 +207,13 @@ function rowLabel(item: MenuItemData): string {
                     :selected="
                         selectedKey === `category-${category.id}:tagline_image`
                     "
+                    kind="image"
+                    :src="category.tagline_image_url"
+                    :alt="category.tagline_sub ?? ''"
+                    img-class="mx-auto mt-2.5 block w-full max-w-[200px]"
                     @select="onSelect"
                     @commit="onCommit"
-                >
-                    <img
-                        :src="category.tagline_image_url"
-                        :alt="category.tagline_sub ?? ''"
-                        class="mx-auto mt-2.5 block w-full max-w-[200px]"
-                    />
-                </MenuEditableElement>
+                />
             </div>
         </div>
     </MenuPageFrame>

@@ -48,22 +48,35 @@ const accompaniment = computed(
     >
         <div class="tc-mp-grid--pozole">
             <MenuEditableElement
+                v-if="category.title_image_url"
+                :element-key="`category-${category.id}:title_image`"
+                label="Título Pozole"
+                :config="
+                    categoryElementFor(category, 'title_image', breakpoint)
+                "
+                :editable="editable"
+                :selected="
+                    selectedKey === `category-${category.id}:title_image`
+                "
+                kind="image"
+                :src="category.title_image_url"
+                :alt="category.name"
+                img-class="tc-mp-title-img"
+                @select="onSelect"
+                @commit="onCommit"
+            />
+            <MenuEditableElement
+                v-else
                 :element-key="`category-${category.id}:title`"
                 label="Título Pozole"
                 :config="categoryElementFor(category, 'title', breakpoint)"
                 :editable="editable"
                 :selected="selectedKey === `category-${category.id}:title`"
+                kind="text"
                 @select="onSelect"
                 @commit="onCommit"
             >
-                <img
-                    v-if="category.title_image_url"
-                    :src="category.title_image_url"
-                    :alt="category.name"
-                    class="tc-mp-title-img"
-                />
                 <h2
-                    v-else
                     class="tc-mp-title-text"
                     :style="{
                         color: category.color ?? undefined,
@@ -183,20 +196,22 @@ const accompaniment = computed(
 
             <MenuEditableElement
                 v-if="category.subtitle_image_url"
-                :element-key="`category-${category.id}:subtitle`"
+                :element-key="`category-${category.id}:subtitle_image`"
                 label="Acompáñalo"
-                :config="categoryElementFor(category, 'subtitle', breakpoint)"
+                :config="
+                    categoryElementFor(category, 'subtitle_image', breakpoint)
+                "
                 :editable="editable"
-                :selected="selectedKey === `category-${category.id}:subtitle`"
+                :selected="
+                    selectedKey === `category-${category.id}:subtitle_image`
+                "
+                kind="image"
+                :src="category.subtitle_image_url"
+                :alt="category.subtitle ?? ''"
+                img-class="tc-mp-subtitle-img mt-2.5"
                 @select="onSelect"
                 @commit="onCommit"
-            >
-                <img
-                    :src="category.subtitle_image_url"
-                    :alt="category.subtitle ?? ''"
-                    class="tc-mp-subtitle-img mt-2.5"
-                />
-            </MenuEditableElement>
+            />
 
             <MenuEditableElement
                 v-if="accompaniment"

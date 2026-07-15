@@ -88,10 +88,15 @@ return new class extends Migration
             }
 
             $changed = true;
+            // Un elemento puede traer YA una clave mobile/tablet/desktop
+            // real junto a claves legacy sueltas (p. ej. un '2xl' huérfano
+            // de una migración parcial anterior) — esa clave nueva, real,
+            // SIEMPRE tiene prioridad sobre cualquier fallback legacy; si no,
+            // se pierde silenciosamente un ajuste ya guardado por el admin.
             $migrated = [
-                'mobile' => $byBreakpoint['base'] ?? $byBreakpoint['sm'] ?? null,
-                'tablet' => $byBreakpoint['md'] ?? $byBreakpoint['base'] ?? $byBreakpoint['sm'] ?? null,
-                'desktop' => $byBreakpoint['xl'] ?? $byBreakpoint['lg'] ?? $byBreakpoint['2xl'] ?? null,
+                'mobile' => $byBreakpoint['mobile'] ?? $byBreakpoint['base'] ?? $byBreakpoint['sm'] ?? null,
+                'tablet' => $byBreakpoint['tablet'] ?? $byBreakpoint['md'] ?? $byBreakpoint['base'] ?? $byBreakpoint['sm'] ?? null,
+                'desktop' => $byBreakpoint['desktop'] ?? $byBreakpoint['xl'] ?? $byBreakpoint['lg'] ?? $byBreakpoint['2xl'] ?? null,
             ];
 
             $elementSettings = array_filter($migrated, fn ($v) => $v !== null);
