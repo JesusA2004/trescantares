@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import MenuEditableVisual from './MenuEditableVisual.vue';
+import MenuEditableElement from './MenuEditableElement.vue';
 import MenuPageFrame from './MenuPageFrame.vue';
-import { byZone, categoryVisualFor, money } from './types';
-import type {
-    BreakpointLayout,
-    MenuBreakpoint,
-    MenuCategoryData,
-} from './types';
+import { byZone, categoryElementFor, money } from './types';
+import type { ElementConfig, MenuBreakpoint, MenuCategoryData } from './types';
 
 const props = withDefaults(
     defineProps<{
@@ -15,22 +11,20 @@ const props = withDefaults(
         breakpoint: MenuBreakpoint;
         editable?: boolean;
         selectedKey?: string | null;
-        scaleFactor?: number;
     }>(),
     {
         editable: false,
         selectedKey: null,
-        scaleFactor: 1,
     },
 );
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, breakpoint: MenuBreakpoint, layout: BreakpointLayout];
+    commit: [key: string, config: ElementConfig];
 }>();
 
-function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
-    emit('commit', key, bp, layout);
+function onCommit(key: string, config: ElementConfig) {
+    emit('commit', key, config);
 }
 
 function onSelect(key: string) {
@@ -91,15 +85,13 @@ const groups = computed(() => [
             </div>
         </div>
 
-        <MenuEditableVisual
+        <MenuEditableElement
             v-if="category.tagline_image_url"
-            element-key="tagline_image"
+            :element-key="`category-${category.id}:tagline_image`"
             label="Refrescar el antojo"
-            :layout="categoryVisualFor(category, 'tagline_image', breakpoint)"
-            :breakpoint="breakpoint"
+            :config="categoryElementFor(category, 'tagline_image', breakpoint)"
             :editable="editable"
-            :selected="selectedKey === 'tagline_image'"
-            :scale-factor="scaleFactor"
+            :selected="selectedKey === `category-${category.id}:tagline_image`"
             @select="onSelect"
             @commit="onCommit"
         >
@@ -108,7 +100,7 @@ const groups = computed(() => [
                 :alt="category.tagline_sub ?? ''"
                 class="tc-mp-tagline-img tc-mp-tagline-img--sm mt-[22px]"
             />
-        </MenuEditableVisual>
+        </MenuEditableElement>
 
         <div class="tc-mp-social-row">
             <a

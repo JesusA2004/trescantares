@@ -48,13 +48,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'prevent
 
     Route::get('menu-editor', [MenuEditorController::class, 'index'])->name('menu-editor.index')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
-    Route::patch('menu-editor/items/{menuItem}/layout', [MenuEditorController::class, 'updateItemLayout'])->name('menu-editor.items.layout')
+    Route::get('menu-editor/preview', [MenuEditorController::class, 'preview'])->name('menu-editor.preview')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::patch('menu-editor/items/{menuItem}/element', [MenuEditorController::class, 'updateItemElement'])->name('menu-editor.items.element')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
     Route::patch('menu-editor/items/{menuItem}/quick', [MenuEditorController::class, 'updateItemQuick'])->name('menu-editor.items.quick')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
     Route::post('menu-editor/items/reorder', [MenuEditorController::class, 'reorderItems'])->name('menu-editor.items.reorder')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
-    Route::patch('menu-editor/categories/{category}/visual-layout', [MenuEditorController::class, 'updateCategoryVisualLayout'])->name('menu-editor.categories.visual-layout')
+    Route::patch('menu-editor/categories/{category}/element', [MenuEditorController::class, 'updateCategoryElement'])->name('menu-editor.categories.element')
         ->middleware(['permission:categories.update|super-admin', 'module:categories']);
 
     Route::resource('users', UserController::class)->except(['show'])

@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { layoutFor } from './layoutRegistry';
-import type { MenuCategoryData } from './types';
+import type { MenuBreakpoint, MenuCategoryData } from './types';
 
 defineProps<{
     category: MenuCategoryData;
 }>();
 
-const viewport = ref<'mobile' | 'desktop'>('mobile');
+type PreviewViewport = Extract<MenuBreakpoint, 'base' | 'lg'>;
+
+const viewport = ref<PreviewViewport>('base');
 
 // Ancho real que simula cada viewport y ancho aproximado del panel donde se
 // dibuja la vista previa (se escala para caber sin scroll horizontal).
-const TARGET_WIDTH: Record<'mobile' | 'desktop', number> = {
-    mobile: 390,
-    desktop: 1440,
+const TARGET_WIDTH: Record<PreviewViewport, number> = {
+    base: 390,
+    lg: 1440,
 };
 const PANEL_WIDTH = 320;
 
@@ -29,11 +31,11 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                     type="button"
                     class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
                     :class="
-                        viewport === 'mobile'
+                        viewport === 'base'
                             ? 'bg-white text-[var(--tc-blue)] shadow-sm'
                             : 'text-gray-500'
                     "
-                    @click="viewport = 'mobile'"
+                    @click="viewport = 'base'"
                 >
                     Móvil
                 </button>
@@ -41,18 +43,21 @@ const scale = computed(() => PANEL_WIDTH / TARGET_WIDTH[viewport.value]);
                     type="button"
                     class="rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
                     :class="
-                        viewport === 'desktop'
+                        viewport === 'lg'
                             ? 'bg-white text-[var(--tc-blue)] shadow-sm'
                             : 'text-gray-500'
                     "
-                    @click="viewport = 'desktop'"
+                    @click="viewport = 'lg'"
                 >
                     Escritorio
                 </button>
             </div>
         </div>
 
-        <div class="tc-preview-viewport" :class="viewport">
+        <div
+            class="tc-preview-viewport"
+            :class="viewport === 'base' ? 'mobile' : 'desktop'"
+        >
             <div
                 class="tc-preview-scaled tc-mp tc-public-layout"
                 :style="{

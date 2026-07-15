@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import MenuEditableVisual from './MenuEditableVisual.vue';
-import MenuItemPhoto from './MenuItemPhoto.vue';
+import MenuEditableElement from './MenuEditableElement.vue';
+import MenuItemVisual from './MenuItemVisual.vue';
 import MenuPageFrame from './MenuPageFrame.vue';
-import { categoryVisualFor, money } from './types';
-import type {
-    BreakpointLayout,
-    MenuBreakpoint,
-    MenuCategoryData,
-} from './types';
+import MenuPriceVisual from './MenuPriceVisual.vue';
+import MenuTextVisual from './MenuTextVisual.vue';
+import { categoryElementFor, itemElementFor } from './types';
+import type { ElementConfig, MenuBreakpoint, MenuCategoryData } from './types';
 
 withDefaults(
     defineProps<{
@@ -15,26 +13,24 @@ withDefaults(
         breakpoint: MenuBreakpoint;
         editable?: boolean;
         selectedKey?: string | null;
-        scaleFactor?: number;
     }>(),
     {
         editable: false,
         selectedKey: null,
-        scaleFactor: 1,
     },
 );
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, breakpoint: MenuBreakpoint, layout: BreakpointLayout];
+    commit: [key: string, config: ElementConfig];
 }>();
 
 function onSelect(key: string) {
     emit('select', key);
 }
 
-function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
-    emit('commit', key, bp, layout);
+function onCommit(key: string, config: ElementConfig) {
+    emit('commit', key, config);
 }
 </script>
 
@@ -43,14 +39,12 @@ function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
         :primary-color="category.color ?? undefined"
         :secondary-color="category.color_secondary ?? undefined"
     >
-        <MenuEditableVisual
-            element-key="title"
+        <MenuEditableElement
+            :element-key="`category-${category.id}:title`"
             :label="`Título ${category.name}`"
-            :layout="categoryVisualFor(category, 'title', breakpoint)"
-            :breakpoint="breakpoint"
+            :config="categoryElementFor(category, 'title', breakpoint)"
             :editable="editable"
-            :selected="selectedKey === 'title'"
-            :scale-factor="scaleFactor"
+            :selected="selectedKey === `category-${category.id}:title`"
             @select="onSelect"
             @commit="onCommit"
         >
@@ -70,7 +64,7 @@ function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
             >
                 {{ category.name }}
             </h2>
-        </MenuEditableVisual>
+        </MenuEditableElement>
         <p
             v-if="category.description"
             class="tc-mp-ingredients mt-2 text-center"
@@ -79,45 +73,79 @@ function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
         </p>
 
         <div class="tc-mp-fusion-list">
-            <div
+            <MenuEditableElement
                 v-for="item in category.items"
                 :key="item.id"
-                class="tc-mp-fusion-row"
+                :element-key="`item-${item.id}:container`"
+                :label="`${item.name} — contenedor`"
+                :config="itemElementFor(item, 'container', breakpoint)"
+                :editable="editable"
+                :selected="selectedKey === `item-${item.id}:container`"
+                @select="onSelect"
+                @commit="onCommit"
             >
-                <MenuItemPhoto
-                    :item="item"
-                    class="tc-mp-fusion-photo"
-                    :breakpoint="breakpoint"
-                    :editable="editable"
-                    :selected="selectedKey === `item-${item.id}`"
-                    :scale-factor="scaleFactor"
-                    @select="onSelect"
-                    @commit="onCommit"
-                />
-                <div class="tc-mp-fusion-text">
-                    <p
-                        class="tc-mp-name tc-mp-name--lg"
-                        :style="{
-                            color: category.color ?? undefined,
-                            '--tc-mp-h': category.color ?? undefined,
-                        }"
-                    >
-                        {{ item.name }}
-                    </p>
-                    <p v-if="item.ingredients" class="tc-mp-ingredients">
-                        {{ item.ingredients }}
-                    </p>
-                    <p
-                        v-if="Number(item.price) > 0"
-                        class="tc-mp-price tc-mp-price--md"
-                        :style="{
-                            color: category.color_secondary ?? undefined,
-                        }"
-                    >
-                        ${{ money(item.price) }}
-                    </p>
+                <div class="tc-mp-fusion-row">
+                    <MenuItemVisual
+                        :item="item"
+                        class="tc-mp-fusion-photo"
+                        :breakpoint="breakpoint"
+                        :editable="editable"
+                        :selected-key="selectedKey"
+                        @select="onSelect"
+                        @commit="onCommit"
+                    />
+                    <div class="tc-mp-fusion-text">
+                        <MenuTextVisual
+                            :element-key="`item-${item.id}:name`"
+                            :label="`${item.name} — nombre`"
+                            :config="itemElementFor(item, 'name', breakpoint)"
+                            :editable="editable"
+                            :selected-key="selectedKey"
+                            as="p"
+                            class="tc-mp-name tc-mp-name--lg"
+                            :style="{
+                                color: category.color ?? undefined,
+                                '--tc-mp-h': category.color ?? undefined,
+                            }"
+                            @select="onSelect"
+                            @commit="onCommit"
+                        >
+                            {{ item.name }}
+                        </MenuTextVisual>
+                        <MenuTextVisual
+                            v-if="item.ingredients"
+                            :element-key="`item-${item.id}:ingredients`"
+                            :label="`${item.name} — ingredientes`"
+                            :config="
+                                itemElementFor(item, 'ingredients', breakpoint)
+                            "
+                            :editable="editable"
+                            :selected-key="selectedKey"
+                            as="p"
+                            class="tc-mp-ingredients"
+                            @select="onSelect"
+                            @commit="onCommit"
+                        >
+                            {{ item.ingredients }}
+                        </MenuTextVisual>
+                        <MenuPriceVisual
+                            v-if="Number(item.price) > 0"
+                            :element-key="`item-${item.id}:price`"
+                            :label="`${item.name} — precio`"
+                            :config="itemElementFor(item, 'price', breakpoint)"
+                            :value="item.price"
+                            :editable="editable"
+                            :selected-key="selectedKey"
+                            class="tc-mp-price tc-mp-price--md"
+                            :style="{
+                                color: category.color_secondary ?? undefined,
+                            }"
+                            @select="onSelect"
+                            @commit="onCommit"
+                        />
+                    </div>
                 </div>
-            </div>
+            </MenuEditableElement>
         </div>
     </MenuPageFrame>
 </template>

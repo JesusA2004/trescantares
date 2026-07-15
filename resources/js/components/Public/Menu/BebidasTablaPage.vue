@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import MenuEditableVisual from './MenuEditableVisual.vue';
+import MenuEditableElement from './MenuEditableElement.vue';
 import MenuPageFrame from './MenuPageFrame.vue';
-import { byZone, categoryVisualFor, money } from './types';
+import { byZone, categoryElementFor, money } from './types';
 import type {
-    BreakpointLayout,
+    ElementConfig,
     MenuBreakpoint,
     MenuCategoryData,
     MenuItemData,
@@ -16,22 +16,20 @@ const props = withDefaults(
         breakpoint: MenuBreakpoint;
         editable?: boolean;
         selectedKey?: string | null;
-        scaleFactor?: number;
     }>(),
     {
         editable: false,
         selectedKey: null,
-        scaleFactor: 1,
     },
 );
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, breakpoint: MenuBreakpoint, layout: BreakpointLayout];
+    commit: [key: string, config: ElementConfig];
 }>();
 
-function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
-    emit('commit', key, bp, layout);
+function onCommit(key: string, config: ElementConfig) {
+    emit('commit', key, config);
 }
 
 function onSelect(key: string) {
@@ -57,14 +55,12 @@ function rowLabel(item: MenuItemData): string {
         :primary-color="category.color ?? undefined"
         :secondary-color="category.color_secondary ?? undefined"
     >
-        <MenuEditableVisual
-            element-key="title"
+        <MenuEditableElement
+            :element-key="`category-${category.id}:title`"
             label="Título Bebidas"
-            :layout="categoryVisualFor(category, 'title', breakpoint)"
-            :breakpoint="breakpoint"
+            :config="categoryElementFor(category, 'title', breakpoint)"
             :editable="editable"
-            :selected="selectedKey === 'title'"
-            :scale-factor="scaleFactor"
+            :selected="selectedKey === `category-${category.id}:title`"
             @select="onSelect"
             @commit="onCommit"
         >
@@ -84,7 +80,7 @@ function rowLabel(item: MenuItemData): string {
             >
                 {{ category.name }}
             </h2>
-        </MenuEditableVisual>
+        </MenuEditableElement>
 
         <div v-if="topTable.length" class="mt-4">
             <div class="tc-mp-table-head">
@@ -187,17 +183,21 @@ function rowLabel(item: MenuItemData): string {
                         >
                     </div>
                 </div>
-                <MenuEditableVisual
+                <MenuEditableElement
                     v-if="category.tagline_image_url"
-                    element-key="tagline_image"
+                    :element-key="`category-${category.id}:tagline_image`"
                     label="Mesa y momento"
-                    :layout="
-                        categoryVisualFor(category, 'tagline_image', breakpoint)
+                    :config="
+                        categoryElementFor(
+                            category,
+                            'tagline_image',
+                            breakpoint,
+                        )
                     "
-                    :breakpoint="breakpoint"
                     :editable="editable"
-                    :selected="selectedKey === 'tagline_image'"
-                    :scale-factor="scaleFactor"
+                    :selected="
+                        selectedKey === `category-${category.id}:tagline_image`
+                    "
                     @select="onSelect"
                     @commit="onCommit"
                 >
@@ -206,7 +206,7 @@ function rowLabel(item: MenuItemData): string {
                         :alt="category.tagline_sub ?? ''"
                         class="mx-auto mt-2.5 block w-full max-w-[200px]"
                     />
-                </MenuEditableVisual>
+                </MenuEditableElement>
             </div>
         </div>
     </MenuPageFrame>

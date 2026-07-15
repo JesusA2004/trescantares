@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
+use App\Models\SiteSetting;
 use App\Support\MenuLayoutZones;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,9 +16,18 @@ use Inertia\Response;
 
 class MenuEditorController extends Controller
 {
-    private const BREAKPOINTS = ['mobile', 'tablet', 'desktop'];
+    private const BREAKPOINTS = ['base', 'sm', 'md', 'lg', 'xl', '2xl'];
 
-    private const CATEGORY_ELEMENTS = ['title', 'subtitle', 'tagline', 'tagline_image', 'image'];
+    private const ITEM_ELEMENTS = [
+        'container', 'image', 'name', 'description', 'price', 'price_label',
+        'price_secondary', 'price_secondary_label', 'presentation',
+        'ingredients', 'choice_label', 'badge', 'caption_image',
+    ];
+
+    private const CATEGORY_ELEMENTS = [
+        'title', 'subtitle', 'tagline', 'tagline_sub',
+        'title_image', 'subtitle_image', 'tagline_image', 'image',
+    ];
 
     public function index(): Response
     {
@@ -31,32 +41,73 @@ class MenuEditorController extends Controller
         ]);
     }
 
-    public function updateItemLayout(Request $request, MenuItem $menuItem): JsonResponse
+    /**
+     * Vista previa WYSIWYG: renderiza EXACTAMENTE el mismo componente
+     * Public/Menu (mismos sub-componentes, mismo app.css, mismas fuentes)
+     * que usa el visitante real, con editable=true para que MenuEditableElement
+     * active selección/arrastre/redimensionado dentro de este mismo documento
+     * (sin iframe anidado ni maquetación aparte — así el WYSIWYG es real).
+     */
+    public function preview(): Response
     {
-        if ($request->boolean('clear')) {
-            $breakpoint = $request->validate(['breakpoint' => ['required', Rule::in(self::BREAKPOINTS)]])['breakpoint'];
-            $settings = $menuItem->layout_settings ?? [];
-            unset($settings[$breakpoint]);
-            $menuItem->update(['layout_settings' => $settings === [] ? null : $settings]);
-            Cache::flush();
+        $settings = SiteSetting::allAsArray();
 
-            return response()->json(['layout_settings' => $menuItem->layout_settings]);
+        foreach (['logo', 'hero_background', 'location_background'] as $key) {
+            $setting = SiteSetting::where('key', $key)->first();
+            $settings[$key.'_url'] = $setting?->image_url;
         }
 
-        $data = $request->validate($this->breakpointRules());
+        $categories = MenuCategory::forPublicMenu();
+
+        return Inertia::render('Public/Menu', [
+            'settings' => $settings,
+            'categories' => $categories,
+            'editable' => true,
+        ]);
+    }
+
+    public function updateItemElement(Request $request, MenuItem $menuItem): JsonResponse
+    {
+        if ($request->boolean('clear')) {
+            return $this->clearElement($request, self::ITEM_ELEMENTS, function () use ($menuItem) {
+                return [$menuItem->layout_settings ?? [], fn ($settings) => $menuItem->update(['layout_settings' => $settings])];
+            }, fn () => $menuItem->fresh()->layout_settings);
+        }
+
+        $data = $request->validate(array_merge(
+            ['element' => ['required', Rule::in(self::ITEM_ELEMENTS)]],
+            $this->configRules(),
+        ));
 
         $settings = $menuItem->layout_settings ?? [];
-        $settings[$data['breakpoint']] = [
-            'move_x' => $data['move_x'],
-            'move_y' => $data['move_y'],
-            'width' => $data['width'],
-            'z_index' => $data['z_index'],
-        ];
+        $settings[$data['element']][$data['breakpoint']] = $data['config'];
 
         $menuItem->update(['layout_settings' => $settings]);
         Cache::flush();
 
         return response()->json(['layout_settings' => $menuItem->layout_settings]);
+    }
+
+    public function updateCategoryElement(Request $request, MenuCategory $category): JsonResponse
+    {
+        if ($request->boolean('clear')) {
+            return $this->clearElement($request, self::CATEGORY_ELEMENTS, function () use ($category) {
+                return [$category->visual_settings ?? [], fn ($settings) => $category->update(['visual_settings' => $settings])];
+            }, fn () => $category->fresh()->visual_settings);
+        }
+
+        $data = $request->validate(array_merge(
+            ['element' => ['required', Rule::in(self::CATEGORY_ELEMENTS)]],
+            $this->configRules(),
+        ));
+
+        $settings = $category->visual_settings ?? [];
+        $settings[$data['element']][$data['breakpoint']] = $data['config'];
+
+        $category->update(['visual_settings' => $settings]);
+        Cache::flush();
+
+        return response()->json(['visual_settings' => $category->visual_settings]);
     }
 
     public function updateItemQuick(Request $request, MenuItem $menuItem): JsonResponse
@@ -72,6 +123,10 @@ class MenuEditorController extends Controller
             'price_label' => 'nullable|string|max:40',
             'price_secondary' => 'nullable|numeric|min:0',
             'price_secondary_label' => 'nullable|string|max:40',
+            'presentation' => 'nullable|string|max:60',
+            'choice_label' => 'nullable|string|max:40',
+            'ingredients' => 'nullable|string',
+            'badge' => 'nullable|string|max:60',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer',
         ]);
@@ -103,55 +158,54 @@ class MenuEditorController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function updateCategoryVisualLayout(Request $request, MenuCategory $category): JsonResponse
+    /**
+     * @param  string[]  $allowedElements
+     * @param  callable(): array{0: array, 1: callable(array): void}  $loadAndSaver
+     * @param  callable(): ?array  $freshSettings
+     */
+    private function clearElement(Request $request, array $allowedElements, callable $loadAndSaver, callable $freshSettings): JsonResponse
     {
-        if ($request->boolean('clear')) {
-            $clearData = $request->validate([
-                'element' => ['required', Rule::in(self::CATEGORY_ELEMENTS)],
-                'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
-            ]);
-            $settings = $category->visual_settings ?? [];
-            unset($settings[$clearData['element']][$clearData['breakpoint']]);
+        $data = $request->validate([
+            'element' => ['required', Rule::in($allowedElements)],
+            'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
+        ]);
 
-            if (($settings[$clearData['element']] ?? []) === []) {
-                unset($settings[$clearData['element']]);
-            }
+        [$settings, $save] = $loadAndSaver();
+        unset($settings[$data['element']][$data['breakpoint']]);
 
-            $category->update(['visual_settings' => $settings === [] ? null : $settings]);
-            Cache::flush();
-
-            return response()->json(['visual_settings' => $category->visual_settings]);
+        if (($settings[$data['element']] ?? []) === []) {
+            unset($settings[$data['element']]);
         }
 
-        $data = $request->validate(array_merge(
-            ['element' => ['required', Rule::in(self::CATEGORY_ELEMENTS)]],
-            $this->breakpointRules(),
-        ));
-
-        $settings = $category->visual_settings ?? [];
-        $element = $data['element'];
-
-        $settings[$element][$data['breakpoint']] = [
-            'move_x' => $data['move_x'],
-            'move_y' => $data['move_y'],
-            'width' => $data['width'],
-            'z_index' => $data['z_index'],
-        ];
-
-        $category->update(['visual_settings' => $settings]);
+        $save($settings === [] ? null : $settings);
         Cache::flush();
 
-        return response()->json(['visual_settings' => $category->visual_settings]);
+        return response()->json(['settings' => $freshSettings()]);
     }
 
-    private function breakpointRules(): array
+    private function configRules(): array
     {
         return [
             'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
-            'move_x' => 'required|numeric|min:-2000|max:2000',
-            'move_y' => 'required|numeric|min:-2000|max:2000',
-            'width' => 'nullable|numeric|min:5|max:100',
-            'z_index' => 'required|integer|min:0|max:999',
+            'config' => 'required|array',
+            'config.x' => 'required|numeric|min:-4000|max:4000',
+            'config.y' => 'required|numeric|min:-4000|max:4000',
+            'config.width' => 'nullable|numeric|min:1|max:4000',
+            'config.height' => 'nullable|numeric|min:1|max:4000',
+            'config.scale' => 'required|numeric|min:0.1|max:5',
+            'config.rotation' => 'required|numeric|min:-360|max:360',
+            'config.z_index' => 'required|integer|min:0|max:999',
+            'config.locked' => 'nullable|boolean',
+            'config.font_size' => 'nullable|numeric|min:1|max:400',
+            'config.line_height' => 'nullable|numeric|min:0.1|max:10',
+            'config.letter_spacing' => 'nullable|numeric|min:-20|max:100',
+            'config.align' => ['nullable', Rule::in(['left', 'center', 'right'])],
+            'config.max_width' => 'nullable|numeric|min:1|max:4000',
+            'config.color' => 'nullable|string|max:30',
+            'config.fit' => ['nullable', Rule::in(['contain', 'cover'])],
+            'config.object_x' => 'nullable|numeric|min:0|max:100',
+            'config.object_y' => 'nullable|numeric|min:0|max:100',
+            'config.inner_scale' => 'nullable|numeric|min:0.1|max:5',
         ];
     }
 }

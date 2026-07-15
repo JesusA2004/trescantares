@@ -1,53 +1,53 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from 'vue';
-import { defaultLayout } from './types';
-import type { BreakpointLayout, MenuBreakpoint } from './types';
+import { defaultElementConfig } from './types';
+import type { ElementConfig } from './types';
 
 const props = withDefaults(
     defineProps<{
         elementKey: string;
         label?: string;
-        layout?: BreakpointLayout;
-        breakpoint: MenuBreakpoint;
+        config?: ElementConfig;
         editable?: boolean;
         selected?: boolean;
-        /** Factor de escala del lienzo (zoom del editor) para convertir px
-         * de pantalla a px reales del documento. 1 en el menú público. */
-        scaleFactor?: number;
+        /** 'image' conserva proporción al redimensionar por defecto. */
+        kind?: 'container' | 'image' | 'text';
     }>(),
     {
         label: '',
-        layout: () => defaultLayout(),
+        config: () => defaultElementConfig(),
         editable: false,
         selected: false,
-        scaleFactor: 1,
+        kind: 'container',
     },
 );
 
 const emit = defineEmits<{
     select: [elementKey: string];
-    commit: [
-        elementKey: string,
-        breakpoint: MenuBreakpoint,
-        layout: BreakpointLayout,
-    ];
+    commit: [elementKey: string, config: ElementConfig];
 }>();
 
 const root = useTemplateRef<HTMLDivElement>('root');
+const locked = computed(() => !!props.config.locked);
+const interactive = computed(() => props.editable && !locked.value);
 
-// Delta en curso (px reales, ya des-escalados) durante un arrastre/resize
-// activo, sumado en vivo al valor guardado para que el movimiento se vea
-// mientras el puntero se mueve; se resuelve a un nuevo layout al soltar.
-const gesture = ref<{ kind: 'move' | 'resize'; dx: number; dy: number } | null>(
-    null,
-);
+// Delta en curso (px REALES del documento — este componente siempre vive
+// dentro del documento del iframe de vista previa, que nunca tiene un
+// transform:scale aplicado a sí mismo, así que getBoundingClientRect() y
+// clientX/clientY están siempre en el mismo sistema de coordenadas sin
+// necesidad de dividir por ningún "scaleFactor" externo).
+const gesture = ref<{
+    kind: 'move' | 'resize' | 'rotate';
+    dx: number;
+    dy: number;
+} | null>(null);
 
 function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
 }
 
 const liveWidth = computed(() => {
-    const base = props.layout.width;
+    const base = props.config.width;
 
     if (gesture.value?.kind !== 'resize') {
         return base;
@@ -62,49 +62,78 @@ const liveWidth = computed(() => {
 
     const baseWidthPx =
         base !== null
-            ? (base / 100) * parentWidth
+            ? base
             : ((
                   root.value?.firstElementChild as HTMLElement | null
               )?.getBoundingClientRect().width ?? parentWidth);
 
-    return clamp(
-        ((baseWidthPx + gesture.value.dx) / parentWidth) * 100,
-        5,
-        100,
-    );
+    return Math.max(10, baseWidthPx + gesture.value.dx);
 });
 
 const style = computed(() => {
-    const l = props.layout;
+    const c = props.config;
     const dx = gesture.value?.kind === 'move' ? gesture.value.dx : 0;
     const dy = gesture.value?.kind === 'move' ? gesture.value.dy : 0;
-    const moveX = l.move_x + dx;
-    const moveY = l.move_y + dy;
+    const x = c.x + dx;
+    const y = c.y + dy;
+
+    const transforms: string[] = [];
+
+    if (x !== 0 || y !== 0) {
+        transforms.push(`translate(${x}px, ${y}px)`);
+    }
+
+    if (c.scale !== 1) {
+        transforms.push(`scale(${c.scale})`);
+    }
+
+    if (c.rotation !== 0) {
+        transforms.push(`rotate(${c.rotation}deg)`);
+    }
 
     const out: Record<string, string | number> = {};
 
-    if (moveX !== 0 || moveY !== 0) {
-        out.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
+    if (transforms.length) {
+        out.transform = transforms.join(' ');
     }
 
     if (liveWidth.value !== null) {
-        out.width = `${liveWidth.value}%`;
+        out.width = `${liveWidth.value}px`;
     }
 
-    if (l.z_index !== 1) {
+    if (c.height !== null) {
+        out.height = `${c.height}px`;
+    }
+
+    if (c.z_index !== 1) {
         out.position = 'relative';
-        out.zIndex = l.z_index;
+        out.zIndex = c.z_index;
     }
 
     return out;
 });
 
+function currentConfigFromDom(): ElementConfig {
+    if (
+        props.config.x !== 0 ||
+        props.config.y !== 0 ||
+        props.config.width !== null
+    ) {
+        return { ...props.config };
+    }
+
+    // Sin personalizar aún: el offset 0,0 ya representa su posición natural
+    // de flujo — no hace falta medir nada, basta con partir de la config
+    // por defecto (igual que hoy se ve, sin salto visual al empezar a mover).
+    return { ...defaultElementConfig(), ...props.config };
+}
+
 function startDrag(event: PointerEvent) {
-    if (!props.editable) {
+    if (!interactive.value) {
         return;
     }
 
-    if ((event.target as HTMLElement).closest('[data-mev-resize-handle]')) {
+    if ((event.target as HTMLElement).closest('[data-mev-handle]')) {
         return;
     }
 
@@ -112,6 +141,7 @@ function startDrag(event: PointerEvent) {
     event.stopPropagation();
     emit('select', props.elementKey);
 
+    const baseline = currentConfigFromDom();
     const startX = event.clientX;
     const startY = event.clientY;
     gesture.value = { kind: 'move', dx: 0, dy: 0 };
@@ -119,8 +149,8 @@ function startDrag(event: PointerEvent) {
     const move = (e: PointerEvent) => {
         gesture.value = {
             kind: 'move',
-            dx: (e.clientX - startX) / props.scaleFactor,
-            dy: (e.clientY - startY) / props.scaleFactor,
+            dx: e.clientX - startX,
+            dy: e.clientY - startY,
         };
     };
 
@@ -129,22 +159,19 @@ function startDrag(event: PointerEvent) {
         document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up);
 
-        const dx = (e.clientX - startX) / props.scaleFactor;
-        const dy = (e.clientY - startY) / props.scaleFactor;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
         gesture.value = null;
 
         if (dx === 0 && dy === 0) {
             return;
         }
 
-        const layout: BreakpointLayout = {
-            move_x: clamp(props.layout.move_x + dx, -2000, 2000),
-            move_y: clamp(props.layout.move_y + dy, -2000, 2000),
-            width: props.layout.width,
-            z_index: props.layout.z_index,
-        };
-
-        emit('commit', props.elementKey, props.breakpoint, layout);
+        emit('commit', props.elementKey, {
+            ...baseline,
+            x: clamp(baseline.x + dx, -4000, 4000),
+            y: clamp(baseline.y + dy, -4000, 4000),
+        });
     };
 
     document.addEventListener('pointermove', move);
@@ -153,7 +180,7 @@ function startDrag(event: PointerEvent) {
 }
 
 function startResize(event: PointerEvent) {
-    if (!props.editable) {
+    if (!interactive.value) {
         return;
     }
 
@@ -161,15 +188,18 @@ function startResize(event: PointerEvent) {
     event.stopPropagation();
     emit('select', props.elementKey);
 
+    const baseline = currentConfigFromDom();
+    const startWidth =
+        baseline.width ??
+        (
+            root.value?.firstElementChild as HTMLElement | null
+        )?.getBoundingClientRect().width ??
+        100;
     const startX = event.clientX;
     gesture.value = { kind: 'resize', dx: 0, dy: 0 };
 
     const move = (e: PointerEvent) => {
-        gesture.value = {
-            kind: 'resize',
-            dx: (e.clientX - startX) / props.scaleFactor,
-            dy: 0,
-        };
+        gesture.value = { kind: 'resize', dx: e.clientX - startX, dy: 0 };
     };
 
     const up = (e: PointerEvent) => {
@@ -177,21 +207,17 @@ function startResize(event: PointerEvent) {
         document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up);
 
-        const dx = (e.clientX - startX) / props.scaleFactor;
+        const dx = e.clientX - startX;
         gesture.value = null;
 
         if (dx === 0) {
             return;
         }
 
-        const layout: BreakpointLayout = {
-            move_x: props.layout.move_x,
-            move_y: props.layout.move_y,
-            width: liveWidth.value,
-            z_index: props.layout.z_index,
-        };
-
-        emit('commit', props.elementKey, props.breakpoint, layout);
+        emit('commit', props.elementKey, {
+            ...baseline,
+            width: Math.max(10, startWidth + dx),
+        });
     };
 
     document.addEventListener('pointermove', move);
@@ -200,7 +226,7 @@ function startResize(event: PointerEvent) {
 }
 
 function nudge(event: KeyboardEvent) {
-    if (!props.editable) {
+    if (!interactive.value) {
         return;
     }
 
@@ -221,15 +247,13 @@ function nudge(event: KeyboardEvent) {
     emit('select', props.elementKey);
 
     const step = event.shiftKey ? 10 : 1;
+    const baseline = currentConfigFromDom();
 
-    const layout: BreakpointLayout = {
-        move_x: clamp(props.layout.move_x + delta[0] * step, -2000, 2000),
-        move_y: clamp(props.layout.move_y + delta[1] * step, -2000, 2000),
-        width: props.layout.width,
-        z_index: props.layout.z_index,
-    };
-
-    emit('commit', props.elementKey, props.breakpoint, layout);
+    emit('commit', props.elementKey, {
+        ...baseline,
+        x: clamp(baseline.x + delta[0] * step, -4000, 4000),
+        y: clamp(baseline.y + delta[1] * step, -4000, 4000),
+    });
 }
 
 function selectFromFocus() {
@@ -237,6 +261,8 @@ function selectFromFocus() {
         emit('select', props.elementKey);
     }
 }
+
+defineExpose({ root });
 </script>
 
 <template>
@@ -246,9 +272,11 @@ function selectFromFocus() {
         :class="{
             'tc-mev--editable': editable,
             'tc-mev--selected': editable && selected,
+            'tc-mev--locked': editable && locked,
         }"
         :style="style"
-        :tabindex="editable ? 0 : undefined"
+        :data-element-key="elementKey"
+        :tabindex="interactive ? 0 : undefined"
         :aria-label="editable ? label || elementKey : undefined"
         @pointerdown="startDrag"
         @keydown="nudge"
@@ -259,11 +287,11 @@ function selectFromFocus() {
             v-if="editable && selected"
             class="tc-mev-label"
             aria-hidden="true"
-            >{{ label || elementKey }}</span
+            >{{ label || elementKey }}{{ locked ? ' 🔒' : '' }}</span
         >
         <div
-            v-if="editable && selected"
-            data-mev-resize-handle
+            v-if="editable && selected && !locked"
+            data-mev-handle
             class="tc-mev-handle"
             @pointerdown="startResize"
         />
@@ -271,12 +299,10 @@ function selectFromFocus() {
 </template>
 
 <style scoped>
-/* A propósito no fija display/position aquí: el host (.tc-mp-photo, un
-   título, etc.) ya trae el display que necesita (flex, block…) y le
-   agregamos esta clase encima — imponer display:block pisaría eso. transform
-   funciona en cualquier elemento de caja sin necesitar position:relative;
-   z-index si lo necesita, se activa vía estilo inline solo cuando aplica
-   (ver computed `style`). */
+/* A propósito no fija display/position: el host (imagen, título, bloque de
+   precio…) ya trae el display que necesita — imponer uno propio pisaría
+   flex/grid del layout público. transform funciona en cualquier caja sin
+   necesitar position:relative; z-index se activa solo cuando aplica. */
 .tc-mev--editable {
     cursor: grab;
     outline-offset: 2px;
@@ -290,6 +316,11 @@ function selectFromFocus() {
     outline: 2px solid var(--tc-blue, #144e8f) !important;
     cursor: grabbing;
     position: relative;
+}
+
+.tc-mev--locked.tc-mev--selected {
+    outline-color: #9ca3af !important;
+    cursor: not-allowed;
 }
 
 .tc-mev-label {

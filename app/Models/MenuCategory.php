@@ -45,6 +45,30 @@ class MenuCategory extends Model
         return $this->hasMany(MenuItem::class);
     }
 
+    /**
+     * Datos tal como los consume el menú público — usado tanto por
+     * Public\MenuController como por el preview WYSIWYG del editor visual
+     * (Admin\MenuEditorController::preview), para garantizar que ambos
+     * rendericen exactamente la misma información.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function forPublicMenu(): array
+    {
+        return self::with(['items' => function ($q) {
+            $q->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name');
+        }])
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (self $category) => $category->toPublicArray())
+            ->values()
+            ->all();
+    }
+
     public function getImageUrlAttribute(): ?string
     {
         return $this->assetUrl('image');

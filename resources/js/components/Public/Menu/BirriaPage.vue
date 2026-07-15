@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import DotOrnament from './DotOrnament.vue';
-import MenuEditableVisual from './MenuEditableVisual.vue';
-import MenuItemPhoto from './MenuItemPhoto.vue';
+import MenuEditableElement from './MenuEditableElement.vue';
+import MenuItemVisual from './MenuItemVisual.vue';
 import MenuPageFrame from './MenuPageFrame.vue';
-import { byZone, categoryVisualFor, money } from './types';
-import type {
-    BreakpointLayout,
-    MenuBreakpoint,
-    MenuCategoryData,
-} from './types';
+import MenuPriceVisual from './MenuPriceVisual.vue';
+import MenuTextVisual from './MenuTextVisual.vue';
+import { byZone, categoryElementFor, itemElementFor } from './types';
+import type { ElementConfig, MenuBreakpoint, MenuCategoryData } from './types';
 
 const props = withDefaults(
     defineProps<{
@@ -17,26 +15,24 @@ const props = withDefaults(
         breakpoint: MenuBreakpoint;
         editable?: boolean;
         selectedKey?: string | null;
-        scaleFactor?: number;
     }>(),
     {
         editable: false,
         selectedKey: null,
-        scaleFactor: 1,
     },
 );
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, breakpoint: MenuBreakpoint, layout: BreakpointLayout];
+    commit: [key: string, config: ElementConfig];
 }>();
 
 function onSelect(key: string) {
     emit('select', key);
 }
 
-function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
-    emit('commit', key, bp, layout);
+function onCommit(key: string, config: ElementConfig) {
+    emit('commit', key, config);
 }
 
 const main = computed(() => byZone(props.category.items, 'main')[0]);
@@ -48,14 +44,12 @@ const sides = computed(() => byZone(props.category.items, 'side'));
         :primary-color="category.color ?? undefined"
         :secondary-color="category.color_secondary ?? undefined"
     >
-        <MenuEditableVisual
-            element-key="title"
+        <MenuEditableElement
+            :element-key="`category-${category.id}:title`"
             label="Título Birria"
-            :layout="categoryVisualFor(category, 'title', breakpoint)"
-            :breakpoint="breakpoint"
+            :config="categoryElementFor(category, 'title', breakpoint)"
             :editable="editable"
-            :selected="selectedKey === 'title'"
-            :scale-factor="scaleFactor"
+            :selected="selectedKey === `category-${category.id}:title`"
             @select="onSelect"
             @commit="onCommit"
         >
@@ -75,40 +69,54 @@ const sides = computed(() => byZone(props.category.items, 'side'));
             >
                 {{ category.name }}
             </h2>
-        </MenuEditableVisual>
+        </MenuEditableElement>
 
-        <div v-if="main" class="tc-mp-hero-row">
-            <MenuItemPhoto
-                :item="main"
-                class="tc-mp-hero-photo"
-                :breakpoint="breakpoint"
-                :editable="editable"
-                :selected="selectedKey === `item-${main.id}`"
-                :scale-factor="scaleFactor"
-                @select="onSelect"
-                @commit="onCommit"
-            />
-            <DotOrnament
-                :color="category.color_secondary ?? undefined"
-                :size="50"
-            />
-            <p
-                class="tc-mp-price tc-mp-price--xl"
-                :style="{ color: category.color_secondary ?? undefined }"
-            >
-                ${{ money(main.price) }}
-            </p>
-        </div>
-
-        <MenuEditableVisual
-            v-if="category.tagline"
-            element-key="tagline"
-            label="Y más…"
-            :layout="categoryVisualFor(category, 'tagline', breakpoint)"
-            :breakpoint="breakpoint"
+        <MenuEditableElement
+            v-if="main"
+            :element-key="`item-${main.id}:container`"
+            :label="`${main.name} — contenedor`"
+            :config="itemElementFor(main, 'container', breakpoint)"
             :editable="editable"
-            :selected="selectedKey === 'tagline'"
-            :scale-factor="scaleFactor"
+            :selected="selectedKey === `item-${main.id}:container`"
+            @select="onSelect"
+            @commit="onCommit"
+        >
+            <div class="tc-mp-hero-row">
+                <MenuItemVisual
+                    :item="main"
+                    class="tc-mp-hero-photo"
+                    :breakpoint="breakpoint"
+                    :editable="editable"
+                    :selected-key="selectedKey"
+                    @select="onSelect"
+                    @commit="onCommit"
+                />
+                <DotOrnament
+                    :color="category.color_secondary ?? undefined"
+                    :size="50"
+                />
+                <MenuPriceVisual
+                    :element-key="`item-${main.id}:price`"
+                    :label="`${main.name} — precio`"
+                    :config="itemElementFor(main, 'price', breakpoint)"
+                    :value="main.price"
+                    :editable="editable"
+                    :selected-key="selectedKey"
+                    class="tc-mp-price tc-mp-price--xl"
+                    :style="{ color: category.color_secondary ?? undefined }"
+                    @select="onSelect"
+                    @commit="onCommit"
+                />
+            </div>
+        </MenuEditableElement>
+
+        <MenuEditableElement
+            v-if="category.tagline"
+            :element-key="`category-${category.id}:tagline`"
+            label="Y más…"
+            :config="categoryElementFor(category, 'tagline', breakpoint)"
+            :editable="editable"
+            :selected="selectedKey === `category-${category.id}:tagline`"
             @select="onSelect"
             @commit="onCommit"
         >
@@ -124,45 +132,68 @@ const sides = computed(() => byZone(props.category.items, 'side'));
                 >
                 <span class="tc-mp-dot-divider-line" />
             </div>
-        </MenuEditableVisual>
+        </MenuEditableElement>
 
         <div class="tc-mp-birria-sides">
-            <div
+            <MenuEditableElement
                 v-for="(side, idx) in sides"
                 :key="side.id"
-                class="tc-mp-alt-row"
-                :class="{ 'tc-mp-alt-row--reverse': idx % 2 === 1 }"
+                :element-key="`item-${side.id}:container`"
+                :label="`${side.name} — contenedor`"
+                :config="itemElementFor(side, 'container', breakpoint)"
+                :editable="editable"
+                :selected="selectedKey === `item-${side.id}:container`"
+                @select="onSelect"
+                @commit="onCommit"
             >
-                <MenuItemPhoto
-                    :item="side"
-                    class="tc-mp-alt-photo"
-                    :breakpoint="breakpoint"
-                    :editable="editable"
-                    :selected="selectedKey === `item-${side.id}`"
-                    :scale-factor="scaleFactor"
-                    @select="onSelect"
-                    @commit="onCommit"
-                />
-                <div class="tc-mp-alt-text">
-                    <p
-                        class="tc-mp-name tc-mp-name--md"
-                        :style="{
-                            color: category.color_secondary ?? undefined,
-                        }"
-                    >
-                        {{ side.name }}
-                    </p>
-                    <p
-                        class="tc-mp-price tc-mp-price--sm"
-                        :style="{
-                            color: category.color ?? undefined,
-                            '--tc-mp-h': category.color ?? undefined,
-                        }"
-                    >
-                        ${{ money(side.price) }}
-                    </p>
+                <div
+                    class="tc-mp-alt-row"
+                    :class="{ 'tc-mp-alt-row--reverse': idx % 2 === 1 }"
+                >
+                    <MenuItemVisual
+                        :item="side"
+                        class="tc-mp-alt-photo"
+                        :breakpoint="breakpoint"
+                        :editable="editable"
+                        :selected-key="selectedKey"
+                        @select="onSelect"
+                        @commit="onCommit"
+                    />
+                    <div class="tc-mp-alt-text">
+                        <MenuTextVisual
+                            :element-key="`item-${side.id}:name`"
+                            :label="`${side.name} — nombre`"
+                            :config="itemElementFor(side, 'name', breakpoint)"
+                            :editable="editable"
+                            :selected-key="selectedKey"
+                            as="p"
+                            class="tc-mp-name tc-mp-name--md"
+                            :style="{
+                                color: category.color_secondary ?? undefined,
+                            }"
+                            @select="onSelect"
+                            @commit="onCommit"
+                        >
+                            {{ side.name }}
+                        </MenuTextVisual>
+                        <MenuPriceVisual
+                            :element-key="`item-${side.id}:price`"
+                            :label="`${side.name} — precio`"
+                            :config="itemElementFor(side, 'price', breakpoint)"
+                            :value="side.price"
+                            :editable="editable"
+                            :selected-key="selectedKey"
+                            class="tc-mp-price tc-mp-price--sm"
+                            :style="{
+                                color: category.color ?? undefined,
+                                '--tc-mp-h': category.color ?? undefined,
+                            }"
+                            @select="onSelect"
+                            @commit="onCommit"
+                        />
+                    </div>
                 </div>
-            </div>
+            </MenuEditableElement>
         </div>
     </MenuPageFrame>
 </template>

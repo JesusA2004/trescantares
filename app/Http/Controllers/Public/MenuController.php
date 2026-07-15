@@ -19,16 +19,7 @@ class MenuController extends Controller
             $settings[$key.'_url'] = $setting?->image_url;
         }
 
-        $categories = MenuCategory::with(['items' => function ($q) {
-            $q->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name');
-        }])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (MenuCategory $category) => $category->toPublicArray());
+        $categories = MenuCategory::forPublicMenu();
 
         return Inertia::render('Public/Menu', compact('settings', 'categories'));
     }

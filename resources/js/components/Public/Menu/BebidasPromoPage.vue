@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import MenuEditableVisual from './MenuEditableVisual.vue';
-import MenuItemPhoto from './MenuItemPhoto.vue';
+import MenuEditableElement from './MenuEditableElement.vue';
 import MenuPageFrame from './MenuPageFrame.vue';
-import { categoryVisualFor, money } from './types';
-import type {
-    BreakpointLayout,
-    MenuBreakpoint,
-    MenuCategoryData,
-} from './types';
+import MenuPriceVisual from './MenuPriceVisual.vue';
+import MenuTextVisual from './MenuTextVisual.vue';
+import { categoryElementFor, itemElementFor } from './types';
+import type { ElementConfig, MenuBreakpoint, MenuCategoryData } from './types';
 
 withDefaults(
     defineProps<{
@@ -15,26 +12,24 @@ withDefaults(
         breakpoint: MenuBreakpoint;
         editable?: boolean;
         selectedKey?: string | null;
-        scaleFactor?: number;
     }>(),
     {
         editable: false,
         selectedKey: null,
-        scaleFactor: 1,
     },
 );
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, breakpoint: MenuBreakpoint, layout: BreakpointLayout];
+    commit: [key: string, config: ElementConfig];
 }>();
 
 function onSelect(key: string) {
     emit('select', key);
 }
 
-function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
-    emit('commit', key, bp, layout);
+function onCommit(key: string, config: ElementConfig) {
+    emit('commit', key, config);
 }
 </script>
 
@@ -44,14 +39,12 @@ function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
         :secondary-color="category.color_secondary ?? undefined"
     >
         <div class="tc-mp-grid--bebidas-promo">
-            <MenuEditableVisual
-                element-key="title"
+            <MenuEditableElement
+                :element-key="`category-${category.id}:title`"
                 label="Título Bebidas"
-                :layout="categoryVisualFor(category, 'title', breakpoint)"
-                :breakpoint="breakpoint"
+                :config="categoryElementFor(category, 'title', breakpoint)"
                 :editable="editable"
-                :selected="selectedKey === 'title'"
-                :scale-factor="scaleFactor"
+                :selected="selectedKey === `category-${category.id}:title`"
                 @select="onSelect"
                 @commit="onCommit"
             >
@@ -71,42 +64,39 @@ function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
                 >
                     {{ category.tagline ?? category.name }}
                 </h2>
-            </MenuEditableVisual>
+            </MenuEditableElement>
 
             <div class="tc-mp-promo-media">
-                <MenuEditableVisual
+                <MenuEditableElement
                     v-if="category.image_url"
-                    element-key="image"
+                    :element-key="`category-${category.id}:image`"
                     label="Foto Bebidas"
-                    :layout="categoryVisualFor(category, 'image', breakpoint)"
-                    :breakpoint="breakpoint"
+                    :config="categoryElementFor(category, 'image', breakpoint)"
                     :editable="editable"
-                    :selected="selectedKey === 'image'"
-                    :scale-factor="scaleFactor"
+                    :selected="selectedKey === `category-${category.id}:image`"
                     @select="onSelect"
                     @commit="onCommit"
                 >
                     <div class="tc-mp-promo-hero">
-                        <MenuItemPhoto
-                            :item="{
-                                image_url: category.image_url,
-                                name: category.name,
-                            }"
+                        <img
+                            :src="category.image_url"
+                            :alt="category.name"
+                            class="h-full w-full object-cover"
                         />
                     </div>
-                </MenuEditableVisual>
+                </MenuEditableElement>
 
-                <MenuEditableVisual
+                <MenuEditableElement
                     v-if="category.subtitle_image_url"
-                    element-key="subtitle"
+                    :element-key="`category-${category.id}:subtitle`"
                     label="Compra dos"
-                    :layout="
-                        categoryVisualFor(category, 'subtitle', breakpoint)
+                    :config="
+                        categoryElementFor(category, 'subtitle', breakpoint)
                     "
-                    :breakpoint="breakpoint"
                     :editable="editable"
-                    :selected="selectedKey === 'subtitle'"
-                    :scale-factor="scaleFactor"
+                    :selected="
+                        selectedKey === `category-${category.id}:subtitle`
+                    "
                     @select="onSelect"
                     @commit="onCommit"
                 >
@@ -115,7 +105,7 @@ function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
                         :alt="category.subtitle ?? ''"
                         class="tc-mp-promo-banner"
                     />
-                </MenuEditableVisual>
+                </MenuEditableElement>
             </div>
 
             <div class="tc-mp-promo-prices">
@@ -124,23 +114,37 @@ function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
                     :key="item.id"
                     class="tc-mp-promo-price-item"
                 >
-                    <p
+                    <MenuTextVisual
+                        :element-key="`item-${item.id}:name`"
+                        :label="`${item.name} — nombre`"
+                        :config="itemElementFor(item, 'name', breakpoint)"
+                        :editable="editable"
+                        :selected-key="selectedKey"
+                        as="p"
                         class="tc-mp-choice"
                         :style="{
                             color: category.color ?? undefined,
                             '--tc-mp-h': category.color ?? undefined,
                         }"
+                        @select="onSelect"
+                        @commit="onCommit"
                     >
                         {{ item.name }}
-                    </p>
-                    <p
+                    </MenuTextVisual>
+                    <MenuPriceVisual
+                        :element-key="`item-${item.id}:price`"
+                        :label="`${item.name} — precio`"
+                        :config="itemElementFor(item, 'price', breakpoint)"
+                        :value="item.price"
+                        :editable="editable"
+                        :selected-key="selectedKey"
                         class="tc-mp-price tc-mp-price--sm"
                         :style="{
                             color: category.color_secondary ?? undefined,
                         }"
-                    >
-                        ${{ money(item.price) }}
-                    </p>
+                        @select="onSelect"
+                        @commit="onCommit"
+                    />
                 </div>
             </div>
         </div>

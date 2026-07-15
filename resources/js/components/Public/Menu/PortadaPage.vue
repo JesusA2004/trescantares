@@ -10,7 +10,11 @@ const props = defineProps<{
     breakpoint?: MenuBreakpoint;
     editable?: boolean;
     selectedKey?: string | null;
-    scaleFactor?: number;
+}>();
+
+defineEmits<{
+    select: [key: string];
+    commit: [key: string, config: unknown];
 }>();
 
 // background_position permite reencuadrar Portada.png (p. ej. "center 30%")

@@ -1,15 +1,28 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { computed, reactive, ref, watch } from 'vue';
-import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
-import { layoutFor } from '@/components/Public/Menu/layoutRegistry';
 import {
-    categoryVisualFor,
-    itemLayoutFor,
+    computed,
+    onMounted,
+    onUnmounted,
+    reactive,
+    ref,
+    useTemplateRef,
+    watch,
+} from 'vue';
+import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import {
+    BREAKPOINT_ORDER,
+    CATEGORY_ELEMENT_LABELS,
+    ITEM_ELEMENT_LABELS,
+    categoryElementFor,
+    hasOwnElementConfig,
+    itemElementFor,
+    resolveBreakpoint,
 } from '@/components/Public/Menu/types';
 import type {
-    BreakpointLayout,
-    CategoryVisualElement,
+    CategoryElementKey,
+    ElementConfig,
+    ItemElementKey,
     MenuBreakpoint,
     MenuCategoryData,
     MenuItemData,
@@ -19,7 +32,7 @@ import TcSelect from '@/components/tc/TcSelect.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
 import { useAutosave } from '@/composables/useAutosave';
 import { useDragSort } from '@/composables/useDragSort';
-import { useNotify } from '@/composables/useNotify';
+import { useMenuPreviewParent } from '@/composables/useMenuPreviewBridge';
 import { patchJson, postJson } from '@/lib/jsonApi';
 import { zonesForLayout } from '@/pages/Admin/MenuItems/zones';
 
@@ -27,12 +40,118 @@ const props = defineProps<{
     categories: MenuCategoryData[];
 }>();
 
-// Copia local mutable — el editor optimiza la UI aplicando el cambio de
-// inmediato y guarda en segundo plano; los datos originales de Inertia no se
-// tocan directamente.
+// Copia local: refleja de inmediato lo que el usuario hace (arrastrar dentro
+// del iframe, editar el inspector, reordenar) para que la barra lateral y el
+// inspector no dependan de un viaje de ida y vuelta al servidor. El iframe
+// de vista previa tiene SU PROPIA copia (carga /admin/menu-editor/preview de
+// forma independiente) — ambas copias se sincronizan vía postMessage:
+// arrastrar dentro del iframe emite "commit" hacia aquí, y los cambios del
+// inspector se envían hacia el iframe con "updateConfig"/"clearElement".
 const categories = reactive<MenuCategoryData[]>(
     JSON.parse(JSON.stringify(props.categories)),
 );
+
+const previewUrl = '/admin/menu-editor/preview';
+
+/* ------------------------------------------------------------------ */
+/* Viewport real (breakpoints Tailwind reales, no una simulación de 3)  */
+/* ------------------------------------------------------------------ */
+
+const BREAKPOINT_PRESETS: {
+    key: MenuBreakpoint;
+    label: string;
+    width: number;
+}[] = [
+    { key: 'base', label: 'Móvil', width: 390 },
+    { key: 'sm', label: 'SM', width: 640 },
+    { key: 'md', label: 'Tablet', width: 768 },
+    { key: 'lg', label: 'Laptop', width: 1024 },
+    { key: 'xl', label: 'Desktop', width: 1280 },
+    { key: '2xl', label: 'Pantalla grande', width: 1536 },
+];
+const WIDTH_PRESETS = [
+    375, 390, 412, 640, 768, 1024, 1280, 1366, 1440, 1536, 1920,
+];
+
+// El ancho del iframe ES el ancho real de su documento — Menu.vue resuelve
+// su propio breakpoint leyendo window.innerWidth del iframe (vía
+// useBreakpoint), así que cambiar este número cambia de verdad qué
+// breakpoint de Tailwind aplica adentro, exactamente igual que /menu.
+const viewportWidth = ref(390);
+const activeBreakpoint = computed(() => resolveBreakpoint(viewportWidth.value));
+
+// El zoom es puramente visual (transform:scale sobre un envoltorio), nunca
+// se aplica al iframe mismo — así las coordenadas guardadas nunca dependen
+// del zoom, tal como exige el WYSIWYG real. PANEL_WIDTH se fija por encima
+// del ancho máximo permitido (2200) para que zoom=100% signifique SIEMPRE
+// tamaño real 1:1 (baseScale=1) — el panel simplemente permite scroll
+// horizontal en viewports anchos en vez de reducir la escala en automático,
+// así "100%" nunca miente sobre el tamaño real renderizado.
+const zoom = ref(100);
+const PANEL_WIDTH = 2600;
+const baseScale = computed(() =>
+    Math.min(1, PANEL_WIDTH / viewportWidth.value),
+);
+const scale = computed(() => baseScale.value * (zoom.value / 100));
+
+// Alto FIJO del iframe (nunca medido/realimentado desde su propio
+// contenido): el menú público usa secciones con min-height:100vh (la
+// portada) — si el alto del iframe se ajustara a partir de su propio
+// scrollHeight, ese 100vh crecería junto con el iframe en un bucle de
+// realimentación sin límite (100vh de un iframe es relativo a SU PROPIA
+// altura). Un valor generoso y estático evita el bucle; el panel exterior
+// ya tiene overflow:auto para lo que sobre. En móvil el contenido se apila
+// en una sola columna y necesita más alto que en escritorio.
+const contentHeight = computed(() =>
+    activeBreakpoint.value === 'base' || activeBreakpoint.value === 'sm'
+        ? 11000
+        : 7000,
+);
+
+/* ------------------------------------------------------------------ */
+/* Iframe WYSIWYG + puente postMessage                                  */
+/* ------------------------------------------------------------------ */
+
+const iframeEl = useTemplateRef<HTMLIFrameElement>('iframeEl');
+const previewReady = ref(false);
+let reselectAfterReload = false;
+
+const bridge = useMenuPreviewParent(() => iframeEl.value, {
+    onReady: () => {
+        previewReady.value = true;
+
+        if (reselectAfterReload && selectedKey.value) {
+            reselectAfterReload = false;
+            bridge.selectElement(selectedKey.value);
+        }
+    },
+    onSelect: (key) => {
+        selectedKey.value = key;
+        followSelectionCategory(key);
+    },
+    onCommit: (key, config) => {
+        onIframeCommit(key, config);
+    },
+});
+
+let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleIframeReload() {
+    if (reloadTimer) {
+        clearTimeout(reloadTimer);
+    }
+
+    reloadTimer = setTimeout(() => {
+        reloadTimer = null;
+        reselectAfterReload = !!selectedKey.value;
+        previewReady.value = false;
+        iframeEl.value?.contentWindow?.location.reload();
+    }, 400);
+}
+
+/* ------------------------------------------------------------------ */
+/* Secciones (categorías) — navegación                                  */
+/* ------------------------------------------------------------------ */
 
 const activeCategoryId = ref<number | null>(categories[0]?.id ?? null);
 const activeCategory = computed(
@@ -48,277 +167,309 @@ function goToIndex(idx: number) {
     }
 
     activeCategoryId.value = categories[idx].id;
-    selectedKey.value = null;
+    bridge.scrollToCategory(categories[idx].id);
 }
 
-const viewport = ref<MenuBreakpoint>('mobile');
-const zoom = ref(100);
+function selectCategory(id: number) {
+    activeCategoryId.value = id;
+    bridge.scrollToCategory(id);
+}
 
-const CANVAS_WIDTH: Record<MenuBreakpoint, number> = {
-    mobile: 390,
-    tablet: 834,
-    desktop: 1440,
-};
-const PANEL_WIDTH = 880;
-const baseScale = computed(() =>
-    Math.min(1, PANEL_WIDTH / CANVAS_WIDTH[viewport.value]),
-);
-const scale = computed(() => baseScale.value * (zoom.value / 100));
+function followSelectionCategory(key: string) {
+    const parsed = parseKey(key);
 
-/* ---------------------------------------------------------------- */
-/* Selección + inspector                                             */
-/* ---------------------------------------------------------------- */
-
-const selectedKey = ref<string | null>(null);
-
-const selectedItem = computed<MenuItemData | null>(() => {
-    if (!selectedKey.value?.startsWith('item-') || !activeCategory.value) {
-        return null;
+    if (!parsed) {
+        return;
     }
 
-    const id = Number(selectedKey.value.slice(5));
+    if (parsed.kind === 'item') {
+        const owner = categories.find((c) =>
+            c.items.some((i) => i.id === parsed.id),
+        );
 
-    return activeCategory.value.items.find((i) => i.id === id) ?? null;
-});
+        if (owner) {
+            activeCategoryId.value = owner.id;
+        }
+    } else {
+        activeCategoryId.value = parsed.id;
+    }
+}
 
-const CATEGORY_ELEMENT_LABELS: Record<CategoryVisualElement, string> = {
-    title: 'Título',
-    subtitle: 'Subtítulo',
-    tagline: 'Tagline',
-    tagline_image: 'Gráfico decorativo',
-    image: 'Imagen de sección',
-};
+/* ------------------------------------------------------------------ */
+/* Claves de elemento: item-{id}:{el} / category-{id}:{el}              */
+/* ------------------------------------------------------------------ */
 
-const selectedLabel = computed(() => {
-    if (selectedItem.value) {
-        return selectedItem.value.name;
+interface ParsedKey {
+    kind: 'item' | 'category';
+    id: number;
+    element: ItemElementKey | CategoryElementKey;
+}
+
+function parseKey(key: string): ParsedKey | null {
+    const itemMatch = /^item-(\d+):(.+)$/.exec(key);
+
+    if (itemMatch) {
+        return {
+            kind: 'item',
+            id: Number(itemMatch[1]),
+            element: itemMatch[2] as ItemElementKey,
+        };
     }
 
-    if (selectedKey.value && selectedKey.value in CATEGORY_ELEMENT_LABELS) {
-        return CATEGORY_ELEMENT_LABELS[
-            selectedKey.value as CategoryVisualElement
-        ];
+    const catMatch = /^category-(\d+):(.+)$/.exec(key);
+
+    if (catMatch) {
+        return {
+            kind: 'category',
+            id: Number(catMatch[1]),
+            element: catMatch[2] as CategoryElementKey,
+        };
     }
 
-    return selectedKey.value ?? '';
-});
+    return null;
+}
 
-function resolveLayout(
-    categoryId: number,
-    key: string,
-    bp: MenuBreakpoint,
-): BreakpointLayout {
-    const cat = categories.find((c) => c.id === categoryId);
-
-    if (!cat) {
-        return { move_x: 0, move_y: 0, width: null, z_index: 1 };
-    }
-
-    if (key.startsWith('item-')) {
-        const id = Number(key.slice(5));
+function findItemGlobal(id: number): MenuItemData | null {
+    for (const cat of categories) {
         const item = cat.items.find((i) => i.id === id);
 
-        return itemLayoutFor({ layout_settings: item?.layout_settings }, bp);
+        if (item) {
+            return item;
+        }
     }
 
-    return categoryVisualFor(cat, key as CategoryVisualElement, bp);
+    return null;
 }
 
-function hasCustomLayout(
-    categoryId: number,
-    key: string,
-    bp: MenuBreakpoint,
-): boolean {
-    const cat = categories.find((c) => c.id === categoryId);
+function findCategoryGlobal(id: number): MenuCategoryData | null {
+    return categories.find((c) => c.id === id) ?? null;
+}
 
-    if (!cat) {
+function resolveConfig(key: string, bp: MenuBreakpoint): ElementConfig {
+    const parsed = parseKey(key);
+
+    if (!parsed) {
+        return itemElementFor({ layout_settings: null }, 'container', bp);
+    }
+
+    if (parsed.kind === 'item') {
+        const item = findItemGlobal(parsed.id);
+
+        return itemElementFor(
+            { layout_settings: item?.layout_settings },
+            parsed.element as ItemElementKey,
+            bp,
+        );
+    }
+
+    const category = findCategoryGlobal(parsed.id);
+
+    return categoryElementFor(
+        { visual_settings: category?.visual_settings },
+        parsed.element as CategoryElementKey,
+        bp,
+    );
+}
+
+function hasOwnConfig(key: string, bp: MenuBreakpoint): boolean {
+    const parsed = parseKey(key);
+
+    if (!parsed) {
         return false;
     }
 
-    if (key.startsWith('item-')) {
-        const id = Number(key.slice(5));
-        const item = cat.items.find((i) => i.id === id);
+    if (parsed.kind === 'item') {
+        const item = findItemGlobal(parsed.id);
 
-        return !!item?.layout_settings?.[bp];
+        return hasOwnElementConfig(
+            item?.layout_settings?.[parsed.element as ItemElementKey],
+            bp,
+        );
     }
 
-    return !!cat.visual_settings?.[key as CategoryVisualElement]?.[bp];
+    const category = findCategoryGlobal(parsed.id);
+
+    return hasOwnElementConfig(
+        category?.visual_settings?.[parsed.element as CategoryElementKey],
+        bp,
+    );
 }
 
-// Deriva del estado reactivo — se actualiza solo cuando applyLocal muta
-// categories, sin necesidad de sincronizarlo a mano en cada handler.
-const inspectorLayout = computed<BreakpointLayout | null>(() => {
-    if (!selectedKey.value || !activeCategory.value) {
-        return null;
-    }
-
-    return resolveLayout(
-        activeCategory.value.id,
-        selectedKey.value,
-        viewport.value,
-    );
-});
-
-const selectedHasCustomLayout = computed(() => {
-    if (!selectedKey.value || !activeCategory.value) {
-        return false;
-    }
-
-    return hasCustomLayout(
-        activeCategory.value.id,
-        selectedKey.value,
-        viewport.value,
-    );
-});
-
-function onSelect(key: string) {
-    selectedKey.value = key;
-}
-
-/* ---------------------------------------------------------------- */
-/* Guardado                                                          */
-/* ---------------------------------------------------------------- */
-
-const savingCount = ref(0);
-const saveStatus = ref<'idle' | 'saved' | 'error'>('idle');
-const lastFailed = ref<{
-    categoryId: number;
-    key: string;
-    bp: MenuBreakpoint;
-    layout: BreakpointLayout | null;
-} | null>(null);
-
-const statusLabel = computed(() => {
-    if (savingCount.value > 0) {
-        return 'Guardando…';
-    }
-
-    if (saveStatus.value === 'error') {
-        return 'Error al guardar';
-    }
-
-    if (saveStatus.value === 'saved') {
-        return 'Guardado';
-    }
-
-    return 'Sin cambios pendientes';
-});
-
-function applyLocal(
-    categoryId: number,
+function applyMirror(
     key: string,
+    config: ElementConfig | null,
     bp: MenuBreakpoint,
-    layout: BreakpointLayout | null,
 ) {
-    const cat = categories.find((c) => c.id === categoryId);
+    const parsed = parseKey(key);
 
-    if (!cat) {
+    if (!parsed) {
         return;
     }
 
-    if (key.startsWith('item-')) {
-        const id = Number(key.slice(5));
-        const item = cat.items.find((i) => i.id === id);
+    const target =
+        parsed.kind === 'item'
+            ? findItemGlobal(parsed.id)
+            : findCategoryGlobal(parsed.id);
 
-        if (!item) {
-            return;
-        }
-
-        const settings = { ...(item.layout_settings ?? {}) };
-
-        if (layout) {
-            settings[bp] = layout;
-        } else {
-            delete settings[bp];
-        }
-
-        item.layout_settings = Object.keys(settings).length ? settings : null;
-
+    if (!target) {
         return;
     }
 
-    const vs = { ...(cat.visual_settings ?? {}) };
-    const elementSettings = { ...(vs[key as CategoryVisualElement] ?? {}) };
+    const field =
+        parsed.kind === 'item' ? 'layout_settings' : 'visual_settings';
+    const settings = { ...((target as any)[field] ?? {}) };
+    const elementSettings = { ...(settings[parsed.element] ?? {}) };
 
-    if (layout) {
-        elementSettings[bp] = layout;
+    if (config) {
+        elementSettings[bp] = config;
     } else {
         delete elementSettings[bp];
     }
 
     if (Object.keys(elementSettings).length) {
-        vs[key as CategoryVisualElement] = elementSettings;
+        settings[parsed.element] = elementSettings;
     } else {
-        delete vs[key as CategoryVisualElement];
+        delete settings[parsed.element];
     }
 
-    cat.visual_settings = Object.keys(vs).length ? vs : null;
+    (target as any)[field] = Object.keys(settings).length ? settings : null;
 }
 
-async function persistChange(
-    categoryId: number,
+/** Aplica localmente y envía al iframe (sin registrar deshacer — lo hacen
+ * las funciones que inician el cambio). */
+function applyChange(
     key: string,
     bp: MenuBreakpoint,
-    layout: BreakpointLayout | null,
+    config: ElementConfig | null,
 ) {
-    savingCount.value++;
+    applyMirror(key, config, bp);
 
-    try {
-        if (key.startsWith('item-')) {
-            const id = Number(key.slice(5));
-            await patchJson(
-                `/admin/menu-editor/items/${id}/layout`,
-                layout
-                    ? { breakpoint: bp, ...layout }
-                    : { breakpoint: bp, clear: true },
-            );
-        } else {
-            await patchJson(
-                `/admin/menu-editor/categories/${categoryId}/visual-layout`,
-                layout
-                    ? { element: key, breakpoint: bp, ...layout }
-                    : { element: key, breakpoint: bp, clear: true },
-            );
-        }
-
-        saveStatus.value = 'saved';
-        lastFailed.value = null;
-    } catch {
-        saveStatus.value = 'error';
-        lastFailed.value = { categoryId, key, bp, layout };
-        useNotify().error(
-            'No se pudo guardar el cambio. Se conservó localmente — puedes reintentar.',
-        );
-    } finally {
-        savingCount.value--;
+    if (config) {
+        bridge.updateConfig(key, config, bp);
+    } else {
+        bridge.clearElement(key, bp);
     }
 }
 
-function retry() {
-    if (!lastFailed.value) {
-        return;
+/* ------------------------------------------------------------------ */
+/* Selección + inspector                                                */
+/* ------------------------------------------------------------------ */
+
+const selectedKey = ref<string | null>(null);
+
+const selectedItem = computed<MenuItemData | null>(() => {
+    const parsed = selectedKey.value ? parseKey(selectedKey.value) : null;
+
+    return parsed?.kind === 'item' ? findItemGlobal(parsed.id) : null;
+});
+
+const selectedItemCategory = computed<MenuCategoryData | null>(() => {
+    if (!selectedItem.value) {
+        return null;
     }
 
-    const { categoryId, key, bp, layout } = lastFailed.value;
-    void persistChange(categoryId, key, bp, layout);
+    return (
+        categories.find((c) =>
+            c.items.some((i) => i.id === selectedItem.value!.id),
+        ) ?? null
+    );
+});
+
+const selectedLabel = computed(() => {
+    const parsed = selectedKey.value ? parseKey(selectedKey.value) : null;
+
+    if (!parsed) {
+        return '';
+    }
+
+    if (parsed.kind === 'item') {
+        const label = ITEM_ELEMENT_LABELS[parsed.element as ItemElementKey];
+
+        return selectedItem.value
+            ? `${selectedItem.value.name} — ${label}`
+            : label;
+    }
+
+    const cat = findCategoryGlobal(parsed.id);
+    const label = CATEGORY_ELEMENT_LABELS[parsed.element as CategoryElementKey];
+
+    return cat ? `${cat.name} — ${label}` : label;
+});
+
+const IMAGE_ELEMENTS = new Set([
+    'image',
+    'title_image',
+    'subtitle_image',
+    'tagline_image',
+    'caption_image',
+]);
+const TEXT_ELEMENTS = new Set([
+    'name',
+    'description',
+    'price',
+    'price_label',
+    'price_secondary',
+    'price_secondary_label',
+    'presentation',
+    'ingredients',
+    'choice_label',
+    'badge',
+    'title',
+    'subtitle',
+    'tagline',
+    'tagline_sub',
+]);
+
+const selectedKind = computed<'image' | 'text' | 'container'>(() => {
+    const parsed = selectedKey.value ? parseKey(selectedKey.value) : null;
+
+    if (!parsed) {
+        return 'container';
+    }
+
+    if (IMAGE_ELEMENTS.has(parsed.element)) {
+        return 'image';
+    }
+
+    if (TEXT_ELEMENTS.has(parsed.element)) {
+        return 'text';
+    }
+
+    return 'container';
+});
+
+const inspectorConfig = computed<ElementConfig | null>(() =>
+    selectedKey.value
+        ? resolveConfig(selectedKey.value, activeBreakpoint.value)
+        : null,
+);
+const selectedHasOwnConfig = computed(() =>
+    selectedKey.value
+        ? hasOwnConfig(selectedKey.value, activeBreakpoint.value)
+        : false,
+);
+
+function onSelectFromSidebar(key: string) {
+    selectedKey.value = key;
+    followSelectionCategory(key);
+    bridge.selectElement(key);
 }
 
-/* ---------------------------------------------------------------- */
-/* Deshacer / rehacer (solo esta sesión)                              */
-/* ---------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* Deshacer / rehacer (solo esta sesión)                                */
+/* ------------------------------------------------------------------ */
 
 interface UndoAction {
-    categoryId: number;
     key: string;
     bp: MenuBreakpoint;
-    prev: BreakpointLayout | null;
-    next: BreakpointLayout | null;
+    prev: ElementConfig | null;
+    next: ElementConfig | null;
 }
 
 const undoStack = ref<UndoAction[]>([]);
 const redoStack = ref<UndoAction[]>([]);
 
-function recordAction(action: UndoAction) {
+function recordUndo(action: UndoAction) {
     undoStack.value.push(action);
 
     if (undoStack.value.length > 50) {
@@ -326,11 +477,6 @@ function recordAction(action: UndoAction) {
     }
 
     redoStack.value = [];
-}
-
-function applyAndSync(action: UndoAction, layout: BreakpointLayout | null) {
-    applyLocal(action.categoryId, action.key, action.bp, layout);
-    void persistChange(action.categoryId, action.key, action.bp, layout);
 }
 
 function undo() {
@@ -341,7 +487,7 @@ function undo() {
     }
 
     redoStack.value.push(action);
-    applyAndSync(action, action.prev);
+    applyChange(action.key, action.bp, action.prev);
 }
 
 function redo() {
@@ -352,144 +498,230 @@ function redo() {
     }
 
     undoStack.value.push(action);
-    applyAndSync(action, action.next);
+    applyChange(action.key, action.bp, action.next);
 }
 
-function onCommit(key: string, bp: MenuBreakpoint, layout: BreakpointLayout) {
-    const cat = activeCategory.value;
-
-    if (!cat) {
+function onKeydown(e: KeyboardEvent) {
+    if (!(e.ctrlKey || e.metaKey)) {
         return;
     }
 
-    const prev = hasCustomLayout(cat.id, key, bp)
-        ? resolveLayout(cat.id, key, bp)
-        : null;
-    applyLocal(cat.id, key, bp, layout);
-    recordAction({ categoryId: cat.id, key, bp, prev, next: layout });
-    void persistChange(cat.id, key, bp, layout);
+    const key = e.key.toLowerCase();
+
+    if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+    } else if (key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        redo();
+    }
 }
 
-/* ---------------------------------------------------------------- */
-/* Inspector: X/Y/ancho/nivel numéricos (debounce)                   */
-/* ---------------------------------------------------------------- */
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 
-const numericAutosave = useAutosave<{
-    categoryId: number;
-    key: string;
-    bp: MenuBreakpoint;
-    layout: BreakpointLayout;
-}>(async (payload) => {
-    void persistChange(
-        payload.categoryId,
-        payload.key,
-        payload.bp,
-        payload.layout,
-    );
-}, 500);
+// Un arrastre/resize/nudge dentro del iframe ya se aplicó y persistió allí
+// mismo (Menu.vue en modo editable) — aquí solo espejamos el resultado para
+// que la barra lateral/inspector no queden desincronizados, y registramos
+// el deshacer.
+function onIframeCommit(key: string, config: ElementConfig) {
+    const bp = activeBreakpoint.value;
+    const prev = hasOwnConfig(key, bp) ? resolveConfig(key, bp) : null;
+    applyMirror(key, config, bp);
+    recordUndo({ key, bp, prev, next: config });
+}
 
-function updateInspectorField(
-    field: keyof BreakpointLayout,
-    value: number | null,
+/* ------------------------------------------------------------------ */
+/* Inspector: edición de campos con lote corto (evita saturar red)      */
+/* ------------------------------------------------------------------ */
+
+let inspectorDebounce: ReturnType<typeof setTimeout> | null = null;
+let inspectorBurstPrev: ElementConfig | null | undefined;
+
+function updateInspectorField<K extends keyof ElementConfig>(
+    field: K,
+    value: ElementConfig[K],
 ) {
-    if (!selectedKey.value || !activeCategory.value || !inspectorLayout.value) {
+    if (!selectedKey.value) {
         return;
     }
 
-    const layout: BreakpointLayout = {
-        ...inspectorLayout.value,
-        [field]: value,
-    };
-    applyLocal(
-        activeCategory.value.id,
-        selectedKey.value,
-        viewport.value,
-        layout,
+    const key = selectedKey.value;
+    const bp = activeBreakpoint.value;
+
+    if (inspectorBurstPrev === undefined) {
+        inspectorBurstPrev = hasOwnConfig(key, bp)
+            ? resolveConfig(key, bp)
+            : null;
+    }
+
+    const next = { ...resolveConfig(key, bp), [field]: value };
+    applyMirror(key, next, bp);
+
+    if (inspectorDebounce) {
+        clearTimeout(inspectorDebounce);
+    }
+
+    inspectorDebounce = setTimeout(() => {
+        inspectorDebounce = null;
+        const prev = inspectorBurstPrev ?? null;
+        inspectorBurstPrev = undefined;
+        recordUndo({ key, bp, prev, next });
+        bridge.updateConfig(key, next, bp);
+    }, 150);
+}
+
+/** Cambia un campo y lo confirma de inmediato (sin lote) — para acciones
+ * discretas de un solo clic (bloquear, traer al frente, centrar…). */
+function commitFieldNow<K extends keyof ElementConfig>(
+    field: K,
+    value: ElementConfig[K],
+) {
+    if (!selectedKey.value) {
+        return;
+    }
+
+    const key = selectedKey.value;
+    const bp = activeBreakpoint.value;
+    const prev = hasOwnConfig(key, bp) ? resolveConfig(key, bp) : null;
+    const next = { ...resolveConfig(key, bp), [field]: value };
+    recordUndo({ key, bp, prev, next });
+    applyChange(key, bp, next);
+}
+
+function toggleAutoHeight(auto: boolean) {
+    updateInspectorField(
+        'height',
+        auto ? null : Math.round(inspectorConfig.value?.height ?? 200),
     );
-    numericAutosave.schedule({
-        categoryId: activeCategory.value.id,
-        key: selectedKey.value,
-        bp: viewport.value,
-        layout,
-    });
 }
 
 function toggleAutoWidth(auto: boolean) {
-    if (!inspectorLayout.value) {
+    updateInspectorField(
+        'width',
+        auto ? null : Math.round(inspectorConfig.value?.width ?? 200),
+    );
+}
+
+function toggleLock() {
+    commitFieldNow('locked', !inspectorConfig.value?.locked);
+}
+
+function bringToFront() {
+    commitFieldNow('z_index', 999);
+}
+
+function sendToBack() {
+    commitFieldNow('z_index', 0);
+}
+
+async function centerHorizontally() {
+    if (!selectedKey.value) {
         return;
     }
 
-    updateInspectorField('width', auto ? null : 40);
+    const rect = await bridge.requestRect(selectedKey.value);
+
+    if (!rect) {
+        return;
+    }
+
+    const current = resolveConfig(selectedKey.value, activeBreakpoint.value);
+    const dx =
+        rect.parent.left +
+        rect.parent.width / 2 -
+        (rect.element.left + rect.element.width / 2);
+    commitFieldNow('x', Math.round(current.x + dx));
+}
+
+async function centerVertically() {
+    if (!selectedKey.value) {
+        return;
+    }
+
+    const rect = await bridge.requestRect(selectedKey.value);
+
+    if (!rect) {
+        return;
+    }
+
+    const current = resolveConfig(selectedKey.value, activeBreakpoint.value);
+    const dy =
+        rect.parent.top +
+        rect.parent.height / 2 -
+        (rect.element.top + rect.element.height / 2);
+    commitFieldNow('y', Math.round(current.y + dy));
 }
 
 function restoreBreakpoint() {
-    if (!selectedKey.value || !activeCategory.value) {
+    if (!selectedKey.value || !selectedHasOwnConfig.value) {
         return;
     }
 
-    if (
-        !hasCustomLayout(
-            activeCategory.value.id,
-            selectedKey.value,
-            viewport.value,
-        )
-    ) {
-        return;
-    }
-
-    const prev = resolveLayout(
-        activeCategory.value.id,
-        selectedKey.value,
-        viewport.value,
-    );
-
-    recordAction({
-        categoryId: activeCategory.value.id,
-        key: selectedKey.value,
-        bp: viewport.value,
-        prev,
-        next: null,
-    });
-    applyLocal(
-        activeCategory.value.id,
-        selectedKey.value,
-        viewport.value,
-        null,
-    );
-    void persistChange(
-        activeCategory.value.id,
-        selectedKey.value,
-        viewport.value,
-        null,
-    );
+    const key = selectedKey.value;
+    const bp = activeBreakpoint.value;
+    const prev = resolveConfig(key, bp);
+    recordUndo({ key, bp, prev, next: null });
+    applyChange(key, bp, null);
 }
 
-function copyBreakpoint(from: MenuBreakpoint, to: MenuBreakpoint) {
-    if (!selectedKey.value || !activeCategory.value) {
+function restoreAllBreakpoints() {
+    if (!selectedKey.value) {
         return;
     }
 
-    const layout = {
-        ...resolveLayout(activeCategory.value.id, selectedKey.value, from),
-    };
-    const prev = hasCustomLayout(activeCategory.value.id, selectedKey.value, to)
-        ? resolveLayout(activeCategory.value.id, selectedKey.value, to)
-        : null;
+    const key = selectedKey.value;
 
-    recordAction({
-        categoryId: activeCategory.value.id,
-        key: selectedKey.value,
-        bp: to,
-        prev,
-        next: layout,
-    });
-    applyLocal(activeCategory.value.id, selectedKey.value, to, layout);
-    void persistChange(activeCategory.value.id, selectedKey.value, to, layout);
+    for (const bp of BREAKPOINT_ORDER) {
+        if (hasOwnConfig(key, bp)) {
+            const prev = resolveConfig(key, bp);
+            recordUndo({ key, bp, prev, next: null });
+            applyChange(key, bp, null);
+        }
+    }
 }
 
-/* ---------------------------------------------------------------- */
-/* Edición rápida de contenido del platillo seleccionado              */
-/* ---------------------------------------------------------------- */
+function copyToNextBreakpoint() {
+    if (!selectedKey.value) {
+        return;
+    }
+
+    const key = selectedKey.value;
+    const idx = BREAKPOINT_ORDER.indexOf(activeBreakpoint.value);
+    const nextBp = BREAKPOINT_ORDER[idx + 1];
+
+    if (!nextBp) {
+        return;
+    }
+
+    const config = { ...resolveConfig(key, activeBreakpoint.value) };
+    const prev = hasOwnConfig(key, nextBp) ? resolveConfig(key, nextBp) : null;
+    recordUndo({ key, bp: nextBp, prev, next: config });
+    applyChange(key, nextBp, config);
+}
+
+function copyToAllBreakpoints() {
+    if (!selectedKey.value) {
+        return;
+    }
+
+    const key = selectedKey.value;
+    const config = resolveConfig(key, activeBreakpoint.value);
+
+    for (const bp of BREAKPOINT_ORDER) {
+        if (bp === activeBreakpoint.value) {
+            continue;
+        }
+
+        const prev = hasOwnConfig(key, bp) ? resolveConfig(key, bp) : null;
+        recordUndo({ key, bp, prev, next: { ...config } });
+        applyChange(key, bp, { ...config });
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Edición rápida de contenido del platillo seleccionado                */
+/* ------------------------------------------------------------------ */
 
 const quickAutosave = useAutosave<{
     id: number;
@@ -499,10 +731,11 @@ const quickAutosave = useAutosave<{
         `/admin/menu-editor/items/${payload.id}/quick`,
         payload.data,
     );
+    scheduleIframeReload();
 }, 500);
 
 const zoneOptions = computed(() =>
-    zonesForLayout(activeCategory.value?.layout),
+    zonesForLayout(selectedItemCategory.value?.layout),
 );
 
 function updateQuickField(field: string, value: unknown) {
@@ -517,9 +750,9 @@ function updateQuickField(field: string, value: unknown) {
     });
 }
 
-/* ---------------------------------------------------------------- */
-/* Reordenar platillos de la sección activa                           */
-/* ---------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* Reordenar platillos de la sección activa                             */
+/* ------------------------------------------------------------------ */
 
 const { registerZone, start, dragging, saving } = useDragSort<MenuItemData>(
     (zones) => {
@@ -537,7 +770,7 @@ const { registerZone, start, dragging, saving } = useDragSort<MenuItemData>(
                 menu_category_id: activeCategory.value!.id,
                 sort_order: idx + 1,
             })),
-        });
+        }).then(() => scheduleIframeReload());
     },
 );
 
@@ -555,9 +788,6 @@ function bindReorderZone(el: HTMLElement | null) {
     }
 }
 
-// El <ul> es el mismo nodo DOM al cambiar de sección (solo cambia su
-// contenido vía v-for), así que la ref función no se vuelve a disparar sola
-// — hay que re-registrar la zona explícitamente con la categoría activa.
 watch(activeCategory, (cat) => {
     if (reorderZoneEl.value && cat) {
         registerZone(String(cat.id), cat.items, reorderZoneEl.value);
@@ -571,6 +801,128 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
 
     start(item, String(activeCategory.value.id), e);
 }
+
+/* ------------------------------------------------------------------ */
+/* Árbol de elementos por sección (expandible, con candado)             */
+/* ------------------------------------------------------------------ */
+
+function itemElementKeys(item: MenuItemData): ItemElementKey[] {
+    const keys: ItemElementKey[] = ['container'];
+
+    if (item.image_url) {
+        keys.push('image');
+    }
+
+    keys.push('name');
+
+    if (item.description) {
+        keys.push('description');
+    }
+
+    if (Number(item.price) > 0) {
+        keys.push('price');
+    }
+
+    if (item.price_label) {
+        keys.push('price_label');
+    }
+
+    if (item.price_secondary) {
+        keys.push('price_secondary');
+    }
+
+    if (item.price_secondary_label) {
+        keys.push('price_secondary_label');
+    }
+
+    if (item.presentation) {
+        keys.push('presentation');
+    }
+
+    if (item.ingredients) {
+        keys.push('ingredients');
+    }
+
+    if (item.choice_label) {
+        keys.push('choice_label');
+    }
+
+    if (item.badge) {
+        keys.push('badge');
+    }
+
+    if (item.caption_image_url) {
+        keys.push('caption_image');
+    }
+
+    return keys;
+}
+
+function categoryElementKeys(cat: MenuCategoryData): CategoryElementKey[] {
+    const keys: CategoryElementKey[] = ['title'];
+
+    if (cat.subtitle) {
+        keys.push('subtitle');
+    }
+
+    if (cat.tagline) {
+        keys.push('tagline');
+    }
+
+    if (cat.tagline_sub) {
+        keys.push('tagline_sub');
+    }
+
+    if (cat.title_image_url) {
+        keys.push('title_image');
+    }
+
+    if (cat.subtitle_image_url) {
+        keys.push('subtitle_image');
+    }
+
+    if (cat.tagline_image_url) {
+        keys.push('tagline_image');
+    }
+
+    if (cat.image_url) {
+        keys.push('image');
+    }
+
+    return keys;
+}
+
+const expandedItems = reactive<Set<number>>(new Set());
+
+function toggleExpanded(id: number) {
+    if (expandedItems.has(id)) {
+        expandedItems.delete(id);
+    } else {
+        expandedItems.add(id);
+    }
+}
+
+function isElementLocked(key: string): boolean {
+    return !!resolveConfig(key, activeBreakpoint.value).locked;
+}
+
+function toggleElementLock(key: string) {
+    const bp = activeBreakpoint.value;
+    const config = resolveConfig(key, bp);
+    const prev = hasOwnConfig(key, bp) ? config : null;
+    const next = { ...config, locked: !config.locked };
+    recordUndo({ key, bp, prev, next });
+    applyChange(key, bp, next);
+}
+
+/* ------------------------------------------------------------------ */
+/* Guardado — estado visible (todo lo demás ya autosalva en segundo     */
+/* plano dentro del iframe o vía useAutosave arriba)                    */
+/* ------------------------------------------------------------------ */
+
+const saveStatus = computed(() =>
+    quickAutosave.status.value === 'error' ? 'error' : 'ok',
+);
 </script>
 
 <template>
@@ -579,29 +931,25 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
     <div class="tc-admin-page tc-menu-editor space-y-4">
         <AdminPageHeader
             title="Editor visual del menú"
-            description="Acomoda platillos, títulos y decorativos directamente sobre el menú real"
+            description="Mueve, redimensiona y edita cada elemento directamente sobre el menú público real"
         >
             <template #label>Menú</template>
             <template #actions>
                 <span
                     class="tc-badge text-[11px]"
-                    :class="{
-                        'tc-badge-blue':
-                            saveStatus !== 'error' && savingCount === 0,
-                        'tc-badge-yellow': savingCount > 0,
-                        'tc-badge-pink':
-                            saveStatus === 'error' && savingCount === 0,
-                    }"
-                    >{{ statusLabel }}</span
+                    :class="
+                        saveStatus === 'error'
+                            ? 'tc-badge-pink'
+                            : 'tc-badge-blue'
+                    "
+                    >{{
+                        saveStatus === 'error'
+                            ? 'Error al guardar'
+                            : previewReady
+                              ? 'Vista previa activa'
+                              : 'Cargando…'
+                    }}</span
                 >
-                <button
-                    v-if="saveStatus === 'error'"
-                    type="button"
-                    class="tc-btn-secondary"
-                    @click="retry"
-                >
-                    Reintentar
-                </button>
                 <Link href="/admin/menu-items" class="tc-btn-secondary"
                     >← Volver</Link
                 >
@@ -610,32 +958,41 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
 
         <div class="tc-editor-toolbar tc-admin-card">
             <div
-                class="flex items-center gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-white/5"
+                class="flex flex-wrap items-center gap-1 rounded-lg bg-gray-100 p-0.5 dark:bg-white/5"
             >
                 <button
-                    v-for="bp in [
-                        'mobile',
-                        'tablet',
-                        'desktop',
-                    ] as MenuBreakpoint[]"
-                    :key="bp"
+                    v-for="preset in BREAKPOINT_PRESETS"
+                    :key="preset.key"
                     type="button"
-                    class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
+                    class="rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
                     :class="
-                        viewport === bp
+                        viewportWidth === preset.width
                             ? 'bg-white text-[var(--tc-blue)] shadow-sm dark:bg-[#262626]'
                             : 'text-gray-500'
                     "
-                    @click="viewport = bp"
+                    :title="`${preset.width}px`"
+                    @click="viewportWidth = preset.width"
                 >
-                    {{
-                        bp === 'mobile'
-                            ? 'Móvil'
-                            : bp === 'tablet'
-                              ? 'Tablet'
-                              : 'Escritorio'
-                    }}
+                    {{ preset.label }}
                 </button>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+                <label class="text-xs text-gray-500">Ancho</label>
+                <input
+                    v-model.number="viewportWidth"
+                    type="number"
+                    min="280"
+                    max="2200"
+                    list="tc-editor-width-presets"
+                    class="tc-input w-20 py-1 text-xs"
+                />
+                <datalist id="tc-editor-width-presets">
+                    <option v-for="w in WIDTH_PRESETS" :key="w" :value="w" />
+                </datalist>
+                <span class="text-xs text-gray-400"
+                    >px · {{ activeBreakpoint }}</span
+                >
             </div>
 
             <div class="flex items-center gap-2">
@@ -682,11 +1039,11 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
             </div>
 
             <div class="flex items-center gap-2">
-                <label class="text-xs text-gray-500">Zoom</label>
+                <label class="text-xs text-gray-500">Zoom (solo visual)</label>
                 <input
                     v-model.number="zoom"
                     type="range"
-                    min="50"
+                    min="25"
                     max="150"
                     step="5"
                     class="w-24"
@@ -698,7 +1055,7 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
         </div>
 
         <div class="tc-editor-grid">
-            <!-- Izquierda: secciones + orden -->
+            <!-- Izquierda: secciones + árbol de elementos + orden -->
             <aside class="tc-admin-card tc-editor-sidebar">
                 <h3
                     class="mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase"
@@ -715,18 +1072,78 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
                                     ? 'bg-[var(--tc-blue)] text-white'
                                     : 'text-gray-600 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/5'
                             "
-                            @click="goToIndex(idx)"
+                            @click="
+                                selectCategory(cat.id);
+                                void idx;
+                            "
                         >
                             {{ cat.name }}
                         </button>
                     </li>
                 </ul>
 
+                <template v-if="activeCategory">
+                    <h3
+                        class="mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase"
+                    >
+                        Elementos de la sección
+                    </h3>
+                    <ul class="mb-4 space-y-0.5">
+                        <li
+                            v-for="el in categoryElementKeys(activeCategory)"
+                            :key="el"
+                            class="flex items-center gap-1"
+                        >
+                            <button
+                                type="button"
+                                class="flex-1 truncate rounded-lg px-2 py-1 text-left text-xs"
+                                :class="
+                                    selectedKey ===
+                                    `category-${activeCategory.id}:${el}`
+                                        ? 'bg-blue-50 text-[var(--tc-blue)] dark:bg-white/10'
+                                        : 'text-gray-600 hover:bg-gray-50 dark:text-white/70 dark:hover:bg-white/5'
+                                "
+                                @click="
+                                    onSelectFromSidebar(
+                                        `category-${activeCategory.id}:${el}`,
+                                    )
+                                "
+                            >
+                                {{ CATEGORY_ELEMENT_LABELS[el] }}
+                            </button>
+                            <button
+                                type="button"
+                                class="px-1 text-xs opacity-70 hover:opacity-100"
+                                :aria-label="
+                                    isElementLocked(
+                                        `category-${activeCategory.id}:${el}`,
+                                    )
+                                        ? 'Desbloquear elemento'
+                                        : 'Bloquear elemento'
+                                "
+                                @click="
+                                    toggleElementLock(
+                                        `category-${activeCategory.id}:${el}`,
+                                    )
+                                "
+                            >
+                                {{
+                                    isElementLocked(
+                                        `category-${activeCategory.id}:${el}`,
+                                    )
+                                        ? '🔒'
+                                        : '🔓'
+                                }}
+                            </button>
+                        </li>
+                    </ul>
+                </template>
+
                 <template v-if="activeCategory && activeCategory.items.length">
                     <h3
                         class="mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase"
                     >
-                        Orden de platillos
+                        Platillos
                         <span
                             v-if="saving"
                             class="ml-1 font-normal text-[var(--tc-blue)] normal-case"
@@ -741,88 +1158,132 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
                             v-for="item in activeCategory.items"
                             :key="item.id"
                             data-drag-row
-                            class="flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs"
+                            class="rounded-lg text-xs"
                             :class="{
                                 'opacity-40': dragging?.item.id === item.id,
-                                'bg-blue-50 dark:bg-white/5':
-                                    selectedKey === `item-${item.id}`,
                             }"
                         >
-                            <button
-                                type="button"
-                                class="cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing"
-                                aria-label="Arrastrar para reordenar"
-                                @pointerdown="onReorderHandleDown(item, $event)"
+                            <div class="flex items-center gap-1.5 px-1.5 py-1">
+                                <button
+                                    type="button"
+                                    class="cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+                                    aria-label="Arrastrar para reordenar"
+                                    @pointerdown="
+                                        onReorderHandleDown(item, $event)
+                                    "
+                                >
+                                    ⠿
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex-1 truncate text-left text-gray-700 dark:text-white/80"
+                                    @click="toggleExpanded(item.id)"
+                                >
+                                    {{ expandedItems.has(item.id) ? '▾' : '▸' }}
+                                    {{ item.name }}
+                                </button>
+                            </div>
+                            <ul
+                                v-if="expandedItems.has(item.id)"
+                                class="mb-1 ml-6 space-y-0.5"
                             >
-                                ⠿
-                            </button>
-                            <button
-                                type="button"
-                                class="flex-1 truncate text-left text-gray-700 dark:text-white/80"
-                                @click="selectedKey = `item-${item.id}`"
-                            >
-                                {{ item.name }}
-                            </button>
+                                <li
+                                    v-for="el in itemElementKeys(item)"
+                                    :key="el"
+                                    class="flex items-center gap-1"
+                                >
+                                    <button
+                                        type="button"
+                                        class="flex-1 truncate rounded-md px-2 py-1 text-left"
+                                        :class="
+                                            selectedKey ===
+                                            `item-${item.id}:${el}`
+                                                ? 'bg-blue-50 text-[var(--tc-blue)] dark:bg-white/10'
+                                                : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5'
+                                        "
+                                        @click="
+                                            onSelectFromSidebar(
+                                                `item-${item.id}:${el}`,
+                                            )
+                                        "
+                                    >
+                                        {{ ITEM_ELEMENT_LABELS[el] }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="px-1 text-xs opacity-70 hover:opacity-100"
+                                        :aria-label="
+                                            isElementLocked(
+                                                `item-${item.id}:${el}`,
+                                            )
+                                                ? 'Desbloquear elemento'
+                                                : 'Bloquear elemento'
+                                        "
+                                        @click="
+                                            toggleElementLock(
+                                                `item-${item.id}:${el}`,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            isElementLocked(
+                                                `item-${item.id}:${el}`,
+                                            )
+                                                ? '🔒'
+                                                : '🔓'
+                                        }}
+                                    </button>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </template>
             </aside>
 
-            <!-- Centro: lienzo -->
+            <!-- Centro: iframe con el MISMO Public/Menu.vue -->
             <div class="tc-admin-card tc-editor-canvas-wrap">
                 <div class="tc-editor-canvas-viewport">
                     <div
-                        v-if="activeCategory"
-                        class="tc-editor-canvas-scaled tc-mp tc-public-layout"
+                        class="tc-editor-canvas-scaled"
                         :style="{
-                            width: CANVAS_WIDTH[viewport] + 'px',
+                            width: viewportWidth + 'px',
+                            height: contentHeight + 'px',
                             transform: `scale(${scale})`,
                         }"
                     >
-                        <section v-if="activeCategory.layout === 'portada'">
-                            <component
-                                :is="layoutFor(activeCategory)"
-                                :category="activeCategory"
-                                :breakpoint="viewport"
-                                editable
-                                :selected-key="selectedKey"
-                                :scale-factor="scale"
-                                @select="onSelect"
-                                @commit="onCommit"
-                            />
-                        </section>
-                        <section v-else class="tc-mp-page">
-                            <component
-                                :is="layoutFor(activeCategory)"
-                                :category="activeCategory"
-                                :breakpoint="viewport"
-                                editable
-                                :selected-key="selectedKey"
-                                :scale-factor="scale"
-                                @select="onSelect"
-                                @commit="onCommit"
-                            />
-                        </section>
+                        <iframe
+                            ref="iframeEl"
+                            :src="previewUrl"
+                            :style="{
+                                width: viewportWidth + 'px',
+                                height: contentHeight + 'px',
+                                border: 'none',
+                                display: 'block',
+                            }"
+                            title="Vista previa editable del menú"
+                        />
                     </div>
                 </div>
                 <p class="mt-2 text-xs text-gray-400">
-                    Haz clic en un platillo o título para seleccionarlo,
-                    arrástralo para moverlo, usa la manija inferior derecha para
-                    cambiar su tamaño y las flechas del teclado para ajustes
-                    finos (Shift = 10 unidades).
+                    Haz clic en cualquier elemento del menú (imagen, nombre,
+                    precio, título…) para seleccionarlo, arrástralo para
+                    moverlo, usa la manija inferior derecha para redimensionar y
+                    las flechas del teclado para ajustes finos (Shift = 10px).
+                    Esta vista es el menú público real a {{ viewportWidth }}px —
+                    lo que ves aquí es exactamente lo que verá el visitante.
                 </p>
             </div>
 
             <!-- Derecha: inspector -->
             <aside class="tc-admin-card tc-editor-inspector">
-                <template v-if="!selectedKey">
+                <template v-if="!selectedKey || !inspectorConfig">
                     <p class="text-sm text-gray-400">
-                        Selecciona un platillo o título en el lienzo para
-                        editarlo.
+                        Selecciona un elemento en el lienzo o en la lista de la
+                        izquierda para editarlo.
                     </p>
                 </template>
 
-                <template v-else-if="inspectorLayout">
+                <template v-else>
                     <h3
                         class="mb-3 text-sm font-bold text-gray-800 dark:text-white"
                     >
@@ -833,31 +1294,44 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
                         <p
                             class="text-xs font-semibold tracking-wide text-gray-400 uppercase"
                         >
-                            Posición y tamaño ({{ viewport }})
+                            Posición y tamaño ({{ activeBreakpoint }})
                         </p>
                         <div class="grid grid-cols-2 gap-2">
                             <TcInput
-                                label="Mover X (px)"
+                                label="X (px)"
                                 type="number"
-                                :model-value="
-                                    Math.round(inspectorLayout.move_x)
+                                :model-value="Math.round(inspectorConfig.x)"
+                                @update:model-value="
+                                    updateInspectorField('x', Number($event))
                                 "
+                            />
+                            <TcInput
+                                label="Y (px)"
+                                type="number"
+                                :model-value="Math.round(inspectorConfig.y)"
+                                @update:model-value="
+                                    updateInspectorField('y', Number($event))
+                                "
+                            />
+                            <TcInput
+                                label="Escala"
+                                type="number"
+                                step="0.05"
+                                :model-value="inspectorConfig.scale"
                                 @update:model-value="
                                     updateInspectorField(
-                                        'move_x',
+                                        'scale',
                                         Number($event),
                                     )
                                 "
                             />
                             <TcInput
-                                label="Mover Y (px)"
+                                label="Rotación (°)"
                                 type="number"
-                                :model-value="
-                                    Math.round(inspectorLayout.move_y)
-                                "
+                                :model-value="inspectorConfig.rotation"
                                 @update:model-value="
                                     updateInspectorField(
-                                        'move_y',
+                                        'rotation',
                                         Number($event),
                                     )
                                 "
@@ -865,7 +1339,7 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
                             <TcInput
                                 label="Nivel (z-index)"
                                 type="number"
-                                :model-value="inspectorLayout.z_index"
+                                :model-value="inspectorConfig.z_index"
                                 @update:model-value="
                                     updateInspectorField(
                                         'z_index',
@@ -874,12 +1348,12 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
                                 "
                             />
                             <div class="tc-field">
-                                <label class="tc-field-label">Ancho (%)</label>
+                                <label class="tc-field-label">Ancho (px)</label>
                                 <input
                                     type="number"
                                     class="tc-input"
-                                    :disabled="inspectorLayout.width === null"
-                                    :value="inspectorLayout.width ?? ''"
+                                    :disabled="inspectorConfig.width === null"
+                                    :value="inspectorConfig.width ?? ''"
                                     @input="
                                         updateInspectorField(
                                             'width',
@@ -897,7 +1371,7 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
                                     <input
                                         type="checkbox"
                                         :checked="
-                                            inspectorLayout.width === null
+                                            inspectorConfig.width === null
                                         "
                                         @change="
                                             toggleAutoWidth(
@@ -907,7 +1381,44 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
                                             )
                                         "
                                     />
-                                    Automático (tamaño original)
+                                    Automático
+                                </label>
+                            </div>
+                            <div class="tc-field">
+                                <label class="tc-field-label">Alto (px)</label>
+                                <input
+                                    type="number"
+                                    class="tc-input"
+                                    :disabled="inspectorConfig.height === null"
+                                    :value="inspectorConfig.height ?? ''"
+                                    @input="
+                                        updateInspectorField(
+                                            'height',
+                                            Number(
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).value,
+                                            ),
+                                        )
+                                    "
+                                />
+                                <label
+                                    class="mt-1 flex items-center gap-1.5 text-xs text-gray-500"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        :checked="
+                                            inspectorConfig.height === null
+                                        "
+                                        @change="
+                                            toggleAutoHeight(
+                                                (
+                                                    $event.target as HTMLInputElement
+                                                ).checked,
+                                            )
+                                        "
+                                    />
+                                    Automático (proporcional)
                                 </label>
                             </div>
                         </div>
@@ -916,25 +1427,225 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
                             <button
                                 type="button"
                                 class="tc-btn-secondary text-xs"
-                                :disabled="!selectedHasCustomLayout"
+                                @click="centerHorizontally"
+                            >
+                                ↔ Centrar horizontal
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="centerVertically"
+                            >
+                                ↕ Centrar vertical
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="bringToFront"
+                            >
+                                Traer al frente
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="sendToBack"
+                            >
+                                Enviar al fondo
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                :class="{
+                                    'tc-badge-pink': inspectorConfig.locked,
+                                }"
+                                @click="toggleLock"
+                            >
+                                {{
+                                    inspectorConfig.locked
+                                        ? '🔒 Desbloquear'
+                                        : '🔓 Bloquear'
+                                }}
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 pt-1">
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                :disabled="!selectedHasOwnConfig"
                                 @click="restoreBreakpoint"
                             >
-                                Restaurar breakpoint
+                                Restaurar este breakpoint
                             </button>
                             <button
                                 type="button"
                                 class="tc-btn-secondary text-xs"
-                                @click="copyBreakpoint('mobile', 'tablet')"
+                                @click="restoreAllBreakpoints"
                             >
-                                Copiar móvil → tablet
+                                Restaurar todos
                             </button>
                             <button
                                 type="button"
                                 class="tc-btn-secondary text-xs"
-                                @click="copyBreakpoint('tablet', 'desktop')"
+                                @click="copyToNextBreakpoint"
                             >
-                                Copiar tablet → escritorio
+                                Copiar → siguiente
                             </button>
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="copyToAllBreakpoints"
+                            >
+                                Copiar a todos
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="selectedKind === 'text'"
+                        class="mb-4 space-y-2.5 border-t border-gray-100 pt-3 dark:border-white/10"
+                    >
+                        <p
+                            class="text-xs font-semibold tracking-wide text-gray-400 uppercase"
+                        >
+                            Texto
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <TcInput
+                                label="Tamaño de fuente"
+                                type="number"
+                                :model-value="inspectorConfig.font_size ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'font_size',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Interlineado"
+                                type="number"
+                                step="0.05"
+                                :model-value="inspectorConfig.line_height ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'line_height',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Espaciado (px)"
+                                type="number"
+                                step="0.1"
+                                :model-value="
+                                    inspectorConfig.letter_spacing ?? ''
+                                "
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'letter_spacing',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Ancho máx. (px)"
+                                type="number"
+                                :model-value="inspectorConfig.max_width ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'max_width',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcSelect
+                                label="Alineación"
+                                :options="[
+                                    { value: 'left', label: 'Izquierda' },
+                                    { value: 'center', label: 'Centro' },
+                                    { value: 'right', label: 'Derecha' },
+                                ]"
+                                :model-value="inspectorConfig.align ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'align',
+                                        ($event || null) as any,
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Color"
+                                :model-value="inspectorConfig.color ?? ''"
+                                placeholder="#144e8f"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'color',
+                                        ($event || null) as any,
+                                    )
+                                "
+                            />
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="selectedKind === 'image'"
+                        class="mb-4 space-y-2.5 border-t border-gray-100 pt-3 dark:border-white/10"
+                    >
+                        <p
+                            class="text-xs font-semibold tracking-wide text-gray-400 uppercase"
+                        >
+                            Imagen
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <TcSelect
+                                label="Ajuste"
+                                :options="[
+                                    { value: 'contain', label: 'Contain' },
+                                    { value: 'cover', label: 'Cover' },
+                                ]"
+                                :model-value="inspectorConfig.fit ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'fit',
+                                        ($event || null) as any,
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Zoom interno"
+                                type="number"
+                                step="0.05"
+                                :model-value="inspectorConfig.inner_scale ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'inner_scale',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Posición X (%)"
+                                type="number"
+                                :model-value="inspectorConfig.object_x ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'object_x',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcInput
+                                label="Posición Y (%)"
+                                type="number"
+                                :model-value="inspectorConfig.object_y ?? ''"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'object_y',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
                         </div>
                     </div>
 
@@ -1023,7 +1734,7 @@ function onReorderHandleDown(item: MenuItemData, e: PointerEvent) {
 
 .tc-editor-grid {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr) 300px;
+    grid-template-columns: 240px minmax(0, 1fr) 300px;
     gap: 16px;
     align-items: start;
 }

@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import MenuEditableVisual from './MenuEditableVisual.vue';
-import { itemLayoutFor } from './types';
-import type { BreakpointLayout, LayoutSettings, MenuBreakpoint } from './types';
+import MenuEditableElement from './MenuEditableElement.vue';
+import { itemElementFor } from './types';
+import type {
+    ElementConfig,
+    ItemLayoutSettings,
+    MenuBreakpoint,
+} from './types';
 
 interface PhotoItem {
     id?: number;
@@ -16,7 +20,7 @@ interface PhotoItem {
     image_fit?: string | null;
     image_align?: string | null;
     visual_size?: string | null;
-    layout_settings?: LayoutSettings | null;
+    layout_settings?: ItemLayoutSettings | null;
 }
 
 const props = withDefaults(
@@ -25,49 +29,45 @@ const props = withDefaults(
         cover?: boolean;
         breakpoint?: MenuBreakpoint;
         editable?: boolean;
-        selected?: boolean;
-        scaleFactor?: number;
+        selectedKey?: string | null;
     }>(),
     {
         cover: false,
-        breakpoint: 'desktop',
+        breakpoint: 'lg',
         editable: false,
-        selected: false,
-        scaleFactor: 1,
+        selectedKey: null,
     },
 );
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, breakpoint: MenuBreakpoint, layout: BreakpointLayout];
+    commit: [key: string, config: ElementConfig];
 }>();
 
 // Solo los platillos reales (con id) tienen layout_settings — el hero de
 // bebidas_promo, por ejemplo, pasa un objeto sintético sin id y se queda sin
 // movimiento real (nada que mover: es la imagen de la categoría, no un item).
 const elementKey = computed(() =>
-    props.item.id ? `item-${props.item.id}` : 'item-none',
+    props.item.id ? `item-${props.item.id}:image` : 'item-none:image',
 );
 const isInteractive = computed(() => props.editable && !!props.item.id);
-const layout = computed(() =>
-    itemLayoutFor(
+const config = computed(() =>
+    itemElementFor(
         { layout_settings: props.item.layout_settings },
+        'image',
         props.breakpoint,
     ),
 );
-
-function onCommit(key: string, bp: MenuBreakpoint, l: BreakpointLayout) {
-    emit('commit', key, bp, l);
-}
 
 const imgStyle = computed(() => {
     const zoom = Number(props.item.image_scale ?? 1);
 
     return {
         objectPosition: `${props.item.image_position_x ?? 50}% ${props.item.image_position_y ?? 50}%`,
-        // image_scale es únicamente zoom/recorte interno de la imagen — el
-        // movimiento real del wrapper (.tc-mp-photo) lo maneja
-        // MenuEditableVisual vía move_x/move_y/width/z_index.
+        // image_scale/image_position_x/y son el encuadre interno de la
+        // imagen (recorte dentro de su caja) — el movimiento real del
+        // wrapper (.tc-mp-photo) lo maneja MenuEditableElement vía x/y/
+        // width/height/scale/rotation/z_index.
         transform: `scale(${zoom})`,
     };
 });
@@ -103,19 +103,18 @@ const fit = computed(() =>
 </script>
 
 <template>
-    <MenuEditableVisual
+    <MenuEditableElement
         :element-key="elementKey"
-        :label="item.name"
-        :layout="layout"
-        :breakpoint="breakpoint"
+        :label="`${item.name} — imagen`"
+        :config="config"
         :editable="isInteractive"
-        :selected="selected"
-        :scale-factor="scaleFactor"
+        :selected="selectedKey === elementKey"
+        kind="image"
         class="tc-mp-photo"
         :class="[sizeClass, { 'tc-mp-photo--cover': fit === 'cover' }]"
         :style="wrapStyle"
         @select="emit('select', $event)"
-        @commit="onCommit"
+        @commit="(k, c) => emit('commit', k, c)"
     >
         <img
             v-if="item.image_url"
@@ -132,5 +131,5 @@ const fit = computed(() =>
             class="tc-mp-caption-img"
             loading="lazy"
         />
-    </MenuEditableVisual>
+    </MenuEditableElement>
 </template>
