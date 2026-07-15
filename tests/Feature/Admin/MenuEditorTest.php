@@ -6,33 +6,10 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Vite;
 
-/**
- * Fuerza la ruta SSR de producción (bootstrap/ssr/app.js) en vez de la del
- * servidor Vite en caliente: si hay un `npm run dev` corriendo en la máquina
- * (public/hot presente), Inertia delega el render SSR a ese proceso ajeno a
- * este test — no queremos que el resultado dependa de un proceso externo que
- * este test no controla ni puede rearrancar.
- */
-function forceProductionSsr(): void
-{
-    Vite::useHotFile(storage_path('framework/testing-disabled-hot-file'));
-}
-
-/**
- * Inertia\Ssr\SsrState se registra como binding `scoped()`: en producción se
- * reinicia solo porque cada request real pasa por Kernel::terminate(). Dentro
- * de un mismo test de Feature, varias llamadas a $this->get() reutilizan el
- * mismo contenedor y jamás disparan ese terminate(), así que SsrState memoiza
- * el `dispatched=true`/response de la primera petición SSR y las siguientes
- * llamadas a /menu dentro del mismo test nunca vuelven a golpear el servidor
- * SSR. No es un bug de la app — es este artefacto del entorno de test.
- */
-function resetSsrStateBetweenRequests(): void
-{
-    app()->forgetScopedInstances();
-}
+// forceProductionSsr()/resetSsrStateBetweenRequests() viven en tests/Pest.php
+// (compartidas por toda la suite — declararlas aquí también fatal-errorearía
+// al correr todos los tests juntos).
 
 function actingAsMenuEditorAdmin(): User
 {
@@ -325,6 +302,7 @@ test('a mobile-only config does not affect the desktop render and vice versa', f
         'menu_category_id' => $category->id,
         'zone' => 'main',
         'is_active' => true,
+        'image' => 'menu/uploads/mobile-desktop-test.png',
         'layout_settings' => [
             'image' => [
                 'mobile' => elementConfig(['x' => 11, 'y' => 22]),

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ImagePlus, Star, X } from 'lucide-vue-next';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { History, ImagePlus, Star, X } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import AdminFormSection from '@/components/admin/AdminFormSection.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
@@ -12,6 +12,7 @@ import type {
 import TcImagePositionEditor from '@/components/tc/TcImagePositionEditor.vue';
 import TcImageUpload from '@/components/tc/TcImageUpload.vue';
 import TcInput from '@/components/tc/TcInput.vue';
+import TcMediaLibraryModal from '@/components/tc/TcMediaLibraryModal.vue';
 import TcSelect from '@/components/tc/TcSelect.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
 import TcTextarea from '@/components/tc/TcTextarea.vue';
@@ -51,6 +52,8 @@ const props = defineProps<{
         ingredients: string | null;
         is_featured: boolean;
         is_active: boolean;
+        image_hidden: boolean;
+        previous_image: string | null;
         gallery: GalleryImage[];
     };
     categories: MenuCategoryData[];
@@ -83,13 +86,34 @@ const form = useForm({
     visual_size: props.item.visual_size ?? 'md',
     is_featured: props.item.is_featured,
     is_active: props.item.is_active,
+    image_hidden: props.item.image_hidden,
     _method: 'PUT',
     delete_image_ids: [] as number[],
     primary_image_id: (props.item.gallery.find((g) => g.is_primary)?.id ??
         null) as number | null,
     new_images: [] as File[],
     caption_image: null as File | null,
+    image_library_path: '',
 });
+
+const mediaLibraryOpen = ref(false);
+const libraryPickedUrl = ref<string | null>(null);
+
+function onLibraryPicked({ path, url }: { path: string; url: string }) {
+    form.image_library_path = path;
+    libraryPickedUrl.value = url;
+    mediaLibraryOpen.value = false;
+}
+
+function restoreImage() {
+    router.post(
+        `/admin/menu-items/${props.item.id}/restore-image`,
+        {},
+        {
+            preserveScroll: true,
+        },
+    );
+}
 
 const selectedCategory = computed(
     () =>
@@ -136,6 +160,7 @@ const primaryPreviewUrl = computed(() => {
     return (
         primary?.image_url ??
         newPreviews.value[0]?.url ??
+        libraryPickedUrl.value ??
         props.item.image_url ??
         null
     );
@@ -413,6 +438,33 @@ function submit() {
                             @change="onFileInput"
                         />
 
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="mediaLibraryOpen = true"
+                            >
+                                Elegir de biblioteca
+                            </button>
+                            <button
+                                v-if="item.previous_image"
+                                type="button"
+                                class="tc-btn-secondary text-xs"
+                                @click="restoreImage"
+                            >
+                                <History
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />Restaurar imagen anterior
+                            </button>
+                        </div>
+                        <p
+                            v-if="form.image_library_path"
+                            class="mt-1 text-xs text-green-600"
+                        >
+                            Se usará la imagen elegida de la biblioteca al
+                            guardar.
+                        </p>
+
                         <p class="mt-2 text-xs text-gray-400">
                             Haz click en ⭐ para cambiar la imagen principal. La
                             imagen marcada se muestra en el menú.
@@ -585,11 +637,19 @@ function submit() {
                     </AdminFormSection>
 
                     <AdminFormSection title="Configuración">
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <TcSwitch
                                 v-model="form.is_active"
                                 label="Activo"
                                 description="Visible en el menú"
+                            />
+                            <TcSwitch
+                                :model-value="!form.image_hidden"
+                                label="Imagen visible"
+                                description="Nombre/precio siguen mostrándose si se oculta"
+                                @update:model-value="
+                                    form.image_hidden = !$event
+                                "
                             />
                             <TcSwitch
                                 v-model="form.is_featured"
@@ -623,4 +683,11 @@ function submit() {
             </div>
         </form>
     </div>
+
+    <TcMediaLibraryModal
+        :open="mediaLibraryOpen"
+        title="Elegir imagen del platillo"
+        @close="mediaLibraryOpen = false"
+        @picked="onLibraryPicked"
+    />
 </template>

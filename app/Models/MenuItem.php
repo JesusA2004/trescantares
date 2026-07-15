@@ -17,9 +17,9 @@ class MenuItem extends Model
     protected $fillable = [
         'menu_category_id', 'zone', 'name', 'slug', 'description',
         'price', 'price_label', 'price_secondary', 'price_secondary_label', 'presentation',
-        'image', 'alt_text', 'image_position_x', 'image_position_y', 'image_scale', 'image_fit',
+        'image', 'previous_image', 'alt_text', 'image_position_x', 'image_position_y', 'image_scale', 'image_fit',
         'image_align', 'visual_size', 'caption_image', 'layout_settings',
-        'badge', 'choice_label', 'ingredients', 'is_featured', 'is_active', 'sort_order',
+        'badge', 'choice_label', 'ingredients', 'is_featured', 'is_active', 'image_hidden', 'sort_order',
     ];
 
     protected $casts = [
@@ -31,6 +31,7 @@ class MenuItem extends Model
         'layout_settings' => 'array',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
+        'image_hidden' => 'boolean',
         'sort_order' => 'integer',
     ];
 
@@ -66,6 +67,14 @@ class MenuItem extends Model
 
     public function getImageUrlAttribute(): ?string
     {
+        // Oculta SOLO la fotografía (conserva nombre/descripción/precio) sin
+        // borrar la ruta guardada — reactivarla restaura la imagen tal cual
+        // estaba, con su posición/tamaño intactos (esos viven en
+        // layout_settings, que nunca se toca aquí).
+        if ($this->image_hidden) {
+            return null;
+        }
+
         // Use primary image from new table if loaded
         if ($this->relationLoaded('primaryImage') && $this->primaryImage) {
             return Storage::url($this->primaryImage->image_path).'?v='.$this->primaryImage->updated_at->timestamp;

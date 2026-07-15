@@ -60,6 +60,13 @@ export interface ElementConfig {
     rotation: number;
     z_index: number;
     locked?: boolean;
+    /** Oculto SOLO en la vista resuelta actual (mobile/tablet/desktop) — a
+     * diferencia de is_active del modelo (oculta en TODAS las vistas), esto
+     * permite p. ej. un adorno visible únicamente en Escritorio. Discreto:
+     * nunca se "mezcla" a medias entre dos vistas. */
+    hidden?: boolean;
+    /** 0-1, interpolable — pensado sobre todo para adornos decorativos. */
+    opacity?: number | null;
     // Texto
     font_size?: number | null;
     line_height?: number | null;
@@ -111,6 +118,7 @@ const INTERPOLATED_FIELDS = [
     'object_x',
     'object_y',
     'inner_scale',
+    'opacity',
 ] as const satisfies readonly (keyof ElementConfig)[];
 
 /** Campos discretos: no tiene sentido "mezclar" un z-index o una alineación
@@ -118,6 +126,7 @@ const INTERPOLATED_FIELDS = [
 const DISCRETE_FIELDS = [
     'z_index',
     'locked',
+    'hidden',
     'align',
     'fit',
     'color',
@@ -417,7 +426,28 @@ export interface MenuItemData {
     layout_settings?: ItemLayoutSettings | null;
     is_active?: boolean;
     is_featured?: boolean;
+    /** Oculta SOLO la fotografía (conserva nombre/descripción/precio) — ver
+     * MenuItem::getImageUrlAttribute(). Cuando es true, image_url ya llega
+     * en null desde el backend; el campo se manda para que el admin sepa
+     * distinguir "sin foto" de "foto oculta temporalmente". */
+    image_hidden?: boolean;
+    previous_image?: string | null;
     sort_order: number;
+}
+
+/** Adorno de sección (flor, curva, textura…) — no pertenece a ningún
+ * platillo. `visual_settings` es el MISMO shape ElementSettings que ya usan
+ * categorías/platillos; la clave estable es `decoration-{id}:image`. */
+export interface MenuDecorationData {
+    id: number;
+    menu_category_id: number;
+    name: string;
+    alt_text?: string | null;
+    is_active: boolean;
+    sort_order: number;
+    visual_settings?: ElementSettings | null;
+    image_url?: string | null;
+    element_key: string;
 }
 
 export interface MenuCategoryData {
@@ -438,6 +468,18 @@ export interface MenuCategoryData {
     background_position?: string | null;
     visual_settings?: CategoryVisualSettings | null;
     items: MenuItemData[];
+    decorations?: MenuDecorationData[];
+}
+
+/** Config visual de UN adorno para un ancho de viewport — mismo mecanismo
+ * de interpolación/extrapolación que categoryElementFor/itemElementFor (ver
+ * resolveElementConfig), aplicado directamente sobre su ElementSettings
+ * propio (un adorno no tiene "elementos" internos, ES el elemento). */
+export function decorationElementFor(
+    decoration: Pick<MenuDecorationData, 'visual_settings'>,
+    breakpoint: MenuBreakpoint,
+): ElementConfig {
+    return resolveElementConfig(decoration.visual_settings, breakpoint);
 }
 
 export function money(value: number | string | null | undefined): string {

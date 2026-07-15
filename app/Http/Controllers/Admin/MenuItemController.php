@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\MenuItemImage;
+use App\Models\MenuMediaAsset;
 use App\Support\MenuLayoutZones;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -18,7 +20,11 @@ use Inertia\Response;
 
 class MenuItemController extends Controller
 {
-    private const IMAGE_DISK_PATH = 'menu/items';
+    // Los platillos SEMBRADOS inicialmente (ver ImportMenuCommand) siguen
+    // viviendo en 'menu/items' — este disco solo aplica a lo que se sube
+    // DESDE el administrador de aquí en adelante (nunca se mezclan ni se
+    // versionan en git, ver storage/app/public/.gitignore).
+    private const IMAGE_DISK_PATH = 'menu/uploads';
 
     public function index(Request $request): Response
     {
@@ -34,13 +40,53 @@ class MenuItemController extends Controller
             $query->where('name', 'like', '%'.$request->search.'%');
         }
 
+        // 'visibility' alimenta el filtro rápido del listado: publicado
+        // (activo + imagen visible), oculto (inactivo O imagen oculta), o
+        // sin imagen (activo pero sin ninguna foto) — ver Index.vue.
         $items = $query->get()->map(fn ($item) => array_merge($item->toArray(), [
             'image_url' => $item->image_url,
+            'has_image' => $item->image !== null || $item->primaryImage !== null,
         ]));
 
         $categories = MenuCategory::orderBy('sort_order')->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Admin/MenuItems/Index', compact('items', 'categories'));
+    }
+
+    /** Alterna is_active/image_hidden desde la vista rápida del listado, sin
+     * navegar al formulario completo — ninguno de los dos borra nada, solo
+     * deja de renderizarse en el menú público hasta reactivarse. */
+    public function quickVisibility(Request $request, MenuItem $menuItem): JsonResponse
+    {
+        $data = $request->validate([
+            'is_active' => 'sometimes|boolean',
+            'image_hidden' => 'sometimes|boolean',
+        ]);
+
+        $menuItem->update($data);
+        Cache::flush();
+
+        return response()->json([
+            'item' => array_merge($menuItem->fresh()->toArray(), [
+                'image_url' => $menuItem->fresh()->image_url,
+                'has_image' => $menuItem->image !== null || $menuItem->primaryImage()->exists(),
+            ]),
+        ]);
+    }
+
+    /** Intercambia `image` <-> `previous_image` — un solo nivel de deshacer
+     * no destructivo para cuando se reemplazó una foto por error. */
+    public function restoreImage(MenuItem $menuItem): JsonResponse
+    {
+        abort_unless($menuItem->previous_image, 422, 'No hay una imagen anterior guardada para este platillo.');
+
+        [$current, $previous] = [$menuItem->image, $menuItem->previous_image];
+        $menuItem->update(['image' => $previous, 'previous_image' => $current]);
+        Cache::flush();
+
+        return response()->json(['item' => array_merge($menuItem->fresh()->toArray(), [
+            'image_url' => $menuItem->fresh()->image_url,
+        ])]);
     }
 
     public function create(): Response
@@ -57,8 +103,11 @@ class MenuItemController extends Controller
         $data = $request->validate($this->rules($request));
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store(self::IMAGE_DISK_PATH, 'public');
+            $data['image'] = $this->storeUploadedImage($request->file('image'), $data['alt_text'] ?? null);
+        } elseif ($request->filled('image_library_path')) {
+            $data['image'] = $this->resolveLibraryPath($request->string('image_library_path'));
         }
+        unset($data['image_library_path']);
 
         $data['slug'] = Str::slug($data['name']);
         $data['sort_order'] = $data['sort_order'] ?? 0;
@@ -69,7 +118,7 @@ class MenuItemController extends Controller
             $primaryIndex = (int) ($request->input('primary_image_index', 0));
             $order = 0;
             foreach ($request->file('images') as $idx => $file) {
-                $path = $file->store(self::IMAGE_DISK_PATH, 'public');
+                $path = $this->storeUploadedImage($file);
                 $item->images()->create([
                     'image_path' => $path,
                     'is_primary' => $idx === $primaryIndex,
@@ -120,18 +169,31 @@ class MenuItemController extends Controller
     {
         $data = $request->validate($this->rules($request));
 
-        if ($request->hasFile('image')) {
-            if ($menuItem->image) {
-                Storage::disk('public')->delete($menuItem->image);
+        if ($request->hasFile('image') || $request->filled('image_library_path')) {
+            $newPath = $request->hasFile('image')
+                ? $this->storeUploadedImage($request->file('image'), $data['alt_text'] ?? null)
+                : $this->resolveLibraryPath($request->string('image_library_path'));
+
+            // La posición/tamaño/ajustes responsive viven en layout_settings
+            // (nunca se tocan aquí) — reemplazar la foto NUNCA los pierde.
+            // La imagen VIEJA se guarda como `previous_image` (un nivel de
+            // deshacer) en vez de borrarse de inmediato; la que YA estaba en
+            // previous_image se libera (borra el archivo solo si ningún otro
+            // platillo/categoría/adorno la sigue usando).
+            if ($menuItem->previous_image && $menuItem->previous_image !== $newPath) {
+                MenuMediaAsset::deleteIfUnused($menuItem->previous_image);
             }
-            $data['image'] = $request->file('image')->store(self::IMAGE_DISK_PATH, 'public');
+
+            $data['previous_image'] = $menuItem->image;
+            $data['image'] = $newPath;
         }
+        unset($data['image_library_path']);
 
         if ($request->hasFile('caption_image')) {
             if ($menuItem->caption_image) {
-                Storage::disk('public')->delete($menuItem->caption_image);
+                MenuMediaAsset::deleteIfUnused($menuItem->caption_image);
             }
-            $data['caption_image'] = $request->file('caption_image')->store(self::IMAGE_DISK_PATH, 'public');
+            $data['caption_image'] = $this->storeUploadedImage($request->file('caption_image'));
         }
 
         $data['sort_order'] = $data['sort_order'] ?? 0;
@@ -142,7 +204,7 @@ class MenuItemController extends Controller
                 ->where('menu_item_id', $menuItem->id)
                 ->get();
             foreach ($toDelete as $img) {
-                Storage::disk('public')->delete($img->image_path);
+                MenuMediaAsset::deleteIfUnused($img->image_path);
                 $img->delete();
             }
         }
@@ -159,7 +221,7 @@ class MenuItemController extends Controller
             $hasPrimary = $menuItem->images()->where('is_primary', true)->exists();
 
             foreach ($request->file('new_images') as $file) {
-                $path = $file->store(self::IMAGE_DISK_PATH, 'public');
+                $path = $this->storeUploadedImage($file);
                 $menuItem->images()->create([
                     'image_path' => $path,
                     'is_primary' => ! $hasPrimary,
@@ -180,15 +242,13 @@ class MenuItemController extends Controller
         $menuItem->load('images');
 
         foreach ($menuItem->images as $img) {
-            Storage::disk('public')->delete($img->image_path);
+            MenuMediaAsset::deleteIfUnused($img->image_path);
         }
 
-        if ($menuItem->image) {
-            Storage::disk('public')->delete($menuItem->image);
-        }
-
-        if ($menuItem->caption_image) {
-            Storage::disk('public')->delete($menuItem->caption_image);
+        foreach ([$menuItem->image, $menuItem->previous_image, $menuItem->caption_image] as $path) {
+            if ($path) {
+                MenuMediaAsset::deleteIfUnused($path);
+            }
         }
 
         $menuItem->delete();
@@ -236,8 +296,9 @@ class MenuItemController extends Controller
             'price_secondary' => 'nullable|numeric|min:0',
             'price_secondary_label' => 'nullable|string|max:40',
             'presentation' => 'nullable|string|max:60',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
-            'caption_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144|dimensions:min_width=20,min_height=20',
+            'image_library_path' => 'nullable|string|max:500',
+            'caption_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096|dimensions:min_width=20,min_height=20',
             'alt_text' => 'nullable|string|max:255',
             'image_position_x' => 'nullable|integer|min:0|max:100',
             'image_position_y' => 'nullable|integer|min:0|max:100',
@@ -245,16 +306,47 @@ class MenuItemController extends Controller
             'image_fit' => 'nullable|in:cover,contain',
             'image_align' => 'nullable|in:left,center,right',
             'visual_size' => 'nullable|in:sm,md,lg',
-            'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
+            'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144|dimensions:min_width=20,min_height=20',
             'primary_image_index' => 'nullable|integer',
-            'new_images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
+            'new_images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144|dimensions:min_width=20,min_height=20',
             'delete_image_ids' => 'nullable|array',
             'delete_image_ids.*' => 'integer',
             'primary_image_id' => 'nullable|integer',
             'ingredients' => 'nullable|string',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
+            'image_hidden' => 'boolean',
             'sort_order' => 'nullable|integer',
         ];
+    }
+
+    /** Guarda un archivo subido con nombre único (Storage::store ya lo
+     * genera) y lo registra en la biblioteca de imágenes del menú para que
+     * pueda reutilizarse después sin volver a subirlo. */
+    private function storeUploadedImage(\Illuminate\Http\UploadedFile $file, ?string $altText = null): string
+    {
+        $path = $file->store(self::IMAGE_DISK_PATH, 'public');
+        [$width, $height] = @getimagesize($file->getRealPath()) ?: [null, null];
+
+        MenuMediaAsset::updateOrCreate(['disk_path' => $path], [
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'width' => $width,
+            'height' => $height,
+            'alt_text' => $altText,
+        ]);
+
+        return $path;
+    }
+
+    /** Valida que una ruta elegida desde la biblioteca exista realmente en
+     * el disco público antes de asignarla — nunca guarda una ruta absoluta
+     * de Windows ni una ruta arbitraria fuera de storage/app/public. */
+    private function resolveLibraryPath(string $path): string
+    {
+        abort_unless(Storage::disk('public')->exists($path), 422, 'La imagen seleccionada de la biblioteca ya no existe.');
+
+        return $path;
     }
 }

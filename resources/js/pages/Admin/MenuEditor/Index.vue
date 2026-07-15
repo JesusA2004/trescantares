@@ -10,6 +10,9 @@ import {
     ChevronRight,
     CircleAlert,
     CircleCheckBig,
+    Copy,
+    Eye,
+    EyeOff,
     ExternalLink,
     GripVertical,
     Image as ImageIcon,
@@ -17,13 +20,16 @@ import {
     Lock,
     LockOpen,
     Monitor,
+    Plus,
     Redo2,
     RotateCcw,
     Search,
     Settings2,
     Smartphone,
+    Sparkles,
     Tablet,
     Tag,
+    Trash2,
     Type as TypeIcon,
     Undo2,
     ZoomIn,
@@ -45,6 +51,7 @@ import {
     MENU_DEVICE_WIDTH,
     categoryElementFor,
     categoryElementKeysFor,
+    decorationElementFor,
     hasOwnElementConfig,
     itemElementFor,
     toAnchorCoordinates,
@@ -54,17 +61,19 @@ import type {
     ElementConfig,
     ItemElementKey,
     MenuCategoryData,
+    MenuDecorationData,
     MenuDevice,
     MenuItemData,
 } from '@/components/Public/Menu/types';
 import TcInput from '@/components/tc/TcInput.vue';
+import TcMediaLibraryModal from '@/components/tc/TcMediaLibraryModal.vue';
 import TcSelect from '@/components/tc/TcSelect.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
 import { useAutosave } from '@/composables/useAutosave';
 import { useDragSort } from '@/composables/useDragSort';
 import { useMenuPreviewParent } from '@/composables/useMenuPreviewBridge';
 import { useNotify } from '@/composables/useNotify';
-import { patchJson, postJson } from '@/lib/jsonApi';
+import { deleteJson, patchJson, postJson } from '@/lib/jsonApi';
 import { zonesForLayout } from '@/pages/Admin/MenuItems/zones';
 
 const props = defineProps<{
@@ -316,19 +325,28 @@ function followSelectionCategory(key: string) {
         if (owner) {
             activeCategoryId.value = owner.id;
         }
+    } else if (parsed.kind === 'decoration') {
+        const owner = categories.find((c) =>
+            (c.decorations ?? []).some((d) => d.id === parsed.id),
+        );
+
+        if (owner) {
+            activeCategoryId.value = owner.id;
+        }
     } else {
         activeCategoryId.value = parsed.id;
     }
 }
 
 /* ------------------------------------------------------------------ */
-/* Claves de elemento: item-{id}:{el} / category-{id}:{el}              */
+/* Claves de elemento: item-{id}:{el} / category-{id}:{el} /            */
+/* decoration-{id}:image                                                */
 /* ------------------------------------------------------------------ */
 
 interface ParsedKey {
-    kind: 'item' | 'category';
+    kind: 'item' | 'category' | 'decoration';
     id: number;
-    element: ItemElementKey | CategoryElementKey;
+    element: ItemElementKey | CategoryElementKey | 'image';
 }
 
 function parseKey(key: string): ParsedKey | null {
@@ -339,6 +357,16 @@ function parseKey(key: string): ParsedKey | null {
             kind: 'item',
             id: Number(itemMatch[1]),
             element: itemMatch[2] as ItemElementKey,
+        };
+    }
+
+    const decorationMatch = /^decoration-(\d+):(.+)$/.exec(key);
+
+    if (decorationMatch) {
+        return {
+            kind: 'decoration',
+            id: Number(decorationMatch[1]),
+            element: decorationMatch[2] as 'image',
         };
     }
 
@@ -371,6 +399,18 @@ function findCategoryGlobal(id: number): MenuCategoryData | null {
     return categories.find((c) => c.id === id) ?? null;
 }
 
+function findDecorationGlobal(id: number): MenuDecorationData | null {
+    for (const cat of categories) {
+        const decoration = (cat.decorations ?? []).find((d) => d.id === id);
+
+        if (decoration) {
+            return decoration;
+        }
+    }
+
+    return null;
+}
+
 function resolveConfigAtWidth(key: string, width: number): ElementConfig {
     const parsed = parseKey(key);
 
@@ -384,6 +424,15 @@ function resolveConfigAtWidth(key: string, width: number): ElementConfig {
         return itemElementFor(
             { layout_settings: item?.layout_settings },
             parsed.element as ItemElementKey,
+            width,
+        );
+    }
+
+    if (parsed.kind === 'decoration') {
+        const decoration = findDecorationGlobal(parsed.id);
+
+        return decorationElementFor(
+            { visual_settings: decoration?.visual_settings },
             width,
         );
     }
@@ -440,6 +489,12 @@ function hasOwnConfig(key: string, device: MenuDevice): boolean {
         );
     }
 
+    if (parsed.kind === 'decoration') {
+        const decoration = findDecorationGlobal(parsed.id);
+
+        return hasOwnElementConfig(decoration?.visual_settings, device);
+    }
+
     const category = findCategoryGlobal(parsed.id);
 
     return hasOwnElementConfig(
@@ -456,6 +511,28 @@ function applyMirror(
     const parsed = parseKey(key);
 
     if (!parsed) {
+        return;
+    }
+
+    if (parsed.kind === 'decoration') {
+        const decoration = findDecorationGlobal(parsed.id);
+
+        if (!decoration) {
+            return;
+        }
+
+        const settings = { ...(decoration.visual_settings ?? {}) };
+
+        if (config) {
+            settings[device] = config;
+        } else {
+            delete settings[device];
+        }
+
+        decoration.visual_settings = Object.keys(settings).length
+            ? settings
+            : null;
+
         return;
     }
 
@@ -517,6 +594,31 @@ const selectedItem = computed<MenuItemData | null>(() => {
     return parsed?.kind === 'item' ? findItemGlobal(parsed.id) : null;
 });
 
+const selectedDecoration = computed<MenuDecorationData | null>(() => {
+    const parsed = selectedKey.value ? parseKey(selectedKey.value) : null;
+
+    return parsed?.kind === 'decoration'
+        ? findDecorationGlobal(parsed.id)
+        : null;
+});
+
+async function renameSelectedDecoration(name: string) {
+    if (!selectedDecoration.value) {
+        return;
+    }
+
+    selectedDecoration.value.name = name;
+
+    try {
+        await patchJson(
+            `/admin/menu-decorations/${selectedDecoration.value.id}`,
+            { name },
+        );
+    } catch {
+        notify.error('No se pudo renombrar el adorno.');
+    }
+}
+
 const selectedItemCategory = computed<MenuCategoryData | null>(() => {
     if (!selectedItem.value) {
         return null;
@@ -542,6 +644,12 @@ const selectedLabel = computed(() => {
         return selectedItem.value
             ? `${selectedItem.value.name} — ${label}`
             : label;
+    }
+
+    if (parsed.kind === 'decoration') {
+        const decoration = findDecorationGlobal(parsed.id);
+
+        return decoration ? `Adorno — ${decoration.name}` : 'Adorno';
     }
 
     const cat = findCategoryGlobal(parsed.id);
@@ -1106,6 +1214,223 @@ function toggleElementLock(key: string) {
     recordUndo({ key, device, prev, next });
     applyChange(key, device, next);
 }
+
+/* ------------------------------------------------------------------ */
+/* Adornos de sección — flores/curvas/texturas que no pertenecen a      */
+/* ningún platillo (ver MenuDecoration)                                 */
+/* ------------------------------------------------------------------ */
+
+const decorationsSaving = ref(false);
+const addDecorationOpen = ref(false);
+
+function selectDecoration(id: number) {
+    onSelectFromSidebar(`decoration-${id}:image`);
+}
+
+async function toggleDecorationActive(decoration: MenuDecorationData) {
+    const previous = decoration.is_active;
+    decoration.is_active = !previous;
+    decorationsSaving.value = true;
+
+    try {
+        await patchJson(`/admin/menu-decorations/${decoration.id}`, {
+            is_active: decoration.is_active,
+        });
+        scheduleIframeReload();
+    } catch {
+        decoration.is_active = previous;
+        notify.error('No se pudo actualizar el adorno.');
+    } finally {
+        decorationsSaving.value = false;
+    }
+}
+
+async function duplicateDecorationAction(decoration: MenuDecorationData) {
+    decorationsSaving.value = true;
+
+    try {
+        const res = await postJson<{ decoration: MenuDecorationData }>(
+            `/admin/menu-decorations/${decoration.id}/duplicate`,
+            {},
+        );
+        const owner = findCategoryGlobal(decoration.menu_category_id);
+
+        if (owner) {
+            owner.decorations = [...(owner.decorations ?? []), res.decoration];
+        }
+
+        scheduleIframeReload();
+        notify.success('Adorno duplicado.');
+    } catch {
+        notify.error('No se pudo duplicar el adorno.');
+    } finally {
+        decorationsSaving.value = false;
+    }
+}
+
+async function deleteDecorationAction(decoration: MenuDecorationData) {
+    const confirmed = await notify.confirmDanger(
+        '¿Eliminar este adorno?',
+        'Esta acción no se puede deshacer. El archivo de imagen solo se borra si ningún otro platillo, título o adorno lo sigue usando.',
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    decorationsSaving.value = true;
+
+    try {
+        await deleteJson(`/admin/menu-decorations/${decoration.id}`);
+        const owner = findCategoryGlobal(decoration.menu_category_id);
+
+        if (owner) {
+            owner.decorations = (owner.decorations ?? []).filter(
+                (d) => d.id !== decoration.id,
+            );
+        }
+
+        if (selectedKey.value === `decoration-${decoration.id}:image`) {
+            selectedKey.value = null;
+        }
+
+        scheduleIframeReload();
+        notify.success('Adorno eliminado.');
+    } catch {
+        notify.error('No se pudo eliminar el adorno.');
+    } finally {
+        decorationsSaving.value = false;
+    }
+}
+
+async function onDecorationPicked({ path }: { path: string; url: string }) {
+    if (!activeCategory.value) {
+        return;
+    }
+
+    addDecorationOpen.value = false;
+    decorationsSaving.value = true;
+
+    try {
+        const res = await postJson<{ decoration: MenuDecorationData }>(
+            '/admin/menu-decorations',
+            {
+                menu_category_id: activeCategory.value.id,
+                name: 'Nuevo adorno',
+                image_library_path: path,
+            },
+        );
+        activeCategory.value.decorations = [
+            ...(activeCategory.value.decorations ?? []),
+            res.decoration,
+        ];
+        scheduleIframeReload();
+        selectDecoration(res.decoration.id);
+        notify.success(
+            'Adorno agregado — ya puedes moverlo/redimensionarlo en el lienzo.',
+        );
+    } catch {
+        notify.error('No se pudo agregar el adorno.');
+    } finally {
+        decorationsSaving.value = false;
+    }
+}
+
+async function moveDecorationToCategory(
+    decoration: MenuDecorationData,
+    categoryId: number,
+) {
+    if (categoryId === decoration.menu_category_id) {
+        return;
+    }
+
+    decorationsSaving.value = true;
+
+    try {
+        await patchJson(`/admin/menu-decorations/${decoration.id}`, {
+            menu_category_id: categoryId,
+        });
+
+        const from = findCategoryGlobal(decoration.menu_category_id);
+
+        if (from) {
+            from.decorations = (from.decorations ?? []).filter(
+                (d) => d.id !== decoration.id,
+            );
+        }
+
+        const to = findCategoryGlobal(categoryId);
+        decoration.menu_category_id = categoryId;
+
+        if (to) {
+            to.decorations = [...(to.decorations ?? []), decoration];
+        }
+
+        scheduleIframeReload();
+        notify.success('Adorno movido de sección.');
+    } catch {
+        notify.error('No se pudo mover el adorno.');
+    } finally {
+        decorationsSaving.value = false;
+    }
+}
+
+const {
+    registerZone: registerDecorationZone,
+    start: startDecorationDrag,
+    dragging: draggingDecoration,
+} = useDragSort<MenuDecorationData>((zones) => {
+    const [, items] = Object.entries(zones)[0] ?? [];
+
+    if (!items || !activeCategory.value) {
+        return Promise.resolve();
+    }
+
+    activeCategory.value.decorations = items;
+
+    return postJson('/admin/menu-decorations/reorder', {
+        items: items.map((d, idx) => ({ id: d.id, sort_order: idx })),
+    });
+});
+
+const decorationZoneEl = ref<HTMLElement | null>(null);
+
+function bindDecorationZone(el: HTMLElement | null) {
+    decorationZoneEl.value = el;
+
+    if (el && activeCategory.value) {
+        registerDecorationZone(
+            `decorations-${activeCategory.value.id}`,
+            activeCategory.value.decorations ?? [],
+            el,
+        );
+    }
+}
+
+watch(activeCategory, (cat) => {
+    if (decorationZoneEl.value && cat) {
+        registerDecorationZone(
+            `decorations-${cat.id}`,
+            cat.decorations ?? [],
+            decorationZoneEl.value,
+        );
+    }
+});
+
+function onDecorationHandleDown(
+    decoration: MenuDecorationData,
+    e: PointerEvent,
+) {
+    if (!activeCategory.value) {
+        return;
+    }
+
+    startDecorationDrag(
+        decoration,
+        `decorations-${activeCategory.value.id}`,
+        e,
+    );
+}
 </script>
 
 <template>
@@ -1449,6 +1774,111 @@ function toggleElementLock(key: string) {
                             </ul>
                         </li>
                     </ul>
+                </template>
+
+                <template v-if="activeCategory">
+                    <h3 class="tc-sidebar-heading">
+                        <Sparkles class="mr-1 inline h-3 w-3" />Adornos
+                        <span
+                            v-if="decorationsSaving"
+                            class="ml-1 font-normal text-[var(--tc-blue)] normal-case"
+                            >guardando…</span
+                        >
+                    </h3>
+                    <ul
+                        :ref="(el) => bindDecorationZone(el as HTMLElement)"
+                        class="mb-2 space-y-0.5"
+                    >
+                        <li
+                            v-for="decoration in activeCategory.decorations ??
+                            []"
+                            :key="decoration.id"
+                            data-drag-row
+                            class="flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs"
+                            :class="{
+                                'opacity-40':
+                                    draggingDecoration?.item.id ===
+                                    decoration.id,
+                                'opacity-50': !decoration.is_active,
+                            }"
+                        >
+                            <button
+                                type="button"
+                                class="cursor-grab touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+                                aria-label="Arrastrar para reordenar"
+                                @pointerdown="
+                                    onDecorationHandleDown(decoration, $event)
+                                "
+                            >
+                                <GripVertical class="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-element-btn flex-1"
+                                :class="{
+                                    'tc-element-btn--active':
+                                        selectedKey ===
+                                        `decoration-${decoration.id}:image`,
+                                }"
+                                @click="selectDecoration(decoration.id)"
+                            >
+                                <ImageIcon
+                                    class="h-3.5 w-3.5 shrink-0 opacity-60"
+                                />
+                                <span class="truncate">{{
+                                    decoration.name
+                                }}</span>
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-lock-btn"
+                                :aria-label="
+                                    decoration.is_active
+                                        ? 'Ocultar adorno'
+                                        : 'Mostrar adorno'
+                                "
+                                title="Mostrar/ocultar"
+                                @click="toggleDecorationActive(decoration)"
+                            >
+                                <Eye
+                                    v-if="decoration.is_active"
+                                    class="h-3 w-3"
+                                />
+                                <EyeOff v-else class="h-3 w-3" />
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-lock-btn"
+                                aria-label="Duplicar adorno"
+                                title="Duplicar"
+                                @click="duplicateDecorationAction(decoration)"
+                            >
+                                <Copy class="h-3 w-3" />
+                            </button>
+                            <button
+                                type="button"
+                                class="tc-lock-btn"
+                                aria-label="Eliminar adorno"
+                                title="Eliminar"
+                                @click="deleteDecorationAction(decoration)"
+                            >
+                                <Trash2 class="h-3 w-3" />
+                            </button>
+                        </li>
+                        <li
+                            v-if="!(activeCategory.decorations ?? []).length"
+                            class="px-2 py-1 text-xs text-gray-400"
+                        >
+                            Esta sección todavía no tiene adornos.
+                        </li>
+                    </ul>
+                    <button
+                        type="button"
+                        class="tc-btn-secondary w-full text-xs"
+                        @click="addDecorationOpen = true"
+                    >
+                        <Plus class="mr-1 inline h-3.5 w-3.5" />Agregar adorno
+                    </button>
                 </template>
             </aside>
 
@@ -1811,6 +2241,71 @@ function toggleElementLock(key: string) {
                         </button>
                     </div>
 
+                    <div
+                        v-if="selectedDecoration"
+                        class="mb-4 space-y-2.5 border-t border-gray-100 pt-3"
+                    >
+                        <p class="tc-inspector-label">Adorno</p>
+                        <TcInput
+                            label="Nombre descriptivo"
+                            :model-value="selectedDecoration.name"
+                            @update:model-value="
+                                renameSelectedDecoration($event as string)
+                            "
+                        />
+                        <div class="grid grid-cols-2 gap-2">
+                            <TcInput
+                                label="Opacidad (0-1)"
+                                type="number"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                :model-value="inspectorConfig.opacity ?? 1"
+                                @update:model-value="
+                                    updateInspectorField(
+                                        'opacity',
+                                        $event === '' ? null : Number($event),
+                                    )
+                                "
+                            />
+                            <TcSelect
+                                label="Mover a sección"
+                                :options="
+                                    categories.map((c) => ({
+                                        value: c.id,
+                                        label: c.name,
+                                    }))
+                                "
+                                :model-value="
+                                    selectedDecoration.menu_category_id
+                                "
+                                @update:model-value="
+                                    moveDecorationToCategory(
+                                        selectedDecoration!,
+                                        Number($event),
+                                    )
+                                "
+                            />
+                        </div>
+                        <label
+                            class="flex items-center gap-1.5 text-xs text-gray-500"
+                        >
+                            <input
+                                type="checkbox"
+                                :checked="!!inspectorConfig.hidden"
+                                @change="
+                                    updateInspectorField(
+                                        'hidden',
+                                        ($event.target as HTMLInputElement)
+                                            .checked,
+                                    )
+                                "
+                            />
+                            Ocultar solo en
+                            {{ activeDevice.label.toLowerCase() }}
+                        </label>
+                    </div>
+
                     <details class="tc-advanced">
                         <summary class="tc-advanced-summary">
                             <Settings2 class="h-3.5 w-3.5" /> Ajustes avanzados
@@ -1962,6 +2457,13 @@ function toggleElementLock(key: string) {
             </aside>
         </div>
     </div>
+
+    <TcMediaLibraryModal
+        :open="addDecorationOpen"
+        title="Agregar adorno — elige o sube una imagen"
+        @close="addDecorationOpen = false"
+        @picked="onDecorationPicked"
+    />
 </template>
 
 <style scoped>

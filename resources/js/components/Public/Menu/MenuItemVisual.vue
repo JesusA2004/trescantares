@@ -103,7 +103,13 @@ const fit = computed(() =>
 </script>
 
 <template>
+    <!-- Sin imagen (oculta o nunca asignada) Y en público (no editable): no
+    se renderiza NADA — ni un contenedor vacío que reserve gap/espacio en el
+    flex del layout, ni una petición HTTP de una imagen oculta. En el editor
+    SÍ se muestra el bloque vacío (editable) para poder seleccionarlo y
+    asignarle una imagen. -->
     <MenuEditableElement
+        v-if="item.image_url || editable"
         :element-key="elementKey"
         :label="`${item.name} — imagen`"
         :config="config"

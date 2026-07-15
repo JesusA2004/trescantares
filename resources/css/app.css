@@ -7058,6 +7058,26 @@ body,
     }
 }
 
+/* ---- Adornos de sección (flores, curvas, texturas… nunca pertenecen a un
+   platillo) ----
+   position:absolute DENTRO de .tc-mp-page (que ya es position:relative) para
+   que nunca reserve espacio en el flujo normal ni deje huecos en el grid —
+   su x/y (ver ElementConfig) es un translate() ADICIONAL sobre este punto de
+   partida fijo en la esquina superior izquierda de la sección. pointer-events
+   se limita al modo editable (en público es puramente decorativo, nunca debe
+   interceptar clics). */
+.tc-mp-decoration {
+    position: absolute;
+    top: 0;
+    left: 0;
+    max-width: 220px;
+    pointer-events: none;
+}
+
+.tc-mp--editable .tc-mp-decoration {
+    pointer-events: auto;
+}
+
 /* ---- Fotografías de platillos (recortes PNG transparentes, sin tarjetas) ----
    Los archivos ya vienen recortados y con sombra incluida: se muestran a su
    proporción natural (object-fit: contain) — nunca se recortan ni deforman.

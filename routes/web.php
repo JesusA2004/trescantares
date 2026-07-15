@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\JobsAdminController;
+use App\Http\Controllers\Admin\MediaLibraryController;
+use App\Http\Controllers\Admin\MenuDecorationController;
 use App\Http\Controllers\Admin\MenuEditorController;
 use App\Http\Controllers\Admin\MenuItemController;
 use App\Http\Controllers\Admin\ModuleController;
@@ -45,6 +47,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'prevent
         ->middleware(['permission:menu.view|super-admin', 'module:menu']);
     Route::post('menu-items/reorder', [MenuItemController::class, 'reorder'])->name('menu-items.reorder')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::patch('menu-items/{menuItem}/visibility', [MenuItemController::class, 'quickVisibility'])->name('menu-items.visibility')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::post('menu-items/{menuItem}/restore-image', [MenuItemController::class, 'restoreImage'])->name('menu-items.restore-image')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
 
     Route::get('menu-editor', [MenuEditorController::class, 'index'])->name('menu-editor.index')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
@@ -58,6 +64,26 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'prevent
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
     Route::patch('menu-editor/categories/{category}/element', [MenuEditorController::class, 'updateCategoryElement'])->name('menu-editor.categories.element')
         ->middleware(['permission:categories.update|super-admin', 'module:categories']);
+
+    Route::post('menu-decorations', [MenuDecorationController::class, 'store'])->name('menu-decorations.store')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::patch('menu-decorations/{menuDecoration}', [MenuDecorationController::class, 'update'])->name('menu-decorations.update')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::delete('menu-decorations/{menuDecoration}', [MenuDecorationController::class, 'destroy'])->name('menu-decorations.destroy')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::post('menu-decorations/{menuDecoration}/duplicate', [MenuDecorationController::class, 'duplicate'])->name('menu-decorations.duplicate')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::post('menu-decorations/reorder', [MenuDecorationController::class, 'reorder'])->name('menu-decorations.reorder')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::patch('menu-decorations/{menuDecoration}/element', [MenuDecorationController::class, 'updateElement'])->name('menu-decorations.element')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+
+    Route::get('media-library', [MediaLibraryController::class, 'index'])->name('media-library.index')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::post('media-library', [MediaLibraryController::class, 'store'])->name('media-library.store')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::delete('media-library/{menuMediaAsset}', [MediaLibraryController::class, 'destroy'])->name('media-library.destroy')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
 
     Route::resource('users', UserController::class)->except(['show'])
         ->middleware(['permission:users.view|super-admin', 'module:users']);

@@ -2,10 +2,12 @@
 import { Head } from '@inertiajs/vue3';
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { layoutFor } from '@/components/Public/Menu/layoutRegistry';
+import MenuEditableElement from '@/components/Public/Menu/MenuEditableElement.vue';
 import MenuSideNav from '@/components/Public/Menu/MenuSideNav.vue';
 import {
     MENU_DEVICE_WIDTH,
     categoryElementFor,
+    decorationElementFor,
     itemElementFor,
     resolveMenuDevice,
     toAnchorCoordinates,
@@ -15,6 +17,7 @@ import type {
     ElementConfig,
     ItemElementKey,
     MenuCategoryData,
+    MenuDecorationData,
     MenuDevice,
 } from '@/components/Public/Menu/types';
 import { useViewportWidth } from '@/composables/useBreakpoint';
@@ -147,9 +150,9 @@ function onScroll() {
 const selectedKey = ref<string | null>(null);
 
 interface ParsedKey {
-    kind: 'item' | 'category';
+    kind: 'item' | 'category' | 'decoration';
     id: number;
-    element: ItemElementKey | CategoryElementKey;
+    element: ItemElementKey | CategoryElementKey | 'image';
 }
 
 function parseKey(key: string): ParsedKey | null {
@@ -160,6 +163,16 @@ function parseKey(key: string): ParsedKey | null {
             kind: 'item',
             id: Number(itemMatch[1]),
             element: itemMatch[2] as ItemElementKey,
+        };
+    }
+
+    const decorationMatch = /^decoration-(\d+):(.+)$/.exec(key);
+
+    if (decorationMatch) {
+        return {
+            kind: 'decoration',
+            id: Number(decorationMatch[1]),
+            element: decorationMatch[2] as 'image',
         };
     }
 
@@ -192,6 +205,26 @@ function findCategory(id: number) {
     return categories.find((c) => c.id === id) ?? null;
 }
 
+function findDecoration(id: number) {
+    for (const cat of categories) {
+        const decoration = (cat.decorations ?? []).find((d) => d.id === id);
+
+        if (decoration) {
+            return decoration;
+        }
+    }
+
+    return null;
+}
+
+/** Todos los adornos activos de una categoría que NO estén ocultos en la
+ * vista resuelta actual — nunca se piden imágenes de adornos ocultos. */
+function visibleDecorations(category: MenuCategoryData): MenuDecorationData[] {
+    return (category.decorations ?? []).filter(
+        (d) => !decorationElementFor(d, viewportWidth.value).hidden,
+    );
+}
+
 function resolveConfig(key: string): ElementConfig | null {
     const parsed = parseKey(key);
 
@@ -208,6 +241,14 @@ function resolveConfig(key: string): ElementConfig | null {
                   parsed.element as ItemElementKey,
                   viewportWidth.value,
               )
+            : null;
+    }
+
+    if (parsed.kind === 'decoration') {
+        const decoration = findDecoration(parsed.id);
+
+        return decoration
+            ? decorationElementFor(decoration, viewportWidth.value)
             : null;
     }
 
@@ -230,6 +271,28 @@ function applyLocal(
     const parsed = parseKey(key);
 
     if (!parsed) {
+        return;
+    }
+
+    if (parsed.kind === 'decoration') {
+        const decoration = findDecoration(parsed.id);
+
+        if (!decoration) {
+            return;
+        }
+
+        const settings = { ...(decoration.visual_settings ?? {}) };
+
+        if (config) {
+            settings[bp] = config;
+        } else {
+            delete settings[bp];
+        }
+
+        decoration.visual_settings = Object.keys(settings).length
+            ? settings
+            : null;
+
         return;
     }
 
@@ -277,6 +340,8 @@ async function persist(
 
     if (parsed.kind === 'item') {
         await patchJson(`/admin/menu-editor/items/${parsed.id}/element`, body);
+    } else if (parsed.kind === 'decoration') {
+        await patchJson(`/admin/menu-decorations/${parsed.id}/element`, body);
     } else {
         await patchJson(
             `/admin/menu-editor/categories/${parsed.id}/element`,
@@ -427,6 +492,22 @@ function onElementCommit(key: string, config: ElementConfig) {
                     :breakpoint="viewportWidth"
                     :editable="editable"
                     :selected-key="selectedKey"
+                    @select="onElementSelect"
+                    @commit="onElementCommit"
+                />
+
+                <MenuEditableElement
+                    v-for="decoration in visibleDecorations(category)"
+                    :key="decoration.element_key"
+                    :element-key="decoration.element_key"
+                    :label="decoration.name"
+                    :config="decorationElementFor(decoration, viewportWidth)"
+                    :editable="editable"
+                    :selected="selectedKey === decoration.element_key"
+                    kind="image"
+                    :src="decoration.image_url"
+                    :alt="decoration.alt_text ?? decoration.name"
+                    class="tc-mp-decoration"
                     @select="onElementSelect"
                     @commit="onElementCommit"
                 />

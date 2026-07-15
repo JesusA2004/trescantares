@@ -38,7 +38,15 @@ class MenuEditorController extends Controller
 
     public function index(): Response
     {
-        $categories = MenuCategory::with(['items' => fn ($q) => $q->orderBy('sort_order')->orderBy('name')])
+        // A diferencia de forPublicMenu() (ver MenuCategory), aquí se cargan
+        // TODOS los adornos sin filtrar por is_active — el panel "ADORNOS"
+        // de la barra lateral necesita poder listar (y reactivar) los
+        // ocultos, aunque el iframe de vista previa (preview(), que sí usa
+        // forPublicMenu) no los renderice mientras estén inactivos.
+        $categories = MenuCategory::with([
+            'items' => fn ($q) => $q->orderBy('sort_order')->orderBy('name'),
+            'decorations',
+        ])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();

@@ -45,21 +45,33 @@ class MenuCategory extends Model
         return $this->hasMany(MenuItem::class);
     }
 
+    public function decorations(): HasMany
+    {
+        return $this->hasMany(MenuDecoration::class)->orderBy('sort_order');
+    }
+
     /**
      * Datos tal como los consume el menú público — usado tanto por
      * Public\MenuController como por el preview WYSIWYG del editor visual
      * (Admin\MenuEditorController::preview), para garantizar que ambos
-     * rendericen exactamente la misma información.
+     * rendericen exactamente la misma información. Los adornos INACTIVOS ni
+     * siquiera se cargan aquí — nunca llegan al HTML/JSON público ni al
+     * iframe de vista previa, así no hay petición HTTP de una imagen oculta.
      *
      * @return array<int, array<string, mixed>>
      */
     public static function forPublicMenu(): array
     {
-        return self::with(['items' => function ($q) {
-            $q->where('is_active', true)
-                ->orderBy('sort_order')
-                ->orderBy('name');
-        }])
+        return self::with([
+            'items' => function ($q) {
+                $q->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('name');
+            },
+            'decorations' => function ($q) {
+                $q->where('is_active', true);
+            },
+        ])
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
@@ -102,6 +114,9 @@ class MenuCategory extends Model
             'tagline_image_url' => $this->tagline_image_url,
             'items' => $this->relationLoaded('items')
                 ? $this->items->map(fn (MenuItem $item) => $item->toPublicArray())->values()
+                : [],
+            'decorations' => $this->relationLoaded('decorations')
+                ? $this->decorations->map(fn (MenuDecoration $d) => $d->toPublicArray())->values()
                 : [],
         ]);
     }

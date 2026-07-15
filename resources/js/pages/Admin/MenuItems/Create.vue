@@ -11,6 +11,7 @@ import type {
 } from '@/components/Public/Menu/types';
 import TcImagePositionEditor from '@/components/tc/TcImagePositionEditor.vue';
 import TcInput from '@/components/tc/TcInput.vue';
+import TcMediaLibraryModal from '@/components/tc/TcMediaLibraryModal.vue';
 import TcSelect from '@/components/tc/TcSelect.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
 import TcTextarea from '@/components/tc/TcTextarea.vue';
@@ -49,7 +50,18 @@ const form = useForm({
     is_active: true,
     images: [] as File[],
     primary_image_index: 0,
+    image_library_path: '',
 });
+
+const mediaLibraryOpen = ref(false);
+
+function onLibraryPicked({ path, url }: { path: string; url: string }) {
+    form.image_library_path = path;
+    form.images = [];
+    form.primary_image_index = 0;
+    previews.value = [{ url, file: null as unknown as File, isPrimary: true }];
+    mediaLibraryOpen.value = false;
+}
 
 const selectedCategory = computed(
     () =>
@@ -307,6 +319,14 @@ function submit() {
                             </div>
                         </div>
 
+                        <button
+                            type="button"
+                            class="tc-btn-secondary mt-2 text-xs"
+                            @click="mediaLibraryOpen = true"
+                        >
+                            Elegir de biblioteca
+                        </button>
+
                         <p class="mt-2 text-xs text-gray-400">
                             La imagen marcada con ⭐ se mostrará en el menú
                             público.
@@ -519,4 +539,11 @@ function submit() {
             </div>
         </form>
     </div>
+
+    <TcMediaLibraryModal
+        :open="mediaLibraryOpen"
+        title="Elegir imagen del platillo"
+        @close="mediaLibraryOpen = false"
+        @picked="onLibraryPicked"
+    />
 </template>

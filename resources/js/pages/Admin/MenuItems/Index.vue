@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
+    Eye,
+    EyeOff,
     GripVertical,
     Pencil,
     Search,
@@ -13,8 +15,9 @@ import AdminEmptyState from '@/components/admin/AdminEmptyState.vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
 import Can from '@/components/admin/Can.vue';
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue';
-import StatusBadge from '@/components/admin/StatusBadge.vue';
 import { useDragSort } from '@/composables/useDragSort';
+import { useNotify } from '@/composables/useNotify';
+import { patchJson } from '@/lib/jsonApi';
 
 interface ItemRow {
     id: number;
@@ -22,6 +25,8 @@ interface ItemRow {
     slug: string;
     price: string;
     image_url: string | null;
+    has_image: boolean;
+    image_hidden: boolean;
     badge: string | null;
     zone: string | null;
     is_active: boolean;
@@ -36,9 +41,14 @@ const props = defineProps<{
     categories: { id: number; name: string }[];
 }>();
 
+const notify = useNotify();
 const confirmDelete = ref<number | null>(null);
 const filterCategory = ref('');
 const filterSearch = ref('');
+/** Vista rápida centralizada: publicados/ocultos/sin imagen — sin entrar a
+ * cada CRUD. "Oculto" cubre TANTO el platillo completo (is_active=false)
+ * COMO solo su imagen (image_hidden=true), ver visibilityOf(). */
+const filterVisibility = ref<'' | 'published' | 'hidden' | 'no-image'>('');
 
 const groups = reactive<Record<string, ItemRow[]>>({});
 props.categories.forEach((c) => {
@@ -47,8 +57,23 @@ props.categories.forEach((c) => {
     );
 });
 
+function visibilityOf(item: ItemRow): 'published' | 'hidden' | 'no-image' {
+    if (!item.is_active || item.image_hidden) {
+        return 'hidden';
+    }
+
+    if (!item.has_image) {
+        return 'no-image';
+    }
+
+    return 'published';
+}
+
 const isFiltering = computed(
-    () => filterCategory.value !== '' || filterSearch.value.trim() !== '',
+    () =>
+        filterCategory.value !== '' ||
+        filterSearch.value.trim() !== '' ||
+        filterVisibility.value !== '',
 );
 
 const visibleCategories = computed(() => {
@@ -62,19 +87,47 @@ const visibleCategories = computed(() => {
 });
 
 function visibleItems(categoryId: number): ItemRow[] {
-    const list = groups[String(categoryId)] ?? [];
+    let list = groups[String(categoryId)] ?? [];
     const q = filterSearch.value.trim().toLowerCase();
 
-    if (!q) {
-        return list;
+    if (q) {
+        list = list.filter((i) => i.name.toLowerCase().includes(q));
     }
 
-    return list.filter((i) => i.name.toLowerCase().includes(q));
+    if (filterVisibility.value) {
+        list = list.filter((i) => visibilityOf(i) === filterVisibility.value);
+    }
+
+    return list;
 }
 
 const totalCount = computed(() =>
     Object.values(groups).reduce((n, l) => n + l.length, 0),
 );
+
+const visibleTotalCount = computed(() =>
+    props.categories.reduce((n, c) => n + visibleItems(c.id).length, 0),
+);
+
+/** Alterna is_active/image_hidden sin salir del listado — ninguno de los
+ * dos borra el platillo, su imagen ni su configuración; al reactivar
+ * recupera exactamente la posición/tamaño que ya tenía guardados. */
+async function toggleQuickVisibility(
+    item: ItemRow,
+    field: 'is_active' | 'image_hidden',
+) {
+    const previous = item[field];
+    item[field] = !previous;
+
+    try {
+        await patchJson(`/admin/menu-items/${item.id}/visibility`, {
+            [field]: item[field],
+        });
+    } catch {
+        item[field] = previous;
+        notify.error('No se pudo actualizar la visibilidad del platillo.');
+    }
+}
 
 const { registerZone, start, dragging, saving } = useDragSort<ItemRow>(
     (zones) => {
@@ -174,11 +227,17 @@ function deleteItem(id: number) {
                     {{ cat.name }}
                 </option>
             </select>
+            <select v-model="filterVisibility" class="tc-toolbar-select">
+                <option value="">Todos los estados</option>
+                <option value="published">Publicados</option>
+                <option value="hidden">Ocultos</option>
+                <option value="no-image">Sin imagen</option>
+            </select>
             <span v-if="saving" class="text-xs text-[var(--tc-blue)]"
                 >Guardando orden…</span
             >
             <span v-else class="text-xs text-gray-400 tabular-nums"
-                >{{ totalCount }} platillo{{
+                >{{ visibleTotalCount }} de {{ totalCount }} platillo{{
                     totalCount !== 1 ? 's' : ''
                 }}</span
             >
@@ -292,7 +351,81 @@ function deleteItem(id: number) {
                                     ${{ Number(item.price).toFixed(2) }}
                                 </td>
                                 <td>
-                                    <StatusBadge :active="item.is_active" />
+                                    <div class="flex flex-col gap-1">
+                                        <span
+                                            class="tc-badge w-fit text-[10px]"
+                                            :class="{
+                                                'tc-badge-green':
+                                                    visibilityOf(item) ===
+                                                    'published',
+                                                'tc-badge-pink':
+                                                    visibilityOf(item) ===
+                                                    'hidden',
+                                                'tc-badge-gray':
+                                                    visibilityOf(item) ===
+                                                    'no-image',
+                                            }"
+                                        >
+                                            {{
+                                                {
+                                                    published: 'Publicado',
+                                                    hidden: 'Oculto',
+                                                    'no-image': 'Sin imagen',
+                                                }[visibilityOf(item)]
+                                            }}
+                                        </span>
+                                        <div class="flex gap-1">
+                                            <button
+                                                type="button"
+                                                class="flex h-6 w-6 items-center justify-center rounded-md border border-[#f0e8d8] text-gray-500 hover:bg-gray-50"
+                                                :title="
+                                                    item.is_active
+                                                        ? 'Ocultar platillo completo'
+                                                        : 'Mostrar platillo'
+                                                "
+                                                @click="
+                                                    toggleQuickVisibility(
+                                                        item,
+                                                        'is_active',
+                                                    )
+                                                "
+                                            >
+                                                <Eye
+                                                    v-if="item.is_active"
+                                                    class="h-3 w-3"
+                                                />
+                                                <EyeOff
+                                                    v-else
+                                                    class="h-3 w-3"
+                                                />
+                                            </button>
+                                            <button
+                                                v-if="item.has_image"
+                                                type="button"
+                                                class="flex h-6 w-6 items-center justify-center rounded-md border border-[#f0e8d8] text-gray-500 hover:bg-gray-50"
+                                                :title="
+                                                    item.image_hidden
+                                                        ? 'Mostrar imagen'
+                                                        : 'Ocultar solo la imagen'
+                                                "
+                                                @click="
+                                                    toggleQuickVisibility(
+                                                        item,
+                                                        'image_hidden',
+                                                    )
+                                                "
+                                            >
+                                                <UtensilsCrossed
+                                                    class="h-3 w-3"
+                                                    :class="
+                                                        item.image_hidden
+                                                            ? 'opacity-40'
+                                                            : ''
+                                                    "
+                                                />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="hidden md:table-cell">
                                     <span
