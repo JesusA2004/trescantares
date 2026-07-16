@@ -7070,12 +7070,39 @@ body,
     position: absolute;
     top: 0;
     left: 0;
-    max-width: 220px;
+    /* width FIJO (no max-width) a propósito: con position:absolute +
+       width:auto, el algoritmo shrink-to-fit del navegador no puede resolver
+       el ancho preferido a partir de una imagen hija cuyo único límite de
+       tamaño es un max-width:100% (porcentaje) — eso colapsaba la caja del
+       adorno a 0x0 (la imagen igual se pintaba por overflow:visible, pero el
+       contorno de selección y la manija de resize quedaban en un punto
+       inexistente). Un ancho real elimina la ambigüedad; en cuanto se
+       personaliza, el estilo en línea de MenuEditableElement (ver liveWidth)
+       lo sobreescribe igual que a cualquier otro elemento. */
+    width: 220px;
     pointer-events: none;
+}
+
+.tc-mp-decoration img {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 .tc-mp--editable .tc-mp-decoration {
     pointer-events: auto;
+}
+
+/* MenuEditableElement fuerza position:relative en .tc-mev--selected (para
+   anclar su etiqueta/manija de resize en elementos normalmente static) — un
+   adorno seleccionado (que SIEMPRE pasa por aquí, ya que se autoselecciona
+   al crearlo) perdería su position:absolute por esa regla más específica
+   ([data-v-hash] cuenta como selector extra), cayendo al flujo normal al
+   final de la sección en vez de flotar en su x/y guardada. !important
+   garantiza que este caso especial siempre gane sin importar el orden de
+   compilación entre este archivo y el <style scoped> del componente. */
+.tc-mp-decoration.tc-mev--selected {
+    position: absolute !important;
 }
 
 /* ---- Fotografías de platillos (recortes PNG transparentes, sin tarjetas) ----
