@@ -10,6 +10,7 @@ const LABELS: Record<string, string> = {
     bebidas_tabla: 'Bebidas — tabla de precios',
     destilados: 'Destilados',
     grid: 'Genérico (lista simple)',
+    promo_full_image: 'Promoción de temporada (imagen a ancho completo)',
 };
 
 export function layoutOptions(

@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\MenuCategory;
+use App\Models\MenuDecoration;
 use App\Models\MenuItem;
+use App\Models\MenuMediaAsset;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -24,6 +26,12 @@ class ImportMenuCommand extends Command
         // Diseño
         'design/FONDO.png' => 'menu/design/fondo.png',
         'design/Portada.png' => 'menu/design/portada.png',
+        // Fondo exclusivo del menú (ajuste `menu_background`), portada
+        // responsive (móvil/web) y página promocional de temporada
+        'design/00 Fondo.png' => 'menu/design/fondo-menu.png',
+        'design/01 PORTADA MOVIL-11.jpg' => 'menu/design/portada-movil.jpg',
+        'design/01 PORTADA WEB-22.jpg' => 'menu/design/portada-web.jpg',
+        'design/MENÚ TRES CANTARES-21.jpg' => 'menu/design/promo-299.jpg',
         'titles/01.png' => 'menu/design/title-pozole.png',
         'titles/02.png' => 'menu/design/title-acompanalo.png',
         'titles/03.png' => 'menu/design/title-pancita.png',
@@ -67,6 +75,44 @@ class ImportMenuCommand extends Command
         'items/25 Pay de Limon.png' => 'menu/items/pay-de-limon.png',
         'items/26 Arroz con Leche.png' => 'menu/items/arroz-con-leche.png',
         'items/27 Flan.png' => 'menu/items/flan.png',
+        // Adornos oficiales por página
+        'decorations/02 BLANCO pag 2.png' => 'menu/decorations/initial/02-blanco-pag-2.png',
+        'decorations/02 TACOS DORADOS pag 2.png' => 'menu/decorations/initial/02-tacos-dorados-pag-2.png',
+        'decorations/02 TU ELIGES pag 2.png' => 'menu/decorations/initial/02-tu-eliges-pag-2.png',
+        'decorations/03 CALDO ILIMITADO pag 3.png' => 'menu/decorations/initial/03-caldo-ilimitado-pag-3.png',
+        'decorations/03 PRECIO pag 3.png' => 'menu/decorations/initial/03-precio-pag-3.png',
+        'decorations/04 PRECIO pag 4.png' => 'menu/decorations/initial/04-precio-pag-4.png',
+        'decorations/04 QUESABIRRIA pag 4.png' => 'menu/decorations/initial/04-quesabirria-pag-4.png',
+        'decorations/04 Y MAS pag 4.png' => 'menu/decorations/initial/04-y-mas-pag-4.png',
+        'decorations/05 DIVISIONES pag 5.png' => 'menu/decorations/initial/05-divisiones-pag-5.png',
+        'decorations/05 NOMBRES PLATILLOS pag 5.png' => 'menu/decorations/initial/05-nombres-platillos-pag-5.png',
+        'decorations/06 PRECIOS pag 6.png' => 'menu/decorations/initial/06-precios-pag-6.png',
+        'decorations/07 BEBIDAS pag 8.png' => 'menu/decorations/initial/07-bebidas-pag-8.png',
+        'decorations/08 BEBIDAS pag 9.png' => 'menu/decorations/initial/08-bebidas-pag-9.png',
+    ];
+
+    /**
+     * Adornos oficiales por página — sembrados vía firstOrCreate() por
+     * `image_path` (única llave estable, ya que MenuDecoration no tiene
+     * slug): si el registro ya existe NO se toca ningún campo (ni siquiera
+     * nombre/categoría/orden), así cualquier ajuste hecho desde el editor
+     * visual (posición, tamaño, ocultar, bloquear, mover de sección, etc.)
+     * sobrevive intacto a cualquier re-importación. Solo crea los que faltan.
+     */
+    private array $decorationDefinitions = [
+        ['category' => 'pozole', 'image' => 'menu/decorations/initial/02-blanco-pag-2.png', 'name' => 'Blanco'],
+        ['category' => 'pozole', 'image' => 'menu/decorations/initial/02-tacos-dorados-pag-2.png', 'name' => 'Tacos Dorados'],
+        ['category' => 'pozole', 'image' => 'menu/decorations/initial/02-tu-eliges-pag-2.png', 'name' => 'Tú Eliges'],
+        ['category' => 'pancita', 'image' => 'menu/decorations/initial/03-caldo-ilimitado-pag-3.png', 'name' => 'Caldo Ilimitado'],
+        ['category' => 'pancita', 'image' => 'menu/decorations/initial/03-precio-pag-3.png', 'name' => 'Precio'],
+        ['category' => 'birria', 'image' => 'menu/decorations/initial/04-precio-pag-4.png', 'name' => 'Precio'],
+        ['category' => 'birria', 'image' => 'menu/decorations/initial/04-quesabirria-pag-4.png', 'name' => 'Quesabirria'],
+        ['category' => 'birria', 'image' => 'menu/decorations/initial/04-y-mas-pag-4.png', 'name' => 'Y Más'],
+        ['category' => 'nuestras-fusiones', 'image' => 'menu/decorations/initial/05-divisiones-pag-5.png', 'name' => 'Divisiones'],
+        ['category' => 'nuestras-fusiones', 'image' => 'menu/decorations/initial/05-nombres-platillos-pag-5.png', 'name' => 'Nombres de Platillos'],
+        ['category' => 'del-comal-a-tu-mesa', 'image' => 'menu/decorations/initial/06-precios-pag-6.png', 'name' => 'Precios'],
+        ['category' => 'cantaritos-mojitos-cervezas', 'image' => 'menu/decorations/initial/07-bebidas-pag-8.png', 'name' => 'Bebidas'],
+        ['category' => 'bebidas', 'image' => 'menu/decorations/initial/08-bebidas-pag-9.png', 'name' => 'Bebidas'],
     ];
 
     public function handle(): int
@@ -102,8 +148,9 @@ class ImportMenuCommand extends Command
         $categories = $this->categoryDefinitions();
         $officialCategorySlugs = array_column($categories, 'slug');
         $officialItemSlugs = [];
+        $categoriesBySlug = [];
 
-        DB::transaction(function () use ($categories, $officialCategorySlugs, &$officialItemSlugs): void {
+        DB::transaction(function () use ($categories, $officialCategorySlugs, &$officialItemSlugs, &$categoriesBySlug): void {
             foreach ($categories as $catData) {
                 $items = $catData['items'] ?? [];
                 unset($catData['items']);
@@ -112,6 +159,7 @@ class ImportMenuCommand extends Command
                     ['slug' => $catData['slug']],
                     $catData,
                 );
+                $categoriesBySlug[$catData['slug']] = $category;
 
                 foreach ($items as $i => $itemData) {
                     $itemData['menu_category_id'] = $category->id;
@@ -145,9 +193,50 @@ class ImportMenuCommand extends Command
             }
         });
 
+        $createdDecorations = 0;
+        foreach ($this->decorationDefinitions as $i => $decoDef) {
+            $owner = $categoriesBySlug[$decoDef['category']] ?? null;
+
+            if (! $owner) {
+                continue;
+            }
+
+            // firstOrCreate (no updateOrCreate): si el adorno ya existe no se
+            // toca NINGÚN campo — ni siquiera nombre/categoría/orden — para
+            // no pisar un cambio manual del administrador (moverlo de
+            // sección, ocultarlo, renombrarlo). Solo crea los que faltan.
+            $decoration = MenuDecoration::firstOrCreate(
+                ['image_path' => $decoDef['image']],
+                [
+                    'menu_category_id' => $owner->id,
+                    'name' => $decoDef['name'],
+                    'alt_text' => $decoDef['name'],
+                    'is_active' => true,
+                    'sort_order' => $i + 1,
+                ],
+            );
+
+            if ($decoration->wasRecentlyCreated) {
+                $createdDecorations++;
+            }
+
+            MenuMediaAsset::firstOrCreate(
+                ['disk_path' => $decoDef['image']],
+                [
+                    'original_name' => basename($decoDef['image']),
+                    'mime_type' => 'image/png',
+                ],
+            );
+        }
+
+        if ($createdDecorations > 0) {
+            $this->line("  ✓ {$createdDecorations} adorno(s) oficial(es) nuevo(s) sembrado(s).");
+        }
+
         if ($this->option('reset-layout')) {
             MenuItem::query()->update(['layout_settings' => null]);
             MenuCategory::query()->update(['visual_settings' => null]);
+            MenuDecoration::query()->update(['visual_settings' => null]);
             $this->warn('--reset-layout: se restauraron todas las posiciones del editor visual a sus valores base.');
         }
 
@@ -169,11 +258,13 @@ class ImportMenuCommand extends Command
                 'slug' => 'portada',
                 'name' => 'Portada',
                 'layout' => 'portada',
-                'image' => 'menu/design/portada.png',
+                'image' => 'menu/design/portada-web.jpg',
+                'image_mobile' => 'menu/design/portada-movil.jpg',
                 'color' => '#DB3465',
                 'color_secondary' => '#144E8F',
                 'sort_order' => 0,
                 'is_active' => true,
+                'show_in_nav' => false,
                 'items' => [],
             ],
             [
@@ -332,6 +423,23 @@ class ImportMenuCommand extends Command
                 'sort_order' => 9,
                 'is_active' => true,
                 'items' => $this->destiladosItems(),
+            ],
+            [
+                // Promoción de temporada ("Todo lo que puedas comer por
+                // $299") — página final a imagen completa, sin platillos.
+                // No aparece en la navegación lateral (show_in_nav=false);
+                // el administrador puede desactivarla cuando termine la
+                // promoción sin borrar el registro.
+                'slug' => 'promo-299',
+                'name' => 'Promoción $299',
+                'layout' => 'promo_full_image',
+                'image' => 'menu/design/promo-299.jpg',
+                'color' => '#DB3465',
+                'color_secondary' => '#144E8F',
+                'sort_order' => 10,
+                'is_active' => true,
+                'show_in_nav' => false,
+                'items' => [],
             ],
         ];
     }

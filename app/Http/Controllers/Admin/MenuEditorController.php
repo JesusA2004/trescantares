@@ -67,7 +67,7 @@ class MenuEditorController extends Controller
     {
         $settings = SiteSetting::allAsArray();
 
-        foreach (['logo', 'hero_background', 'location_background'] as $key) {
+        foreach (['logo', 'hero_background', 'location_background', 'menu_background'] as $key) {
             $setting = SiteSetting::where('key', $key)->first();
             $settings[$key.'_url'] = $setting?->image_url;
         }
@@ -203,10 +203,10 @@ class MenuEditorController extends Controller
         return [
             'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
             'config' => 'required|array',
-            'config.x' => 'required|numeric|min:-4000|max:4000',
-            'config.y' => 'required|numeric|min:-4000|max:4000',
-            'config.width' => 'nullable|numeric|min:1|max:4000',
-            'config.height' => 'nullable|numeric|min:1|max:4000',
+            'config.x' => 'required|numeric|min:-20000|max:20000',
+            'config.y' => 'required|numeric|min:-20000|max:20000',
+            'config.width' => 'nullable|numeric|min:1|max:20000',
+            'config.height' => 'nullable|numeric|min:1|max:20000',
             'config.scale' => 'required|numeric|min:0.1|max:5',
             'config.rotation' => 'required|numeric|min:-360|max:360',
             'config.z_index' => 'required|integer|min:0|max:999',
@@ -215,7 +215,7 @@ class MenuEditorController extends Controller
             'config.line_height' => 'nullable|numeric|min:0.1|max:10',
             'config.letter_spacing' => 'nullable|numeric|min:-20|max:100',
             'config.align' => ['nullable', Rule::in(['left', 'center', 'right'])],
-            'config.max_width' => 'nullable|numeric|min:1|max:4000',
+            'config.max_width' => 'nullable|numeric|min:1|max:20000',
             'config.color' => 'nullable|string|max:30',
             'config.fit' => ['nullable', Rule::in(['contain', 'cover'])],
             'config.object_x' => 'nullable|numeric|min:0|max:100',

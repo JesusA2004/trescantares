@@ -13,10 +13,12 @@ withDefaults(
         breakpoint: MenuBreakpoint;
         editable?: boolean;
         selectedKey?: string | null;
+        backgroundUrl?: string | null;
     }>(),
     {
         editable: false,
         selectedKey: null,
+        backgroundUrl: null,
     },
 );
 
@@ -38,6 +40,7 @@ function onCommit(key: string, config: ElementConfig) {
     <MenuPageFrame
         :primary-color="category.color ?? undefined"
         :secondary-color="category.color_secondary ?? undefined"
+        :background-url="backgroundUrl"
     >
         <MenuEditableElement
             v-if="category.title_image_url"

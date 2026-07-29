@@ -13,7 +13,7 @@ use Inertia\Response;
 
 class SettingController extends Controller
 {
-    private array $imageKeys = ['logo', 'favicon', 'hero_background', 'location_background'];
+    private array $imageKeys = ['logo', 'favicon', 'hero_background', 'location_background', 'menu_background'];
 
     private array $textKeys = [
         'restaurant_name', 'contact_phone', 'whatsapp_phone', 'address',

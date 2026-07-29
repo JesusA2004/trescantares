@@ -160,6 +160,10 @@ const style = computed(() => {
         out.zIndex = c.z_index;
     }
 
+    if (c.opacity !== null && c.opacity !== undefined && c.opacity !== 1) {
+        out.opacity = String(c.opacity);
+    }
+
     return out;
 });
 
@@ -233,23 +237,72 @@ function startDrag(event: PointerEvent) {
     const baseline = currentConfigFromDom();
     const startX = event.clientX;
     const startY = event.clientY;
+    const startScrollY = (document.scrollingElement ?? document.documentElement)
+        .scrollTop;
+    let lastClientX = event.clientX;
+    let lastClientY = event.clientY;
+    let autoScrollFrame = 0;
+
     gesture.value = { kind: 'move', dx: 0, dy: 0 };
 
-    const move = (e: PointerEvent) => {
+    function applyDelta() {
+        const scroller = document.scrollingElement ?? document.documentElement;
+        const scrolled = scroller.scrollTop - startScrollY;
+
         gesture.value = {
             kind: 'move',
-            dx: e.clientX - startX,
-            dy: e.clientY - startY,
+            dx: lastClientX - startX,
+            dy: lastClientY - startY + scrolled,
         };
+    }
+
+    // Auto-scroll cuando el puntero se acerca al borde superior/inferior del
+    // viewport MIENTRAS se arrastra — sin esto es imposible mover un adorno
+    // a una sección que hoy está fuera de la vista, porque no hay forma de
+    // desplazar la página con el puntero ya capturado en el arrastre. La
+    // posición se recalcula en cada frame (no solo en pointermove) para que
+    // el elemento siga avanzando aunque el puntero esté quieto sobre el borde.
+    const EDGE = 56;
+    const MAX_SPEED = 16;
+
+    function autoScrollTick() {
+        const scroller = document.scrollingElement ?? document.documentElement;
+        const vh = window.innerHeight;
+        let speed = 0;
+
+        if (lastClientY < EDGE) {
+            speed = -MAX_SPEED * (1 - lastClientY / EDGE);
+        } else if (lastClientY > vh - EDGE) {
+            speed = MAX_SPEED * (1 - (vh - lastClientY) / EDGE);
+        }
+
+        if (speed !== 0) {
+            scroller.scrollTop += speed;
+            applyDelta();
+        }
+
+        autoScrollFrame = requestAnimationFrame(autoScrollTick);
+    }
+    autoScrollFrame = requestAnimationFrame(autoScrollTick);
+
+    const move = (e: PointerEvent) => {
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
+        applyDelta();
     };
 
     const up = (e: PointerEvent) => {
         document.removeEventListener('pointermove', move);
         document.removeEventListener('pointerup', up);
         document.removeEventListener('pointercancel', up);
+        cancelAnimationFrame(autoScrollFrame);
 
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
+
+        const scroller = document.scrollingElement ?? document.documentElement;
+        const dx = lastClientX - startX;
+        const dy = lastClientY - startY + (scroller.scrollTop - startScrollY);
         gesture.value = null;
 
         if (dx === 0 && dy === 0) {
@@ -258,8 +311,8 @@ function startDrag(event: PointerEvent) {
 
         emit('commit', props.elementKey, {
             ...baseline,
-            x: clamp(baseline.x + dx, -4000, 4000),
-            y: clamp(baseline.y + dy, -4000, 4000),
+            x: clamp(baseline.x + dx, -20000, 20000),
+            y: clamp(baseline.y + dy, -20000, 20000),
         });
     };
 
@@ -356,8 +409,8 @@ function nudge(event: KeyboardEvent) {
 
     emit('commit', props.elementKey, {
         ...baseline,
-        x: clamp(baseline.x + delta[0] * step, -4000, 4000),
-        y: clamp(baseline.y + delta[1] * step, -4000, 4000),
+        x: clamp(baseline.x + delta[0] * step, -20000, 20000),
+        y: clamp(baseline.y + delta[1] * step, -20000, 20000),
     });
 }
 
@@ -395,6 +448,7 @@ defineExpose({ root });
             :alt="alt"
             :class="imgClass"
             :style="imageStyle"
+            :draggable="editable ? false : undefined"
         />
         <slot v-else />
         <span
@@ -420,6 +474,14 @@ defineExpose({ root });
 .tc-mev--editable {
     cursor: grab;
     outline-offset: 2px;
+    /* Sin esto, arrastrar sobre texto/imagen dispara la selección nativa del
+       navegador (resaltado azul) a mitad de gesto, que compite con el
+       arrastre real y puede sentirse como si el elemento "no se dejara"
+       mover. touch-action:none evita además que el navegador interprete el
+       gesto como scroll táctil en vez de arrastre en pantallas táctiles. */
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
 }
 
 .tc-mev--editable:hover {

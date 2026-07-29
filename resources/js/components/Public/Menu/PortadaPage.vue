@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { logoTresCantares } from '@/lib/tres-cantares-assets';
 import type { MenuBreakpoint, MenuCategoryData } from './types';
 
 // Portada no tiene platillos ni títulos movibles — breakpoint/editable se
 // aceptan solo para no filtrar como atributos HTML sueltos al <section>.
-const props = defineProps<{
+defineProps<{
     category: MenuCategoryData;
     breakpoint?: MenuBreakpoint;
     editable?: boolean;
@@ -16,29 +14,21 @@ defineEmits<{
     select: [key: string];
     commit: [key: string, config: unknown];
 }>();
-
-// background_position permite reencuadrar Portada.png (p. ej. "center 30%")
-// sin recurrir a un valor fijo — controla el encuadre real de la foto.
-const coverStyle = computed(() => ({
-    '--tc-mp-bg-pos': props.category.background_position || 'center',
-}));
 </script>
 
 <template>
-    <section
-        class="tc-mp-cover"
-        aria-label="Tres Cantares — Puritito Norte"
-        :style="coverStyle"
-    >
-        <img v-if="category.image_url" :src="category.image_url" alt="" />
-        <div class="tc-mp-cover-overlay" />
-        <div class="tc-mp-cover-logo-wrap">
-            <img
-                :src="logoTresCantares"
-                alt="Tres Cantares — Puritito Norte"
-                class="tc-mp-cover-logo"
+    <section class="tc-mp-cover" aria-label="Tres Cantares — Puritito Norte">
+        <picture v-if="category.image_url">
+            <source
+                v-if="category.image_mobile_url"
+                media="(max-width: 767px)"
+                :srcset="category.image_mobile_url"
             />
-        </div>
+            <img
+                :src="category.image_url"
+                alt="Tres Cantares — Puritito Norte"
+            />
+        </picture>
         <div class="tc-mp-cover-scroll" aria-hidden="true">
             <span>Desliza</span>
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none">

@@ -19,7 +19,11 @@ class CategoryController extends Controller
     public const LAYOUTS = [
         'portada', 'pozole', 'pancita', 'birria', 'fusiones', 'comal',
         'postres', 'bebidas_promo', 'bebidas_tabla', 'destilados', 'grid',
+        'promo_full_image',
     ];
+
+    /** Campos de imagen que soportan subir/reemplazar/quitar. */
+    private const IMAGE_FIELDS = ['image', 'image_mobile', 'title_image', 'subtitle_image', 'tagline_image'];
 
     public function index(): Response
     {
@@ -83,7 +87,7 @@ class CategoryController extends Controller
 
     public function destroy(MenuCategory $category): RedirectResponse
     {
-        foreach (['image', 'title_image', 'subtitle_image', 'tagline_image'] as $field) {
+        foreach (self::IMAGE_FIELDS as $field) {
             if ($category->{$field}) {
                 Storage::disk('public')->delete($category->{$field});
             }
@@ -114,12 +118,18 @@ class CategoryController extends Controller
 
     private function handleUploads(Request $request, array $data, ?MenuCategory $category = null): array
     {
-        foreach (['image', 'title_image', 'subtitle_image', 'tagline_image'] as $field) {
+        foreach (self::IMAGE_FIELDS as $field) {
             if ($request->hasFile($field)) {
                 if ($category && $category->{$field}) {
                     Storage::disk('public')->delete($category->{$field});
                 }
                 $data[$field] = $request->file($field)->store(self::IMAGE_DISK_PATH, 'public');
+            } elseif ($request->boolean("remove_{$field}") && $category && $category->{$field}) {
+                // Quitar sin reemplazar (p. ej. portada móvil o la imagen de
+                // una página promocional) — solo aplica cuando no llegó un
+                // archivo nuevo para este mismo campo en la misma petición.
+                Storage::disk('public')->delete($category->{$field});
+                $data[$field] = null;
             }
         }
 
@@ -140,11 +150,18 @@ class CategoryController extends Controller
             'layout' => 'nullable|string|in:'.implode(',', self::LAYOUTS),
             'background_position' => 'nullable|string|max:40',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'image_mobile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'title_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'subtitle_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'tagline_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'remove_image' => 'nullable|boolean',
+            'remove_image_mobile' => 'nullable|boolean',
+            'remove_title_image' => 'nullable|boolean',
+            'remove_subtitle_image' => 'nullable|boolean',
+            'remove_tagline_image' => 'nullable|boolean',
             'sort_order' => 'nullable|integer',
             'is_active' => 'boolean',
+            'show_in_nav' => 'nullable|boolean',
         ];
     }
 }

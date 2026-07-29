@@ -28,10 +28,12 @@ const form = useForm({
     layout: 'grid',
     background_position: '',
     image: null as File | null,
+    image_mobile: null as File | null,
     title_image: null as File | null,
     subtitle_image: null as File | null,
     tagline_image: null as File | null,
     is_active: true,
+    show_in_nav: true,
 });
 
 // Una categoría nueva aún no tiene platillos: la vista previa solo puede
@@ -166,6 +168,14 @@ function submit() {
                             :error="form.errors.image"
                             @change="(f) => (form.image = f)"
                         />
+                        <TcImageUpload
+                            v-if="form.layout === 'portada'"
+                            label="Imagen de portada (Móvil, hasta 767px)"
+                            hint="Opcional — si se deja vacía, se usa la imagen de arriba también en móvil. JPG, PNG, WEBP · Máx. 4MB"
+                            :max-mb="4"
+                            :error="form.errors.image_mobile"
+                            @change="(f) => (form.image_mobile = f)"
+                        />
                         <TcInput
                             id="background_position"
                             v-model="form.background_position"
@@ -199,6 +209,11 @@ function submit() {
                             v-model="form.is_active"
                             label="Categoría activa"
                             description="Visible en el menú público"
+                        />
+                        <TcSwitch
+                            v-model="form.show_in_nav"
+                            label="Mostrar en navegación"
+                            description="Aparece en el menú lateral de secciones. Desactívalo para páginas como la portada o una promoción de temporada."
                         />
                         <p class="text-xs text-gray-400">
                             El orden de aparición se controla arrastrando las

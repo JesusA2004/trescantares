@@ -15,10 +15,12 @@ const props = withDefaults(
         breakpoint: MenuBreakpoint;
         editable?: boolean;
         selectedKey?: string | null;
+        backgroundUrl?: string | null;
     }>(),
     {
         editable: false,
         selectedKey: null,
+        backgroundUrl: null,
     },
 );
 
@@ -43,6 +45,7 @@ const sides = computed(() => byZone(props.category.items, 'side'));
     <MenuPageFrame
         :primary-color="category.color ?? undefined"
         :secondary-color="category.color_secondary ?? undefined"
+        :background-url="backgroundUrl"
     >
         <MenuEditableElement
             v-if="category.title_image_url"

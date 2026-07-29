@@ -1222,6 +1222,7 @@ function toggleElementLock(key: string) {
 
 const decorationsSaving = ref(false);
 const addDecorationOpen = ref(false);
+const replaceDecorationImageOpen = ref(false);
 
 function selectDecoration(id: number) {
     onSelectFromSidebar(`decoration-${id}:image`);
@@ -1331,6 +1332,34 @@ async function onDecorationPicked({ path }: { path: string; url: string }) {
         );
     } catch {
         notify.error('No se pudo agregar el adorno.');
+    } finally {
+        decorationsSaving.value = false;
+    }
+}
+
+async function onDecorationImageReplaced({
+    path,
+}: {
+    path: string;
+    url: string;
+}) {
+    if (!selectedDecoration.value) {
+        return;
+    }
+
+    replaceDecorationImageOpen.value = false;
+    decorationsSaving.value = true;
+
+    try {
+        const res = await patchJson<{ decoration: MenuDecorationData }>(
+            `/admin/menu-decorations/${selectedDecoration.value.id}`,
+            { image_library_path: path },
+        );
+        Object.assign(selectedDecoration.value, res.decoration);
+        scheduleIframeReload();
+        notify.success('Imagen del adorno reemplazada.');
+    } catch {
+        notify.error('No se pudo reemplazar la imagen del adorno.');
     } finally {
         decorationsSaving.value = false;
     }
@@ -1898,25 +1927,33 @@ function onDecorationHandleDown(
                         />
                     </div>
                     <div
-                        class="tc-editor-canvas-scaled"
+                        class="tc-editor-canvas-box"
                         :style="{
-                            width: activeDevice.width + 'px',
-                            height: activeDevice.height + 'px',
-                            transform: `scale(${scale})`,
+                            width: activeDevice.width * scale + 'px',
+                            height: activeDevice.height * scale + 'px',
                             visibility: previewReady ? 'visible' : 'hidden',
                         }"
                     >
-                        <iframe
-                            ref="iframeEl"
-                            :src="previewUrl"
+                        <div
+                            class="tc-editor-canvas-scaled"
                             :style="{
                                 width: activeDevice.width + 'px',
                                 height: activeDevice.height + 'px',
-                                border: 'none',
-                                display: 'block',
+                                transform: `scale(${scale})`,
                             }"
-                            title="Vista previa editable del menú"
-                        />
+                        >
+                            <iframe
+                                ref="iframeEl"
+                                :src="previewUrl"
+                                :style="{
+                                    width: activeDevice.width + 'px',
+                                    height: activeDevice.height + 'px',
+                                    border: 'none',
+                                    display: 'block',
+                                }"
+                                title="Vista previa editable del menú"
+                            />
+                        </div>
                     </div>
                 </div>
                 <p class="mt-2 text-xs text-gray-400">
@@ -2253,6 +2290,15 @@ function onDecorationHandleDown(
                                 renameSelectedDecoration($event as string)
                             "
                         />
+                        <button
+                            type="button"
+                            class="tc-btn-secondary w-full text-xs"
+                            @click="replaceDecorationImageOpen = true"
+                        >
+                            <ImageIcon
+                                class="mr-1 inline h-3.5 w-3.5"
+                            />Reemplazar imagen
+                        </button>
                         <div class="grid grid-cols-2 gap-2">
                             <TcInput
                                 label="Opacidad (0-1)"
@@ -2463,6 +2509,13 @@ function onDecorationHandleDown(
         title="Agregar adorno — elige o sube una imagen"
         @close="addDecorationOpen = false"
         @picked="onDecorationPicked"
+    />
+
+    <TcMediaLibraryModal
+        :open="replaceDecorationImageOpen"
+        title="Reemplazar imagen del adorno — elige o sube una imagen"
+        @close="replaceDecorationImageOpen = false"
+        @picked="onDecorationImageReplaced"
     />
 </template>
 
@@ -2694,9 +2747,13 @@ function onDecorationHandleDown(
     display: flex;
 }
 
+.tc-editor-canvas-box {
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
 .tc-editor-canvas-scaled {
     transform-origin: top left;
-    flex-shrink: 0;
 }
 
 .tc-editor-skeleton {

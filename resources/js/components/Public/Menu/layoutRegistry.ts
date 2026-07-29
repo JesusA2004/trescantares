@@ -10,6 +10,7 @@ import PancitaPage from './PancitaPage.vue';
 import PortadaPage from './PortadaPage.vue';
 import PostresPage from './PostresPage.vue';
 import PozolePage from './PozolePage.vue';
+import PromoFullImagePage from './PromoFullImagePage.vue';
 import type { MenuCategoryData } from './types';
 
 export const layoutComponents: Record<string, Component> = {
@@ -23,6 +24,7 @@ export const layoutComponents: Record<string, Component> = {
     bebidas_promo: BebidasPromoPage,
     bebidas_tabla: BebidasTablaPage,
     destilados: DestiladosPage,
+    promo_full_image: PromoFullImagePage,
 };
 
 export function layoutFor(

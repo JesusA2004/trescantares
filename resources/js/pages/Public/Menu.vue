@@ -55,9 +55,7 @@ const categories = reactive<MenuCategoryData[]>(
     JSON.parse(JSON.stringify(props.categories)),
 );
 
-const navCategories = computed(() =>
-    categories.filter((c) => c.layout !== 'portada'),
-);
+const navCategories = computed(() => categories.filter((c) => c.show_in_nav));
 
 // Etiquetas cortas para la navegación lateral (el nombre completo va en aria-label).
 const SHORT_LABELS: Record<string, string> = {
@@ -492,6 +490,7 @@ function onElementCommit(key: string, config: ElementConfig) {
                     :breakpoint="viewportWidth"
                     :editable="editable"
                     :selected-key="selectedKey"
+                    :background-url="settings.menu_background_url"
                     @select="onElementSelect"
                     @commit="onElementCommit"
                 />

@@ -460,12 +460,14 @@ export interface MenuCategoryData {
     tagline?: string | null;
     tagline_sub?: string | null;
     image_url?: string | null;
+    image_mobile_url?: string | null;
     title_image_url?: string | null;
     subtitle_image_url?: string | null;
     tagline_image_url?: string | null;
     color?: string | null;
     color_secondary?: string | null;
     background_position?: string | null;
+    show_in_nav?: boolean;
     visual_settings?: CategoryVisualSettings | null;
     items: MenuItemData[];
     decorations?: MenuDecorationData[];
@@ -600,6 +602,9 @@ const CATEGORY_LAYOUT_ELEMENTS: Record<
     },
     destilados: {
         tagline_image: (c) => !!c.tagline_image_url,
+    },
+    promo_full_image: {
+        image: (c) => !!c.image_url,
     },
 };
 

@@ -14,7 +14,7 @@ class MenuController extends Controller
     {
         $settings = SiteSetting::allAsArray();
 
-        foreach (['logo', 'hero_background', 'location_background'] as $key) {
+        foreach (['logo', 'hero_background', 'location_background', 'menu_background'] as $key) {
             $setting = SiteSetting::where('key', $key)->first();
             $settings[$key.'_url'] = $setting?->image_url;
         }

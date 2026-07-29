@@ -34,6 +34,14 @@ class SiteSettingSeeder extends Seeder
             // Menú público
             ['key' => 'menu_show_prices', 'value' => '1', 'type' => 'boolean', 'group' => 'menu', 'is_public' => false],
             ['key' => 'menu_intro_text', 'value' => '', 'type' => 'text', 'group' => 'menu', 'is_public' => true],
+            // Valor por defecto (no null como el resto de imágenes de marca):
+            // el importador ya copia este archivo a una ruta estable
+            // precisamente para que el fondo del menú quede activo desde la
+            // primera instalación, sin depender de que el admin lo suba a
+            // mano. firstOrCreate() solo aplica este valor la primera vez —
+            // si el admin lo reemplaza o lo borra después desde Configuración,
+            // esa elección persiste en cualquier reseed posterior.
+            ['key' => 'menu_background', 'value' => 'menu/design/fondo-menu.png', 'type' => 'image', 'group' => 'menu', 'is_public' => true],
             // Bolsa de trabajo
             ['key' => 'jobs_whatsapp', 'value' => '527772678443', 'type' => 'text', 'group' => 'jobs', 'is_public' => true],
             ['key' => 'jobs_intro_text', 'value' => '', 'type' => 'text', 'group' => 'jobs', 'is_public' => true],

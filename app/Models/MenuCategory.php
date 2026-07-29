@@ -14,13 +14,14 @@ class MenuCategory extends Model
 
     protected $fillable = [
         'name', 'slug', 'description', 'subtitle', 'tagline', 'tagline_sub',
-        'image', 'title_image', 'subtitle_image', 'tagline_image',
+        'image', 'image_mobile', 'title_image', 'subtitle_image', 'tagline_image',
         'icon', 'color', 'color_secondary', 'layout', 'background_position',
-        'visual_settings', 'sort_order', 'is_active',
+        'visual_settings', 'sort_order', 'is_active', 'show_in_nav',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'show_in_nav' => 'boolean',
         'sort_order' => 'integer',
         'visual_settings' => 'array',
     ];
@@ -86,6 +87,11 @@ class MenuCategory extends Model
         return $this->assetUrl('image');
     }
 
+    public function getImageMobileUrlAttribute(): ?string
+    {
+        return $this->assetUrl('image_mobile');
+    }
+
     public function getTitleImageUrlAttribute(): ?string
     {
         return $this->assetUrl('title_image');
@@ -109,6 +115,7 @@ class MenuCategory extends Model
     {
         return array_merge($this->toArray(), [
             'image_url' => $this->image_url,
+            'image_mobile_url' => $this->image_mobile_url,
             'title_image_url' => $this->title_image_url,
             'subtitle_image_url' => $this->subtitle_image_url,
             'tagline_image_url' => $this->tagline_image_url,

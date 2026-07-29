@@ -6977,6 +6977,15 @@ body,
     height: auto;
 }
 
+/* Página promocional de temporada (promo_full_image) — ancho completo,
+   nunca deformada (contain conserva su proporción real). */
+.tc-mp-promo-full-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
 .tc-mp-title-text {
     font-family: var(--tc-font-display);
     text-align: center;
@@ -7241,58 +7250,25 @@ body,
 }
 
 /* ==== PORTADA ====
-   Móvil: proporción de la foto original (retrato). Tablet+: la portada
-   llena el viewport completo (ancho y alto reales, no una hoja angosta). */
+   Las fotos oficiales (portada-movil.jpg hasta 767px, portada-web.jpg desde
+   768px) ya traen logotipo y filtro de color horneados — se muestran
+   completas (width:100%, height:auto), sin recorte ni capas encima. */
 .tc-mp-cover {
     position: relative;
     width: 100%;
-    aspect-ratio: 1080 / 1920;
-    max-height: 100svh;
     overflow: hidden;
     background: #7a1030;
 }
 
-@media (min-width: 768px) {
-    .tc-mp-cover {
-        aspect-ratio: auto;
-        height: 100svh;
-        min-height: 560px;
-    }
+.tc-mp-cover picture {
+    display: block;
 }
 
+.tc-mp-cover picture img,
 .tc-mp-cover > img {
-    position: absolute;
-    inset: 0;
+    display: block;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: var(--tc-mp-bg-pos, center);
-}
-
-.tc-mp-cover-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        180deg,
-        rgba(123, 16, 48, 0.42) 0%,
-        rgba(123, 16, 48, 0.12) 38%,
-        rgba(20, 30, 50, 0.18) 100%
-    );
-}
-
-.tc-mp-cover-logo-wrap {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10%;
-}
-
-.tc-mp-cover-logo {
-    width: 100%;
-    max-width: clamp(280px, 24vw, 460px);
-    filter: brightness(0) invert(1) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+    height: auto;
 }
 
 .tc-mp-cover-scroll {

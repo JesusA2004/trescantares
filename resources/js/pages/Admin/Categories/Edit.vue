@@ -34,12 +34,32 @@ const form = useForm({
     layout: props.category.layout,
     background_position: props.category.background_position ?? '',
     image: null as File | null,
+    image_mobile: null as File | null,
     title_image: null as File | null,
     subtitle_image: null as File | null,
     tagline_image: null as File | null,
+    remove_image: false,
+    remove_image_mobile: false,
     is_active: props.category.is_active,
+    show_in_nav: props.category.show_in_nav ?? true,
     _method: 'PUT',
 });
+
+/** TcImageUpload solo avisa "el usuario dejó este campo en blanco" — si
+ * originalmente había una imagen guardada, eso significa que la quiere
+ * quitar (no solo "sin cambios"); elegir un archivo nuevo cancela esa
+ * intención. El backend solo borra cuando `remove_*` viaja explícito y no
+ * llegó un archivo nuevo (ver CategoryController::handleUploads). */
+function onImageChange(file: File | null) {
+    form.image = file;
+    form.remove_image = file === null && !!props.category.image_url;
+}
+
+function onImageMobileChange(file: File | null) {
+    form.image_mobile = file;
+    form.remove_image_mobile =
+        file === null && !!props.category.image_mobile_url;
+}
 
 // La vista previa refleja los cambios del formulario en vivo (colores,
 // plantilla, encuadre de portada) usando los mismos componentes del menú
@@ -163,12 +183,25 @@ function submit() {
 
                     <AdminFormSection title="Imágenes">
                         <TcImageUpload
-                            label="Imagen de sección"
+                            :label="
+                                form.layout === 'portada'
+                                    ? 'Imagen de portada (Tablet y Escritorio, ≥768px)'
+                                    : 'Imagen de sección'
+                            "
                             hint="Dejar sin cambios para conservar la actual. JPG, PNG, WEBP · Máx. 4MB"
                             :current-url="category.image_url"
                             :max-mb="4"
                             :error="form.errors.image"
-                            @change="(f) => (form.image = f)"
+                            @change="onImageChange"
+                        />
+                        <TcImageUpload
+                            v-if="form.layout === 'portada'"
+                            label="Imagen de portada (Móvil, hasta 767px)"
+                            hint="Opcional — si se deja vacía, se usa la imagen de arriba también en móvil. JPG, PNG, WEBP · Máx. 4MB"
+                            :current-url="category.image_mobile_url"
+                            :max-mb="4"
+                            :error="form.errors.image_mobile"
+                            @change="onImageMobileChange"
                         />
                         <TcInput
                             id="background_position"
@@ -206,6 +239,11 @@ function submit() {
                             v-model="form.is_active"
                             label="Categoría activa"
                             description="Visible en el menú público"
+                        />
+                        <TcSwitch
+                            v-model="form.show_in_nav"
+                            label="Mostrar en navegación"
+                            description="Aparece en el menú lateral de secciones. Desactívalo para páginas como la portada o una promoción de temporada."
                         />
                         <p class="text-xs text-gray-400">
                             El orden de aparición se controla arrastrando las
