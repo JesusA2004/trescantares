@@ -148,11 +148,34 @@ const style = computed(() => {
     }
 
     if (liveWidth.value !== null) {
+        // Varias plantillas (tc-mp-pozole-photo, tc-mp-hero-photo,
+        // tc-mp-alt-photo, tc-mp-promo-hero…) traen su propio max-width en
+        // calc(clamp(...)) para el tamaño responsivo por defecto. Una vez
+        // personalizado, ese max-width seguiría ganando sobre este width en
+        // línea (max-width topa a width sin importar especificidad) — el
+        // usuario podía achicar pero nunca agrandar más allá de ese tope.
+        // Anularlo aquí le da control real e ilimitado del tamaño.
         out.width = `${liveWidth.value}px`;
+        out.maxWidth = 'none';
     }
 
     if (liveHeight.value !== null) {
         out.height = `${liveHeight.value}px`;
+        out.maxHeight = 'none';
+    }
+
+    // Varias fotos de platillo (tc-mp-pozole-photo, tc-mp-hero-photo,
+    // tc-mp-alt-photo…) son hijos de una fila flex compartida con el bloque
+    // de precio (tc-mp-pozole-main y equivalentes). Sin flex-shrink:0, el
+    // algoritmo de flexbox las encogía de vuelta a su tamaño "que quepa" en
+    // la fila en cuanto se personalizaban — max-width:none de arriba no
+    // basta porque el encogimiento por flex-shrink no depende de max-width,
+    // depende del espacio disponible en el eje principal del flex padre.
+    // flex-shrink:0 fuerza a que el ancho/alto explícitos de arriba se
+    // respeten siempre, incluso si eso desborda la fila (el padre puede
+    // seguir envolviendo/scrolleando, como ya hacen los adornos).
+    if (liveWidth.value !== null || liveHeight.value !== null) {
+        out.flexShrink = '0';
     }
 
     if (c.z_index !== 1) {

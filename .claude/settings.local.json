@@ -119,7 +119,11 @@
       "Bash(git push *)",
       "Bash(E2E_BASE_URL=http://127.0.0.1:8010 npx playwright test tests-e2e/menu-decorations-and-visibility.spec.ts)",
       "Bash(pkill -f \"port=8010\")",
-      "Bash(rm -f diag-decoration.mjs diag-1-before.png diag-2-modal-open.png diag-3-after-upload.png diag-sidebar.html diag-inspector.html tests-e2e/fixtures/diag-big.png)"
+      "Bash(rm -f diag-decoration.mjs diag-1-before.png diag-2-modal-open.png diag-3-after-upload.png diag-sidebar.html diag-inspector.html tests-e2e/fixtures/diag-big.png)",
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:\\\\Users\\\\Jesus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--wamp64-www-trescantares\\\\1212c04d-6b3f-431a-92dd-6a8c0964bfaa\\\\scratchpad\\\\check.js\")",
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:\\\\Users\\\\Jesus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--wamp64-www-trescantares\\\\1212c04d-6b3f-431a-92dd-6a8c0964bfaa\\\\scratchpad\\\\check2.js\")",
+      "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:\\\\Users\\\\Jesus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--wamp64-www-trescantares\\\\1212c04d-6b3f-431a-92dd-6a8c0964bfaa\\\\scratchpad\\\\check3.js\")",
+      "Bash(powershell -Command \"Get-CimInstance Win32_Process -Filter \\\\\"Name='node.exe' or Name='php.exe'\\\\\" | Select-Object ProcessId,Name,CommandLine | Format-Table -AutoSize -Wrap\")"
     ]
   }
 }
