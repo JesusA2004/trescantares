@@ -141,7 +141,21 @@ const style = computed(() => {
         transforms.push(`rotate(${c.rotation}deg)`);
     }
 
-    const out: Record<string, string | number> = {};
+    // SIEMPRE position:relative + z-index explícito (nunca condicionado a
+    // "¿tiene transform?" o "¿z_index !== 1?") — sin esto, un elemento recién
+    // creado en x:0,y:0 (sin transform) queda SIN posicionar, y CSS pinta los
+    // hermanos sin posicionar ANTES que cualquier hermano posicionado (con
+    // transform o z-index propio) sin importar el orden en el DOM (ver
+    // painting order, CSS 2.1 Apéndice E, pasos 3 vs. 6). Eso hacía que un
+    // adorno nuevo se "escondiera" detrás de cualquier otro que ya se hubiera
+    // movido antes, y solo reapareciera al seleccionarlo (.tc-mev--selected
+    // fuerza position:relative aparte). position:relative sin offsets no
+    // cambia el layout — solo habilita z-index y hace que el ORDEN EN EL DOM
+    // (o z_index si se personalizó) decida el apilamiento de forma consistente.
+    const out: Record<string, string | number> = {
+        position: 'relative',
+        zIndex: c.z_index,
+    };
 
     if (transforms.length) {
         out.transform = transforms.join(' ');
@@ -176,11 +190,6 @@ const style = computed(() => {
     // seguir envolviendo/scrolleando, como ya hacen los adornos).
     if (liveWidth.value !== null || liveHeight.value !== null) {
         out.flexShrink = '0';
-    }
-
-    if (c.z_index !== 1) {
-        out.position = 'relative';
-        out.zIndex = c.z_index;
     }
 
     if (c.opacity !== null && c.opacity !== undefined && c.opacity !== 1) {

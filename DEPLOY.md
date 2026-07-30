@@ -11,6 +11,14 @@ npm run build:ssr   # solo si Inertia SSR está habilitado (config/inertia.php: 
 cp .env.example .env   # si no existe ya; completar credenciales reales de BD/mail/etc.
 php artisan key:generate
 
+# El usuario del proceso PHP (www-data/apache/nginx, según la distro) necesita
+# poder ESCRIBIR en storage/ — sin esto, cualquier subida (adornos, fotos de
+# platillo, biblioteca de medios) falla con "Unable to create a directory at
+# .../storage/app/public/...". Confirma el usuario real con
+# `ps aux | grep -E "php-fpm|nginx|apache2"` antes de asumir www-data.
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+
 php artisan migrate --force
 php artisan db:seed --class=Database\\Seeders\\MenuSeeder --force
 php artisan storage:link
@@ -19,6 +27,11 @@ php artisan optimize:clear
 
 ### Qué hace cada paso
 
+- `chown`/`chmod` sobre `storage`/`bootstrap/cache`: el proceso PHP necesita
+  ser dueño (o al menos tener permiso de escritura) de estos directorios para
+  poder crear subcarpetas nuevas (p. ej. `storage/app/public/menu/uploads` la
+  primera vez que alguien sube un adorno o una foto desde el admin). Sin esto
+  Laravel lanza `Unable to create a directory at .../storage/app/public/...`.
 - `php artisan migrate --force`: aplica el esquema y las migraciones de datos
   (incluida la que separa las imágenes de título/subtítulo/tagline de
   categoría de su variante de texto — ver
