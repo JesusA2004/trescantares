@@ -35,9 +35,19 @@ class MediaLibraryController extends Controller
      * y genera un nombre de archivo único vía Storage::store(). */
     public function store(Request $request): JsonResponse
     {
+        // Mensajes explícitos en español — sin esto, Laravel devuelve el
+        // texto de validación en inglés (locale por defecto de la app) y el
+        // admin solo ve un error genérico sin saber si fue el tamaño, el
+        // tipo de archivo o las dimensiones.
         $request->validate([
             'file' => 'required|image|mimes:jpg,jpeg,png,webp|max:6144|dimensions:min_width=20,min_height=20',
             'alt_text' => 'nullable|string|max:255',
+        ], [
+            'file.required' => 'Selecciona una imagen para subir.',
+            'file.image' => 'El archivo no es una imagen válida.',
+            'file.mimes' => 'Solo se admiten imágenes JPG, PNG o WEBP.',
+            'file.max' => 'La imagen pesa demasiado — el máximo es 6MB.',
+            'file.dimensions' => 'La imagen es demasiado pequeña (mínimo 20x20 px).',
         ]);
 
         $file = $request->file('file');

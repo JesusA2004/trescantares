@@ -2,7 +2,12 @@
 import { Trash2, Upload, X } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
 import { useNotify } from '@/composables/useNotify';
-import { deleteJson, getJson, postFormWithProgress } from '@/lib/jsonApi';
+import {
+    ApiError,
+    deleteJson,
+    getJson,
+    postFormWithProgress,
+} from '@/lib/jsonApi';
 
 interface Asset {
     id: number;
@@ -81,11 +86,39 @@ async function uploadFile(file: File) {
         assets.value.unshift(res.asset);
         emit('picked', { path: res.asset.disk_path, url: res.asset.url });
         notify.success('Imagen subida correctamente.');
-    } catch {
-        notify.error('No se pudo subir la imagen.');
+    } catch (e) {
+        notify.error(uploadErrorMessage(e));
     } finally {
         uploading.value = false;
     }
+}
+
+/** Traduce el error de la subida a un mensaje concreto — sin esto, un 422
+ * de validación (tamaño, dimensiones, tipo de archivo) o una sesión
+ * expirada (419) se veían todos como el mismo "no se pudo subir la
+ * imagen" genérico, sin decir por qué. */
+function uploadErrorMessage(e: unknown): string {
+    if (e instanceof ApiError) {
+        const fieldErrors = (
+            e.data as { errors?: Record<string, string[]> } | null
+        )?.errors?.file;
+
+        if (fieldErrors?.length) {
+            return fieldErrors.join(' ');
+        }
+
+        if (e.status === 419) {
+            return 'Tu sesión expiró — recarga la página e intenta de nuevo.';
+        }
+
+        if (e.status === 413) {
+            return 'La imagen es demasiado pesada para el servidor.';
+        }
+
+        return e.message || 'No se pudo subir la imagen.';
+    }
+
+    return 'No se pudo subir la imagen — revisa tu conexión e intenta de nuevo.';
 }
 
 function onFileInput(e: Event) {
