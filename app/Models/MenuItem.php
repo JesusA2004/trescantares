@@ -19,7 +19,8 @@ class MenuItem extends Model
         'price', 'price_label', 'price_secondary', 'price_secondary_label', 'presentation',
         'image', 'previous_image', 'alt_text', 'image_position_x', 'image_position_y', 'image_scale', 'image_fit',
         'image_align', 'visual_size', 'caption_image', 'layout_settings',
-        'badge', 'choice_label', 'ingredients', 'is_featured', 'is_active', 'image_hidden', 'sort_order',
+        'badge', 'choice_label', 'choice_label_hidden', 'ingredients', 'ingredients_hidden',
+        'is_featured', 'is_active', 'image_hidden', 'sort_order',
     ];
 
     protected $casts = [
@@ -32,6 +33,8 @@ class MenuItem extends Model
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'image_hidden' => 'boolean',
+        'ingredients_hidden' => 'boolean',
+        'choice_label_hidden' => 'boolean',
         'sort_order' => 'integer',
     ];
 
@@ -103,12 +106,20 @@ class MenuItem extends Model
 
     /**
      * Representación usada por el menú público y por la vista previa del CRUD.
+     *
+     * `ingredients_hidden`/`choice_label_hidden` ocultan SOLO ese bloque de
+     * texto (igual que `image_hidden` con la foto) sin tocar `is_active` ni
+     * borrar el texto guardado — por eso se anula aquí (nunca en el atributo
+     * crudo) y el formulario de edición, que lee $menuItem->toArray() directo,
+     * sigue viendo el texto real para poder reactivarlo.
      */
     public function toPublicArray(): array
     {
         return array_merge($this->toArray(), [
             'image_url' => $this->image_url,
             'caption_image_url' => $this->caption_image_url,
+            'ingredients' => $this->ingredients_hidden ? null : $this->ingredients,
+            'choice_label' => $this->choice_label_hidden ? null : $this->choice_label,
         ]);
     }
 }

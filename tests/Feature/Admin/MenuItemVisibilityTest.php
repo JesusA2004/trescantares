@@ -95,6 +95,61 @@ test('ocultar solo la imagen conserva nombre, descripción y precio visibles', f
         ->and($html)->not->toContain('<img src="/storage/menu/uploads/foo.png');
 });
 
+test('ocultar solo los ingredientes conserva nombre y precio visibles sin borrar el texto', function () {
+    actingAsMenuAdmin();
+
+    $category = MenuCategory::factory()->create(['is_active' => true]);
+    $item = MenuItem::factory()->create([
+        'menu_category_id' => $category->id,
+        'zone' => 'main',
+        'is_active' => true,
+        'name' => 'Platillo Con Ingredientes',
+        'ingredients' => 'Pollo, cebolla, cilantro',
+    ]);
+
+    $this->patchJson("/admin/menu-items/{$item->id}/visibility", ['ingredients_hidden' => true])->assertOk();
+
+    $item->refresh();
+    expect($item->ingredients_hidden)->toBeTrue()
+        ->and($item->is_active)->toBeTrue() // el platillo COMPLETO sigue activo
+        ->and($item->ingredients)->toBe('Pollo, cebolla, cilantro') // el texto sigue guardado, intacto
+        ->and($item->toPublicArray()['ingredients'])->toBeNull(); // pero no se sirve al público
+
+    $html = $this->get('/menu')->assertOk()->getContent();
+    expect($html)->toContain('Platillo Con Ingredientes')
+        ->and($html)->not->toContain('Pollo, cebolla, cilantro');
+
+    // Reactivarlo restaura el texto exactamente igual que estaba.
+    $this->patchJson("/admin/menu-items/{$item->id}/visibility", ['ingredients_hidden' => false])->assertOk();
+    $item->refresh();
+    expect($item->toPublicArray()['ingredients'])->toBe('Pollo, cebolla, cilantro');
+});
+
+test('ocultar solo la etiqueta de elección no desactiva el platillo', function () {
+    actingAsMenuAdmin();
+
+    $category = MenuCategory::factory()->create(['is_active' => true]);
+    $item = MenuItem::factory()->create([
+        'menu_category_id' => $category->id,
+        'zone' => 'main',
+        'is_active' => true,
+        'name' => 'Platillo Con Etiqueta',
+        'choice_label' => 'Elige tu salsa',
+    ]);
+
+    $this->patchJson("/admin/menu-items/{$item->id}/visibility", ['choice_label_hidden' => true])->assertOk();
+
+    $item->refresh();
+    expect($item->choice_label_hidden)->toBeTrue()
+        ->and($item->is_active)->toBeTrue()
+        ->and($item->choice_label)->toBe('Elige tu salsa')
+        ->and($item->toPublicArray()['choice_label'])->toBeNull();
+
+    $html = $this->get('/menu')->assertOk()->getContent();
+    expect($html)->toContain('Platillo Con Etiqueta')
+        ->and($html)->not->toContain('Elige tu salsa');
+});
+
 test('reemplazar una imagen conserva la posición/tamaño (layout_settings) y guarda un nivel de deshacer', function () {
     Storage::fake('public');
     actingAsMenuAdmin();

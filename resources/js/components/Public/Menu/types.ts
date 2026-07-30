@@ -412,7 +412,13 @@ export interface MenuItemData {
     price_secondary_label?: string | null;
     presentation?: string | null;
     choice_label?: string | null;
+    /** Cuando es true, `choice_label` ya llega en null desde el backend (ver
+     * MenuItem::toPublicArray) — el texto sigue guardado, solo se deja de
+     * renderizar. Mismo mecanismo que `image_hidden` pero para este bloque. */
+    choice_label_hidden?: boolean;
     ingredients?: string | null;
+    /** Igual que `choice_label_hidden`, pero para el bloque de ingredientes. */
+    ingredients_hidden?: boolean;
     badge?: string | null;
     image_url?: string | null;
     alt_text?: string | null;

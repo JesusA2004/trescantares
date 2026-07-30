@@ -35,6 +35,7 @@ const props = defineProps<{
         description: string | null;
         badge: string | null;
         choice_label: string | null;
+        choice_label_hidden: boolean;
         price: string | number;
         price_label: string | null;
         price_secondary: string | number | null;
@@ -50,6 +51,7 @@ const props = defineProps<{
         visual_size: string | null;
         caption_image_url: string | null;
         ingredients: string | null;
+        ingredients_hidden: boolean;
         is_featured: boolean;
         is_active: boolean;
         image_hidden: boolean;
@@ -71,12 +73,14 @@ const form = useForm({
     description: props.item.description ?? '',
     badge: props.item.badge ?? '',
     choice_label: props.item.choice_label ?? '',
+    choice_label_hidden: props.item.choice_label_hidden,
     price: props.item.price,
     price_label: props.item.price_label ?? '',
     price_secondary: props.item.price_secondary ?? '',
     price_secondary_label: props.item.price_secondary_label ?? '',
     presentation: props.item.presentation ?? '',
     ingredients: props.item.ingredients ?? '',
+    ingredients_hidden: props.item.ingredients_hidden,
     alt_text: props.item.alt_text ?? '',
     image_position_x: props.item.image_position_x ?? 50,
     image_position_y: props.item.image_position_y ?? 50,
@@ -183,8 +187,8 @@ const previewCategory = computed<MenuCategoryData | null>(() => {
         price_secondary: form.price_secondary || null,
         price_secondary_label: form.price_secondary_label || null,
         presentation: form.presentation || null,
-        choice_label: form.choice_label || null,
-        ingredients: form.ingredients || null,
+        choice_label: form.choice_label_hidden ? null : form.choice_label || null,
+        ingredients: form.ingredients_hidden ? null : form.ingredients || null,
         badge: form.badge || null,
         image_url: primaryPreviewUrl.value,
         alt_text: form.alt_text || null,
@@ -622,17 +626,35 @@ function submit() {
                                 v-model="form.badge"
                                 label="Insignia"
                             />
-                            <TcInput
-                                id="choice_label"
-                                v-model="form.choice_label"
-                                label="Etiqueta de elección"
-                            />
+                            <div class="space-y-2">
+                                <TcInput
+                                    id="choice_label"
+                                    v-model="form.choice_label"
+                                    label="Etiqueta de elección"
+                                />
+                                <TcSwitch
+                                    :model-value="!form.choice_label_hidden"
+                                    label="Etiqueta visible"
+                                    description="Ocultarla no borra el texto"
+                                    @update:model-value="
+                                        form.choice_label_hidden = !$event
+                                    "
+                                />
+                            </div>
                         </div>
                         <TcTextarea
                             id="ingredients"
                             v-model="form.ingredients"
                             label="Ingredientes / opciones"
                             :rows="2"
+                        />
+                        <TcSwitch
+                            :model-value="!form.ingredients_hidden"
+                            label="Ingredientes visibles"
+                            description="Ocultarlos no borra el texto"
+                            @update:model-value="
+                                form.ingredients_hidden = !$event
+                            "
                         />
                     </AdminFormSection>
 

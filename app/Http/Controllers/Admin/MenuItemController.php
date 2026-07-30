@@ -53,14 +53,17 @@ class MenuItemController extends Controller
         return Inertia::render('Admin/MenuItems/Index', compact('items', 'categories'));
     }
 
-    /** Alterna is_active/image_hidden desde la vista rápida del listado, sin
-     * navegar al formulario completo — ninguno de los dos borra nada, solo
-     * deja de renderizarse en el menú público hasta reactivarse. */
+    /** Alterna is_active/image_hidden/ingredients_hidden/choice_label_hidden
+     * desde la vista rápida del listado, sin navegar al formulario completo —
+     * ninguno borra nada, solo deja de renderizarse en el menú público hasta
+     * reactivarse. */
     public function quickVisibility(Request $request, MenuItem $menuItem): JsonResponse
     {
         $data = $request->validate([
             'is_active' => 'sometimes|boolean',
             'image_hidden' => 'sometimes|boolean',
+            'ingredients_hidden' => 'sometimes|boolean',
+            'choice_label_hidden' => 'sometimes|boolean',
         ]);
 
         $menuItem->update($data);
@@ -291,6 +294,7 @@ class MenuItemController extends Controller
             'description' => 'nullable|string',
             'badge' => 'nullable|string|max:60',
             'choice_label' => 'nullable|string|max:40',
+            'choice_label_hidden' => 'boolean',
             'price' => 'required|numeric|min:0',
             'price_label' => 'nullable|string|max:40',
             'price_secondary' => 'nullable|numeric|min:0',
@@ -313,6 +317,7 @@ class MenuItemController extends Controller
             'delete_image_ids.*' => 'integer',
             'primary_image_id' => 'nullable|integer',
             'ingredients' => 'nullable|string',
+            'ingredients_hidden' => 'boolean',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
             'image_hidden' => 'boolean',
