@@ -1171,11 +1171,16 @@ function itemElementKeys(item: MenuItemData): ItemElementKey[] {
         keys.push('presentation');
     }
 
-    if (item.ingredients) {
+    // `item.ingredients`/`item.choice_label` llegan en null cuando su
+    // *_hidden está activo (ver MenuItem::toPublicArray) — sin el OR aquí, en
+    // cuanto se ocultara el bloque desaparecería de este árbol y ya no habría
+    // forma de volver a seleccionarlo para reactivarlo (ver el switch
+    // "Ingredientes visibles"/"Etiqueta visible" del inspector, más abajo).
+    if (item.ingredients || item.ingredients_hidden) {
         keys.push('ingredients');
     }
 
-    if (item.choice_label) {
+    if (item.choice_label || item.choice_label_hidden) {
         keys.push('choice_label');
     }
 
@@ -2495,6 +2500,36 @@ function onDecorationHandleDown(
                                 :model-value="selectedItem.is_active"
                                 @update:model-value="
                                     updateQuickField('is_active', $event)
+                                "
+                            />
+                            <TcSwitch
+                                v-if="
+                                    selectedItem.ingredients ||
+                                    selectedItem.ingredients_hidden
+                                "
+                                label="Ingredientes visibles"
+                                description="Ocultarlos no borra el texto"
+                                :model-value="!selectedItem.ingredients_hidden"
+                                @update:model-value="
+                                    updateQuickField(
+                                        'ingredients_hidden',
+                                        !$event,
+                                    )
+                                "
+                            />
+                            <TcSwitch
+                                v-if="
+                                    selectedItem.choice_label ||
+                                    selectedItem.choice_label_hidden
+                                "
+                                label="Etiqueta visible"
+                                description="Ocultarla no borra el texto"
+                                :model-value="!selectedItem.choice_label_hidden"
+                                @update:model-value="
+                                    updateQuickField(
+                                        'choice_label_hidden',
+                                        !$event,
+                                    )
                                 "
                             />
                         </div>

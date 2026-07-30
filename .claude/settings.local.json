@@ -125,7 +125,9 @@
       "Bash(NODE_PATH=\"$\\(pwd\\)/node_modules\" node \"C:\\\\Users\\\\Jesus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--wamp64-www-trescantares\\\\1212c04d-6b3f-431a-92dd-6a8c0964bfaa\\\\scratchpad\\\\check3.js\")",
       "Bash(powershell -Command \"Get-CimInstance Win32_Process -Filter \\\\\"Name='node.exe' or Name='php.exe'\\\\\" | Select-Object ProcessId,Name,CommandLine | Format-Table -AutoSize -Wrap\")",
       "Bash(xargs -I{} sh -c \"grep -H \\\\\"Schema::create\\\\\" {}\")",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(powershell -Command \"Get-CimInstance Win32_Process -Filter \\\\\"Name='php.exe' or Name='node.exe'\\\\\" | Select-Object ProcessId,CommandLine | Format-Table -AutoSize -Wrap\")",
+      "Bash(chromium-cli --help)"
     ]
   }
 }
