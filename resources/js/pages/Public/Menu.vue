@@ -484,32 +484,49 @@ function onElementCommit(key: string, config: ElementConfig) {
                 />
             </section>
             <section v-else :id="`cat-${category.id}`" class="tc-mp-page">
-                <component
-                    :is="layoutFor(category)"
-                    :category="category"
-                    :breakpoint="viewportWidth"
-                    :editable="editable"
-                    :selected-key="selectedKey"
-                    :background-url="settings.menu_background_url"
-                    @select="onElementSelect"
-                    @commit="onElementCommit"
-                />
+                <!-- Capa de contenido: título/fotos/precios/ingredientes…
+                     aislada en su propio stacking context (isolation:isolate,
+                     ver app.css) para que NINGÚN z-index interno, por alto
+                     que sea, pueda competir directamente con la capa de
+                     adornos de abajo — ver .tc-mp-content-layer. -->
+                <div class="tc-mp-content-layer">
+                    <component
+                        :is="layoutFor(category)"
+                        :category="category"
+                        :breakpoint="viewportWidth"
+                        :editable="editable"
+                        :selected-key="selectedKey"
+                        :background-url="settings.menu_background_url"
+                        @select="onElementSelect"
+                        @commit="onElementCommit"
+                    />
+                </div>
 
-                <MenuEditableElement
-                    v-for="decoration in visibleDecorations(category)"
-                    :key="decoration.element_key"
-                    :element-key="decoration.element_key"
-                    :label="decoration.name"
-                    :config="decorationElementFor(decoration, viewportWidth)"
-                    :editable="editable"
-                    :selected="selectedKey === decoration.element_key"
-                    kind="image"
-                    :src="decoration.image_url"
-                    :alt="decoration.alt_text ?? decoration.name"
-                    class="tc-mp-decoration"
-                    @select="onElementSelect"
-                    @commit="onElementCommit"
-                />
+                <!-- Capa de adornos: SIEMPRE por encima de la capa de
+                     contenido (ver .tc-mp-decoration-layer), sin importar
+                     qué elemento esté seleccionado. position:absolute +
+                     inset:0 reproduce EXACTAMENTE el mismo origen de
+                     coordenadas que tenían los adornos como hijos directos
+                     de .tc-mp-page (top:0/left:0 de su caja de relleno), así
+                     que ningún x/y guardado cambia de significado. -->
+                <div class="tc-mp-decoration-layer">
+                    <MenuEditableElement
+                        v-for="decoration in visibleDecorations(category)"
+                        :key="decoration.element_key"
+                        :element-key="decoration.element_key"
+                        :label="decoration.name"
+                        :config="decorationElementFor(decoration, viewportWidth)"
+                        :editable="editable"
+                        :selected="selectedKey === decoration.element_key"
+                        kind="image"
+                        :src="decoration.image_url"
+                        :alt="decoration.alt_text ?? decoration.name"
+                        decoration
+                        class="tc-mp-decoration"
+                        @select="onElementSelect"
+                        @commit="onElementCommit"
+                    />
+                </div>
             </section>
         </template>
 

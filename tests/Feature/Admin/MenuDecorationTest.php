@@ -41,6 +41,59 @@ test('crear un adorno subiendo un PNG transparente nuevo', function () {
     expect($response->json('decoration.image_url'))->not->toBeNull();
 });
 
+test('un adorno nuevo recibe automáticamente un z_index superior al último adorno existente', function () {
+    Storage::fake('public');
+    actingAsMenuAdmin();
+
+    $category = MenuCategory::factory()->create();
+
+    // Primer adorno: sin visual_settings, resuelve a z_index=1 por defecto
+    // (defaultElementConfig) — el siguiente debe nacer por ENCIMA de ese
+    // default implícito, no empatado con él.
+    $this->post('/admin/menu-decorations', [
+        'menu_category_id' => $category->id,
+        'name' => 'Primero',
+        'image' => UploadedFile::fake()->image('primero.png', 100, 100),
+    ])->assertCreated();
+    $first = MenuDecoration::firstOrFail();
+    expect($first->visual_settings['desktop']['z_index'])->toBe(2);
+
+    // Segundo adorno: debe quedar por encima del primero (2 → 3).
+    $this->post('/admin/menu-decorations', [
+        'menu_category_id' => $category->id,
+        'name' => 'Segundo',
+        'image' => UploadedFile::fake()->image('segundo.png', 100, 100),
+    ])->assertCreated();
+    $second = MenuDecoration::where('name', 'Segundo')->firstOrFail();
+    expect($second->visual_settings['desktop']['z_index'])->toBe(3);
+
+    // "Al frente" sobre el primero (z_index=999) — el próximo adorno nuevo
+    // debe seguir naciendo por encima de CUALQUIER adorno existente, no solo
+    // del último creado.
+    $this->patchJson("/admin/menu-decorations/{$first->id}/element", [
+        'breakpoint' => 'desktop',
+        'config' => decorationElementConfig(['z_index' => 999]),
+    ])->assertOk();
+
+    $this->post('/admin/menu-decorations', [
+        'menu_category_id' => $category->id,
+        'name' => 'Tercero',
+        'image' => UploadedFile::fake()->image('tercero.png', 100, 100),
+    ])->assertCreated();
+    $third = MenuDecoration::where('name', 'Tercero')->firstOrFail();
+    expect($third->visual_settings['desktop']['z_index'])->toBe(1000);
+
+    // Una categoría distinta no se ve afectada por el z_index de esta.
+    $otherCategory = MenuCategory::factory()->create();
+    $this->post('/admin/menu-decorations', [
+        'menu_category_id' => $otherCategory->id,
+        'name' => 'Otra categoría',
+        'image' => UploadedFile::fake()->image('otra.png', 100, 100),
+    ])->assertCreated();
+    $otherFirst = MenuDecoration::where('name', 'Otra categoría')->firstOrFail();
+    expect($otherFirst->visual_settings['desktop']['z_index'])->toBe(2);
+});
+
 test('crear un adorno eligiendo una imagen ya existente de la biblioteca no duplica el archivo', function () {
     Storage::fake('public');
     actingAsMenuAdmin();

@@ -44,6 +44,13 @@ class MenuDecorationController extends Controller
             'alt_text' => $data['alt_text'] ?? null,
             'is_active' => true,
             'sort_order' => $maxOrder + 1,
+            // Un adorno nuevo debe quedar SIEMPRE por encima de los demás
+            // adornos ya existentes de la misma categoría (nunca detrás,
+            // nunca empatado con el default) — un solo ancla 'desktop' basta:
+            // resolveElementConfig (types.ts) extrapola z_index (campo
+            // discreto, nunca interpolado) a CUALQUIER breakpoint sin
+            // necesidad de repetirlo en mobile/tablet.
+            'visual_settings' => ['desktop' => ['z_index' => $this->nextDecorationZIndex($data['menu_category_id'])]],
         ]);
 
         Cache::flush();
@@ -175,6 +182,29 @@ class MenuDecorationController extends Controller
         Cache::flush();
 
         return response()->json(['visual_settings' => $menuDecoration->fresh()->visual_settings]);
+    }
+
+    /** z_index más alto entre los adornos ya existentes de la categoría + 1
+     * (mínimo 2, ya que un adorno sin visual_settings resuelve a z_index=1
+     * por defaultElementConfig() — el primer adorno creado en una categoría
+     * vacía debe empezar por encima de ese default implícito). Revisa las
+     * tres vistas de cada adorno existente (no solo 'desktop') porque
+     * bringToFront/sendToBack pueden haber personalizado cualquiera. */
+    private function nextDecorationZIndex(int $categoryId): int
+    {
+        $max = 1;
+
+        foreach (MenuDecoration::where('menu_category_id', $categoryId)->get(['visual_settings']) as $sibling) {
+            foreach (self::BREAKPOINTS as $breakpoint) {
+                $z = $sibling->visual_settings[$breakpoint]['z_index'] ?? null;
+
+                if ($z !== null) {
+                    $max = max($max, (int) $z);
+                }
+            }
+        }
+
+        return $max + 1;
     }
 
     private function resolveImagePath(Request $request, array $data): string

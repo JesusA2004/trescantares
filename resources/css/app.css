@@ -6856,6 +6856,11 @@ body,
     position: relative;
     margin: 0 auto;
     padding: clamp(20px, 5vw, 28px) clamp(14px, 4vw, 20px);
+    /* Cada sección es su propio universo de apilamiento — así el contenido o
+       los adornos de UNA categoría nunca pueden competir en z-index con los
+       de otra sección vecina; section-root es el bloque de referencia único
+       para .tc-mp-content-layer/.tc-mp-decoration-layer de aquí abajo. */
+    isolation: isolate;
 }
 
 .tc-mp-page + .tc-mp-page {
@@ -7067,16 +7072,52 @@ body,
     }
 }
 
+/* ---- Jerarquía de capas de una sección de menú ----
+   section.tc-mp-page (section-root, isolation:isolate arriba) contiene
+   exactamente dos capas hermanas, en este orden:
+
+     .tc-mp-content-layer    → título/fotos/precios/ingredientes/etiquetas…
+     .tc-mp-decoration-layer → flores/curvas/texturas (adornos de sección)
+
+   La capa de adornos SIEMPRE pinta encima de la capa de contenido — no por
+   una comparación numérica de z-index (que dependería de qué valor haya
+   elegido cada quien y sería frágil), sino porque .tc-mp-content-layer
+   aísla TODO su interior en su propio stacking context (isolation:isolate):
+   ningún z-index interno, por alto que sea (el inspector permite hasta 999
+   vía "Al frente"), puede escapar de esa burbuja y competir directamente
+   con .tc-mp-decoration-layer. Dentro de esta última, el z_index individual
+   de cada adorno (ElementConfig.z_index) sí decide el orden entre adornos
+   entre sí, tal como antes. */
+.tc-mp-content-layer {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+}
+
+/* position:absolute + inset:0 reproduce EXACTAMENTE el mismo punto de
+   partida (esquina superior izquierda de la caja de relleno de .tc-mp-page)
+   que tenían los adornos cuando eran hijos directos de la sección — el x/y
+   guardado de cada adorno (ver ElementConfig) sigue siendo un translate()
+   adicional sobre ese mismo origen, sin ningún reescalado. z-index > 0 la
+   coloca por encima de .tc-mp-content-layer sin importar su contenido.
+   pointer-events:none en la capa entera para que el hueco vacío entre
+   adornos nunca capture clics destinados al contenido de abajo — cada
+   <MenuEditableElement decoration> individual reactiva pointer-events:auto
+   solo en modo editable (ver regla de abajo), igual que antes. */
+.tc-mp-decoration-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
 /* ---- Adornos de sección (flores, curvas, texturas… nunca pertenecen a un
    platillo) ----
-   position:absolute DENTRO de .tc-mp-page (que ya es position:relative) para
-   que nunca reserve espacio en el flujo normal ni deje huecos en el grid —
-   su x/y (ver ElementConfig) es un translate() ADICIONAL sobre este punto de
-   partida fijo en la esquina superior izquierda de la sección. pointer-events
-   se limita al modo editable (en público es puramente decorativo, nunca debe
-   interceptar clics). */
+   MenuEditableElement ya fija position:absolute de forma PERMANENTE para
+   cualquier instancia con la prop `decoration` (ver ese componente) — nunca
+   depende de si está seleccionado, así que ya no hace falta ningún parche
+   `!important` aquí para reforzarlo. */
 .tc-mp-decoration {
-    position: absolute;
     top: 0;
     left: 0;
     /* width FIJO (no max-width) a propósito: con position:absolute +
@@ -7100,18 +7141,6 @@ body,
 
 .tc-mp--editable .tc-mp-decoration {
     pointer-events: auto;
-}
-
-/* MenuEditableElement fuerza position:relative en .tc-mev--selected (para
-   anclar su etiqueta/manija de resize en elementos normalmente static) — un
-   adorno seleccionado (que SIEMPRE pasa por aquí, ya que se autoselecciona
-   al crearlo) perdería su position:absolute por esa regla más específica
-   ([data-v-hash] cuenta como selector extra), cayendo al flujo normal al
-   final de la sección en vez de flotar en su x/y guardada. !important
-   garantiza que este caso especial siempre gane sin importar el orden de
-   compilación entre este archivo y el <style scoped> del componente. */
-.tc-mp-decoration.tc-mev--selected {
-    position: absolute !important;
 }
 
 /* ---- Fotografías de platillos (recortes PNG transparentes, sin tarjetas) ----

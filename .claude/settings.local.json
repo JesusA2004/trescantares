@@ -127,7 +127,8 @@
       "Bash(xargs -I{} sh -c \"grep -H \\\\\"Schema::create\\\\\" {}\")",
       "Bash(git stash *)",
       "Bash(powershell -Command \"Get-CimInstance Win32_Process -Filter \\\\\"Name='php.exe' or Name='node.exe'\\\\\" | Select-Object ProcessId,CommandLine | Format-Table -AutoSize -Wrap\")",
-      "Bash(chromium-cli --help)"
+      "Bash(chromium-cli --help)",
+      "Bash(powershell -NoProfile -Command \"Get-CimInstance Win32_Process -Filter \\\\\"Name='php.exe' or Name='node.exe'\\\\\" | Select-Object ProcessId,CommandLine | Format-List\")"
     ]
   }
 }

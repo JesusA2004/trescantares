@@ -120,13 +120,12 @@ const innerStyle = computed(() =>
 <style scoped>
 /* Sin z-index explícito en .tc-mp-frame-inner a propósito: alcanza con que
    sea DOM-later que .tc-mp-frame-bg (ambos position:relative/absolute con
-   z-index implícito) para pintarse encima de ella — un z-index positivo
-   aquí "se escapa" del contexto de apilamiento local de .tc-mp-frame (que
-   no lo aísla, ya que .tc-mp-frame nunca fija su propio z-index) y termina
-   compitiendo directamente con los adornos de la sección (.tc-mp-decoration,
-   hermanos de más arriba, sin z-index propio) — les ganaba y los dejaba
-   sin poder recibir clics pese a estar después en el DOM. Bug real ya
-   corregido: no reintroducir el z-index aquí. */
+   z-index implícito) para pintarse encima de ella. Este componente entero
+   vive dentro de .tc-mp-content-layer (Menu.vue/app.css), que ya aísla en su
+   propio stacking context (isolation:isolate) cualquier z-index que se fije
+   aquí dentro — no puede escapar a competir con .tc-mp-decoration-layer
+   (los adornos de la sección) aunque se le pusiera uno alto. Aun así se deja
+   sin z-index propio por simplicidad: no hace ninguna falta. */
 .tc-mp-frame-bg {
     position: absolute;
     inset: 0;

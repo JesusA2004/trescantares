@@ -24,6 +24,20 @@ const props = withDefaults(
          * son las que traen el tope de max-width/proporción responsiva
          * original (tc-mp-title-img, tc-mp-subtitle-img, etc.). */
         imgClass?: string;
+        /** true SOLO para adornos de sección (flores, curvas, texturas…) —
+         * este componente les fija position:absolute de forma PERMANENTE
+         * (no condicionada a si están seleccionados). Antes de esto, el
+         * elemento vivía siempre en position:relative salvo mientras estaba
+         * seleccionado (un parche en app.css lo forzaba a absolute solo con
+         * `.tc-mev--selected` + !important) — al deseleccionarlo volvía a
+         * relative y cae al flujo normal del documento en vez de flotar en
+         * su x/y guardada, apareciendo "movido" o detrás de otro contenido.
+         * Ver también .tc-mp-decoration-layer en app.css: la capa de
+         * adornos completa ya vive en su propio stacking context por
+         * encima del contenido, así que esta bandera solo necesita resolver
+         * el posicionamiento DENTRO de esa capa, nunca el apilamiento
+         * frente a título/foto/precio. */
+        decoration?: boolean;
     }>(),
     {
         label: '',
@@ -34,6 +48,7 @@ const props = withDefaults(
         src: null,
         alt: '',
         imgClass: '',
+        decoration: false,
     },
 );
 
@@ -141,19 +156,29 @@ const style = computed(() => {
         transforms.push(`rotate(${c.rotation}deg)`);
     }
 
-    // SIEMPRE position:relative + z-index explícito (nunca condicionado a
-    // "¿tiene transform?" o "¿z_index !== 1?") — sin esto, un elemento recién
-    // creado en x:0,y:0 (sin transform) queda SIN posicionar, y CSS pinta los
-    // hermanos sin posicionar ANTES que cualquier hermano posicionado (con
-    // transform o z-index propio) sin importar el orden en el DOM (ver
-    // painting order, CSS 2.1 Apéndice E, pasos 3 vs. 6). Eso hacía que un
-    // adorno nuevo se "escondiera" detrás de cualquier otro que ya se hubiera
-    // movido antes, y solo reapareciera al seleccionarlo (.tc-mev--selected
-    // fuerza position:relative aparte). position:relative sin offsets no
+    // SIEMPRE position:relative (o absolute para adornos, ver `decoration`
+    // prop) + z-index explícito (nunca condicionado a "¿tiene transform?" o
+    // "¿z_index !== 1?") — sin esto, un elemento recién creado en x:0,y:0
+    // (sin transform) queda SIN posicionar, y CSS pinta los hermanos sin
+    // posicionar ANTES que cualquier hermano posicionado (con transform o
+    // z-index propio) sin importar el orden en el DOM (ver painting order,
+    // CSS 2.1 Apéndice E, pasos 3 vs. 6). position:relative sin offsets no
     // cambia el layout — solo habilita z-index y hace que el ORDEN EN EL DOM
-    // (o z_index si se personalizó) decida el apilamiento de forma consistente.
+    // (o z_index si se personalizó) decida el apilamiento de forma consistente
+    // DENTRO de la capa de contenido (ver .tc-mp-content-layer en app.css).
+    //
+    // Los adornos (`decoration === true`) usan SIEMPRE position:absolute,
+    // sin importar si están seleccionados — antes esto dependía de un
+    // parche CSS (`.tc-mp-decoration.tc-mev--selected{position:absolute
+    // !important}`) que solo aplicaba mientras el adorno tenía la clase de
+    // selección; al seleccionar cualquier OTRO elemento el adorno perdía
+    // position:absolute y caía al flujo normal del documento (bug real,
+    // confirmado con getComputedStyle: el mismo adorno medía y=-1320px
+    // seleccionado y y=1742px apenas se seleccionaba otra cosa). Fijarlo
+    // aquí, en la única fuente de verdad del estilo del elemento, lo hace
+    // permanente para editor Y público sin depender de ninguna clase.
     const out: Record<string, string | number> = {
-        position: 'relative',
+        position: props.decoration ? 'absolute' : 'relative',
         zIndex: c.z_index,
     };
 

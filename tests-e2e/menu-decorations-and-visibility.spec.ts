@@ -338,14 +338,20 @@ test('ocultar un adorno solo en Móvil no lo oculta en Escritorio', async ({ pag
 
     await page.locator('aside.tc-editor-sidebar').getByRole('button', { name: 'Pozole', exact: true }).click();
 
-    const keys = await frame
-        .locator('[data-element-key]')
-        .evaluateAll((els) => els.map((el) => el.getAttribute('data-element-key')));
-    const decorationKey = keys.find((k) => k?.startsWith('decoration-')) as string;
-    expect(decorationKey).toBeTruthy();
-
+    // Pozole ya trae adornos OFICIALES sembrados por menu:import-initial
+    // (Blanco, Tacos Dorados, Tú Eliges) además del "Nuevo adorno" de la
+    // prueba anterior — un escaneo genérico "el primer data-element-key que
+    // empiece con decoration-" puede agarrar uno de los oficiales en vez del
+    // que esta prueba realmente selecciona y oculta. Se lee la clave DESPUÉS
+    // de seleccionar "Nuevo adorno" (único con ese nombre) para que sea
+    // siempre el mismo elemento en ambos lados de la aserción.
     await page.locator('aside.tc-editor-sidebar').getByRole('button', { name: 'Nuevo adorno', exact: true }).click();
     await page.waitForTimeout(200);
+
+    const selected = frame.locator('.tc-mev--selected').first();
+    await selected.waitFor({ state: 'attached' });
+    const decorationKey = (await selected.getAttribute('data-element-key')) as string;
+    expect(decorationKey).toBeTruthy();
 
     const inspector = page.locator('aside.tc-editor-inspector');
     await inspector.getByText(/Ocultar solo en/).locator('input[type="checkbox"]').check();
