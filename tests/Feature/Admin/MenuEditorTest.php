@@ -155,6 +155,78 @@ test('a locked element config is preserved through the config payload', function
     expect($item->layout_settings['name']['desktop']['locked'])->toBeTrue();
 });
 
+test('hidden can be set on an item element config and persists per breakpoint', function () {
+    actingAsMenuEditorAdmin();
+    $item = MenuItem::factory()->create();
+
+    $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
+        'element' => 'name',
+        'breakpoint' => 'mobile',
+        'config' => elementConfig(['hidden' => true]),
+    ])->assertOk();
+
+    $item->refresh();
+    expect($item->layout_settings['name']['mobile']['hidden'])->toBeTrue();
+
+    // Otro breakpoint del mismo elemento no se ve afectado — mismo mecanismo
+    // discreto por vista que ya usaban los adornos.
+    $this->patchJson("/admin/menu-editor/items/{$item->id}/element", [
+        'element' => 'name',
+        'breakpoint' => 'desktop',
+        'config' => elementConfig(),
+    ])->assertOk();
+
+    $item->refresh();
+    expect($item->layout_settings['name']['desktop'])->not->toHaveKey('hidden');
+});
+
+test('admin can force a manual section height per breakpoint, and clear it back to auto', function () {
+    actingAsMenuEditorAdmin();
+    $category = MenuCategory::factory()->create();
+
+    $this->patchJson("/admin/menu-editor/categories/{$category->id}/section-height", [
+        'breakpoint' => 'desktop',
+        'height' => 2400,
+    ])->assertOk();
+
+    $category->refresh();
+    expect($category->section_height)->toMatchArray(['desktop' => 2400.0]);
+
+    // Otro breakpoint no se ve afectado — mismo mecanismo discreto por vista
+    // que ElementConfig.hidden/z_index.
+    $this->patchJson("/admin/menu-editor/categories/{$category->id}/section-height", [
+        'breakpoint' => 'mobile',
+        'height' => 1200,
+    ])->assertOk();
+
+    $category->refresh();
+    expect($category->section_height)->toMatchArray(['desktop' => 2400.0, 'mobile' => 1200.0]);
+
+    // height=null limpia SOLO esa vista, vuelve a automático.
+    $this->patchJson("/admin/menu-editor/categories/{$category->id}/section-height", [
+        'breakpoint' => 'desktop',
+        'height' => null,
+    ])->assertOk();
+
+    $category->refresh();
+    expect($category->section_height)->not->toHaveKey('desktop')
+        ->and($category->section_height)->toHaveKey('mobile');
+});
+
+test('hidden can be set on a category element config (tagline, title, etc.)', function () {
+    actingAsMenuEditorAdmin();
+    $category = MenuCategory::factory()->create();
+
+    $this->patchJson("/admin/menu-editor/categories/{$category->id}/element", [
+        'element' => 'tagline',
+        'breakpoint' => 'desktop',
+        'config' => elementConfig(['hidden' => true]),
+    ])->assertOk();
+
+    $category->refresh();
+    expect($category->visual_settings['tagline']['desktop']['hidden'])->toBeTrue();
+});
+
 test('admin can quick-edit an item without leaving the editor', function () {
     actingAsMenuEditorAdmin();
     $item = MenuItem::factory()->create(['name' => 'Original', 'price' => 50]);

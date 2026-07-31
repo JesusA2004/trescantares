@@ -10,6 +10,7 @@ import {
     decorationElementFor,
     itemElementFor,
     resolveMenuDevice,
+    sectionHeightFor,
     toAnchorCoordinates,
 } from '@/components/Public/Menu/types';
 import type {
@@ -107,9 +108,63 @@ function scrollTo(catId: number | null) {
     }
 }
 
+/**
+ * Alt+clic para seleccionar el elemento de ABAJO cuando un adorno (u otro
+ * elemento) tapa a otro en el mismo punto — la capa de adornos siempre pinta
+ * encima del contenido (ver .tc-mp-decoration-layer en app.css), así que un
+ * clic normal en esa zona SIEMPRE llega primero al adorno; sin esto, el
+ * elemento tapado queda inalcanzable desde el lienzo (solo quedaría la lista
+ * lateral). Capture phase en `document` para interceptar el gesto ANTES de
+ * que llegue al propio `@pointerdown="startDrag"` del elemento superior
+ * (bubble phase, en MenuEditableElement.vue) — `stopPropagation()` aquí
+ * impide que ese handler se ejecute, así que un clic SIN Alt nunca se ve
+ * afectado. Cada Alt+clic avanza un paso en el stack de
+ * `elementsFromPoint()`, cicla al llegar al final.
+ */
+function handleEditorAltClick(event: PointerEvent) {
+    if (!event.altKey) {
+        return;
+    }
+
+    const target = event.target as HTMLElement | null;
+
+    if (!target?.closest('.tc-mev')) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const keys: string[] = [];
+
+    for (const el of document.elementsFromPoint(event.clientX, event.clientY)) {
+        const withKey = (el as HTMLElement).closest?.(
+            '[data-element-key]',
+        ) as HTMLElement | null;
+        const key = withKey?.getAttribute('data-element-key');
+
+        if (key && !keys.includes(key)) {
+            keys.push(key);
+        }
+    }
+
+    if (keys.length === 0) {
+        return;
+    }
+
+    const currentIndex = selectedKey.value ? keys.indexOf(selectedKey.value) : -1;
+    onElementSelect(keys[(currentIndex + 1) % keys.length]);
+}
+
 let observer: IntersectionObserver | null = null;
 
 onMounted(() => {
+    if (props.editable) {
+        document.addEventListener('pointerdown', handleEditorAltClick, {
+            capture: true,
+        });
+    }
+
     observer = new IntersectionObserver(
         (entries) => {
             for (const entry of entries) {
@@ -133,6 +188,12 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    if (props.editable) {
+        document.removeEventListener('pointerdown', handleEditorAltClick, {
+            capture: true,
+        });
+    }
+
     observer?.disconnect();
     window.removeEventListener('scroll', onScroll);
 });
@@ -483,7 +544,16 @@ function onElementCommit(key: string, config: ElementConfig) {
                     @commit="onElementCommit"
                 />
             </section>
-            <section v-else :id="`cat-${category.id}`" class="tc-mp-page">
+            <section
+                v-else
+                :id="`cat-${category.id}`"
+                class="tc-mp-page"
+                :style="{
+                    minHeight: sectionHeightFor(category, viewportWidth)
+                        ? `${sectionHeightFor(category, viewportWidth)}px`
+                        : undefined,
+                }"
+            >
                 <!-- Capa de contenido: título/fotos/precios/ingredientes…
                      aislada en su propio stacking context (isolation:isolate,
                      ver app.css) para que NINGÚN z-index interno, por alto

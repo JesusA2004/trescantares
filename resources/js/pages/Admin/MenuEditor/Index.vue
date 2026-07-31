@@ -260,6 +260,43 @@ const activeIndex = computed(() =>
     categories.findIndex((c) => c.id === activeCategoryId.value),
 );
 
+/** Alto mínimo forzado de la SECCIÓN completa (no de un elemento) para la
+ * vista actualmente seleccionada en la barra de herramientas — null =
+ * automático (crece con el contenido, el comportamiento de siempre). Campo
+ * discreto por vista, sin interpolar (mismo criterio que sectionHeightFor()
+ * en types.ts, que es lo que consume el iframe/menú público). */
+const sectionHeightForCurrentDevice = computed<number | null>(
+    () => activeCategory.value?.section_height?.[selectedDevice.value] ?? null,
+);
+
+async function updateSectionHeight(height: number | null) {
+    if (!activeCategory.value) {
+        return;
+    }
+
+    const category = activeCategory.value;
+    const breakpoint = selectedDevice.value;
+    const heights = { ...(category.section_height ?? {}) };
+
+    if (height === null) {
+        delete heights[breakpoint];
+    } else {
+        heights[breakpoint] = height;
+    }
+
+    category.section_height = Object.keys(heights).length ? heights : null;
+
+    try {
+        await patchJson(
+            `/admin/menu-editor/categories/${category.id}/section-height`,
+            { breakpoint, height },
+        );
+        scheduleIframeReload();
+    } catch {
+        notify.error('No se pudo guardar el alto de la sección.');
+    }
+}
+
 const searchQuery = ref('');
 
 function normalize(text: string): string {
@@ -1970,9 +2007,11 @@ function onDecorationHandleDown(
                     >. Haz clic en cualquier elemento del menú para
                     seleccionarlo, arrástralo para moverlo, usa la manija
                     inferior derecha para redimensionar y las flechas del
-                    teclado para ajustes finos (Shift = 10px). Esta vista previa
-                    es el menú público real — lo que ves aquí es exactamente lo
-                    que verá el visitante.
+                    teclado para ajustes finos (Shift = 10px). Si un adorno
+                    tapa otro elemento, mantén presionado
+                    <strong>Alt</strong> y haz clic para elegir el elemento de
+                    abajo. Esta vista previa es el menú público real — lo que
+                    ves aquí es exactamente lo que verá el visitante.
                 </p>
             </div>
 
@@ -1985,6 +2024,54 @@ function onDecorationHandleDown(
                             Selecciona un elemento en el lienzo o en la lista de
                             la izquierda para editarlo.
                         </p>
+                    </div>
+
+                    <div
+                        v-if="activeCategory"
+                        class="mt-2 space-y-2 border-t border-gray-100 pt-3"
+                    >
+                        <p class="tc-inspector-label">
+                            Alto de la sección — {{ activeDevice.label }}
+                        </p>
+                        <div class="tc-field">
+                            <label class="tc-field-label">Alto (px)</label>
+                            <input
+                                type="number"
+                                class="tc-input"
+                                :disabled="sectionHeightForCurrentDevice === null"
+                                :value="sectionHeightForCurrentDevice ?? ''"
+                                @change="
+                                    updateSectionHeight(
+                                        Number(
+                                            (
+                                                $event.target as HTMLInputElement
+                                            ).value,
+                                        ),
+                                    )
+                                "
+                            />
+                            <label
+                                class="mt-1 flex items-center gap-1.5 text-xs text-gray-500"
+                            >
+                                <input
+                                    type="checkbox"
+                                    :checked="sectionHeightForCurrentDevice === null"
+                                    @change="
+                                        updateSectionHeight(
+                                            (
+                                                $event.target as HTMLInputElement
+                                            ).checked
+                                                ? null
+                                                : Math.round(
+                                                      sectionHeightForCurrentDevice ??
+                                                          800,
+                                                  ),
+                                        )
+                                    "
+                                />
+                                Automático (crece con el contenido)
+                            </label>
+                        </div>
                     </div>
                 </template>
 
@@ -2133,6 +2220,24 @@ function onDecorationHandleDown(
                                 }}
                             </button>
                         </div>
+
+                        <label
+                            class="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500"
+                        >
+                            <input
+                                type="checkbox"
+                                :checked="!!inspectorConfig.hidden"
+                                @change="
+                                    updateInspectorField(
+                                        'hidden',
+                                        ($event.target as HTMLInputElement)
+                                            .checked,
+                                    )
+                                "
+                            />
+                            Ocultar solo en
+                            {{ activeDevice.label.toLowerCase() }}
+                        </label>
 
                         <div class="flex flex-wrap gap-1.5 pt-1">
                             <button
@@ -2338,23 +2443,6 @@ function onDecorationHandleDown(
                                 "
                             />
                         </div>
-                        <label
-                            class="flex items-center gap-1.5 text-xs text-gray-500"
-                        >
-                            <input
-                                type="checkbox"
-                                :checked="!!inspectorConfig.hidden"
-                                @change="
-                                    updateInspectorField(
-                                        'hidden',
-                                        ($event.target as HTMLInputElement)
-                                            .checked,
-                                    )
-                                "
-                            />
-                            Ocultar solo en
-                            {{ activeDevice.label.toLowerCase() }}
-                        </label>
                     </div>
 
                     <details class="tc-advanced">

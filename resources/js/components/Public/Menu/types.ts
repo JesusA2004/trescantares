@@ -475,8 +475,29 @@ export interface MenuCategoryData {
     background_position?: string | null;
     show_in_nav?: boolean;
     visual_settings?: CategoryVisualSettings | null;
+    /** Alto MÍNIMO forzado a mano de la sección completa, por vista — null
+     * (o vista ausente) = automático, crece con el contenido como siempre.
+     * Nunca es un tope: si el contenido real es más alto, se sale
+     * visualmente, nunca se recorta. Ver sectionHeightFor() más abajo. */
+    section_height?: Partial<Record<MenuDevice, number | null>> | null;
     items: MenuItemData[];
     decorations?: MenuDecorationData[];
+}
+
+/**
+ * Alto mínimo forzado de una sección para un ancho de viewport dado —
+ * a propósito NO interpola entre vistas como resolveElementConfig(): es un
+ * valor discreto que el admin fija a mano por dispositivo (mobile/tablet/
+ * desktop, ver resolveMenuDevice), sin un "intermedio" con sentido propio.
+ * Si la vista resuelta no tiene un alto guardado, es automático (null).
+ */
+export function sectionHeightFor(
+    category: Pick<MenuCategoryData, 'section_height'>,
+    viewportWidth: MenuBreakpoint,
+): number | null {
+    const device = resolveMenuDevice(viewportWidth);
+
+    return category.section_height?.[device] ?? null;
 }
 
 /** Config visual de UN adorno para un ancho de viewport — mismo mecanismo

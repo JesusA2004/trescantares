@@ -16,7 +16,7 @@ class MenuCategory extends Model
         'name', 'slug', 'description', 'subtitle', 'tagline', 'tagline_sub',
         'image', 'image_mobile', 'title_image', 'subtitle_image', 'tagline_image',
         'icon', 'color', 'color_secondary', 'layout', 'background_position',
-        'visual_settings', 'sort_order', 'is_active', 'show_in_nav',
+        'visual_settings', 'section_height', 'sort_order', 'is_active', 'show_in_nav',
     ];
 
     protected $casts = [
@@ -24,6 +24,7 @@ class MenuCategory extends Model
         'show_in_nav' => 'boolean',
         'sort_order' => 'integer',
         'visual_settings' => 'array',
+        'section_height' => 'array',
     ];
 
     protected static function booted(): void

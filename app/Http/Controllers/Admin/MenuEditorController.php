@@ -125,6 +125,34 @@ class MenuEditorController extends Controller
         return response()->json(['visual_settings' => $category->visual_settings]);
     }
 
+    /**
+     * Alto MÍNIMO forzado a mano de la sección completa (no de un elemento),
+     * por vista — null limpia esa vista y vuelve al crecimiento automático
+     * (el comportamiento de siempre). Nunca es un tope: el contenido real
+     * puede seguir siendo más alto, nunca se recorta (ver min-height en
+     * Menu.vue/app.css).
+     */
+    public function updateCategorySectionHeight(Request $request, MenuCategory $category): JsonResponse
+    {
+        $data = $request->validate([
+            'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
+            'height' => 'nullable|numeric|min:1|max:20000',
+        ]);
+
+        $heights = $category->section_height ?? [];
+
+        if ($data['height'] === null) {
+            unset($heights[$data['breakpoint']]);
+        } else {
+            $heights[$data['breakpoint']] = $data['height'];
+        }
+
+        $category->update(['section_height' => $heights === [] ? null : $heights]);
+        Cache::flush();
+
+        return response()->json(['section_height' => $category->fresh()->section_height]);
+    }
+
     public function updateItemQuick(Request $request, MenuItem $menuItem): JsonResponse
     {
         $layout = MenuCategory::find($request->input('menu_category_id', $menuItem->menu_category_id))?->layout;
@@ -213,6 +241,7 @@ class MenuEditorController extends Controller
             'config.rotation' => 'required|numeric|min:-360|max:360',
             'config.z_index' => 'required|integer|min:0|max:999',
             'config.locked' => 'nullable|boolean',
+            'config.hidden' => 'nullable|boolean',
             'config.font_size' => 'nullable|numeric|min:1|max:400',
             'config.line_height' => 'nullable|numeric|min:0.1|max:10',
             'config.letter_spacing' => 'nullable|numeric|min:-20|max:100',

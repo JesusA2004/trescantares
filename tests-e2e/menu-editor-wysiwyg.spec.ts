@@ -830,3 +830,76 @@ test('la barra de navegación lateral (position:fixed) no desplaza ni reduce el 
     // reserve espacio para la barra lateral fixed.
     expect(pageLeft, '.tc-mp-page no debe desplazarse por la barra lateral fixed').toBeLessThan(100);
 });
+
+/* ========================================================================
+ * CORRECCIÓN — redimensionar el "contenedor" de un platillo (foto+precio en
+ * fila flex) no debe reacomodar/encoger la foto ni el precio de adentro
+ * como efecto secundario del flex — el contenedor solo debe crecer/moverse
+ * su propia caja. Antes de la corrección, .tc-mp-hero-row (y las filas
+ * equivalentes de otros layouts) eran block-level sin width propio, así que
+ * heredaban el ancho explícito que MenuEditableElement le da al wrapper al
+ * redimensionarlo — y la foto (ancho en % de esa fila) se encogía/crecía en
+ * cascada, aunque el admin solo quería agrandar el bloque contenedor.
+ * ==================================================================== */
+
+test('redimensionar el contenedor de "Birria" no cambia el tamaño de su foto ni de su precio, y editor/público coinciden', async ({ page }) => {
+    await login(page);
+    // Fija el viewport a 1440 ANTES de abrir el editor — "Escritorio" usa el
+    // ancho real de la ventana del admin (desktopRealWidth en Index.vue), y
+    // más abajo se compara contra /menu explícitamente a 1440px; sin fijarlo
+    // aquí, el editor usaría el viewport por defecto de Playwright (~1280px)
+    // y las propiedades en vw (p. ej. el gap de .tc-mp-hero-row) darían un
+    // resultado ligeramente distinto entre editor y público por un desajuste
+    // de ancho real, no por ningún bug de posicionamiento.
+    await page.setViewportSize({ width: 1440, height: 1300 });
+    const frame = await openEditorAtDevice(page, 'Escritorio');
+
+    // No se usa expandItem()/selectElement() aquí a propósito: la categoría
+    // Y su platillo principal se llaman IGUAL ("Birria"), así que un filtro
+    // genérico por texto en toda la barra lateral puede pescar el botón de
+    // navegación de la sección en vez del renglón del platillo. Se escopea
+    // explícitamente a la lista "Platillos".
+    await page.locator('aside.tc-editor-sidebar').getByRole('button', { name: 'Birria', exact: true }).first().click();
+    await page.waitForTimeout(300);
+    const platillosList = page
+        .locator('aside.tc-editor-sidebar h3', { hasText: 'Platillos' })
+        .locator('xpath=following-sibling::ul[1]');
+    const birriaRow = platillosList.locator('li').filter({
+        has: page.getByRole('button', { name: 'Birria', exact: true }),
+    }).first();
+    await birriaRow.getByRole('button', { name: 'Birria', exact: true }).click();
+    await page.waitForTimeout(300);
+    await birriaRow.locator('.tc-element-btn', { hasText: 'Contenedor' }).click();
+    await page.waitForTimeout(400);
+
+    const containerKey = (await frame
+        .locator('.tc-mev--selected')
+        .first()
+        .getAttribute('data-element-key')) as string;
+    expect(containerKey).toMatch(/^item-\d+:container$/);
+
+    const photoKey = containerKey.replace(':container', ':image');
+    const priceKey = containerKey.replace(':container', ':price');
+
+    const before = await editorRectsFor(frame, [photoKey, priceKey]);
+
+    await setInspectorWidth(page, 900);
+    await setProportional(page, false);
+    await heightField(page).fill('700');
+    await heightField(page).press('Tab');
+    await page.waitForTimeout(600);
+
+    const containerAfter = await editorRectsFor(frame, [containerKey]);
+    expect(containerAfter[containerKey].width, 'el contenedor sí creció').toBeGreaterThan(800);
+    expect(containerAfter[containerKey].height, 'el contenedor sí creció').toBeGreaterThan(600);
+
+    const after = await editorRectsFor(frame, [photoKey, priceKey]);
+    expectSameRect(before[photoKey], after[photoKey], 'foto: mismo tamaño tras agrandar el contenedor');
+    expectSameRect(before[priceKey], after[priceKey], 'precio: misma posición/tamaño tras agrandar el contenedor');
+
+    await page.waitForTimeout(2000);
+
+    const publicRects = await publicRectsFor(page, 1440, [containerKey, photoKey, priceKey]);
+    expectSameRect(after[photoKey], publicRects[photoKey], 'foto: editor vs /menu tras redimensionar el contenedor');
+    expectSameRect(after[priceKey], publicRects[priceKey], 'precio: editor vs /menu tras redimensionar el contenedor');
+});

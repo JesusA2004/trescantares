@@ -7335,6 +7335,10 @@ body,
     gap: clamp(14px, 3vw, 28px);
     justify-content: center;
     margin-top: 18px;
+    /* Ver comentario completo en .tc-mp-alt-row: la fila no debe estirarse
+       al ancho del contenedor cuando se redimensiona a mano. */
+    width: max-content;
+    max-width: 100%;
 }
 
 .tc-mp-pozole-photo {
@@ -7353,6 +7357,10 @@ body,
     gap: clamp(14px, 3vw, 24px);
     justify-content: center;
     margin-top: 10px;
+    /* Ver comentario completo en .tc-mp-alt-row: la fila no debe estirarse
+       al ancho del contenedor cuando se redimensiona a mano. */
+    width: max-content;
+    max-width: 100%;
 }
 
 .tc-mp-accompaniment-photo {
@@ -7526,6 +7534,16 @@ body,
     gap: clamp(16px, 3vw, 28px);
     justify-content: center;
     margin-top: 16px;
+    /* width:max-content: la fila NUNCA debe estirarse al ancho que le dé el
+       "contenedor" (item-X:container) al redimensionarlo — sin esto, la
+       foto/precio de adentro (tamaño en % del ancho de esta fila) cambiaban
+       como efecto secundario no deseado de agrandar el contenedor.
+       Redimensionar el contenedor ahora solo agranda su propia caja; la
+       fila conserva su tamaño natural (misma técnica en .tc-mp-alt-row,
+       .tc-mp-fusion-row, .tc-mp-dessert-row, .tc-mp-pozole-main,
+       .tc-mp-accompaniment — ver comentario completo en .tc-mp-alt-row). */
+    width: max-content;
+    max-width: 100%;
 }
 
 .tc-mp-hero-photo {
@@ -7538,6 +7556,16 @@ body,
     align-items: center;
     gap: 14px;
     margin: 16px 0;
+    /* width:max-content (no explicit width, no width:100%): la fila NUNCA
+       debe estirarse para llenar el ancho que le dé el elemento "contenedor"
+       (item-X:container) cuando el admin lo redimensiona a mano — sin esto,
+       la foto/precio de adentro (tamaño en % del ancho de esta fila)
+       cambiaban de tamaño como efecto secundario no deseado de agrandar el
+       contenedor. Redimensionar el contenedor ahora solo agranda su propia
+       caja; la fila conserva su tamaño natural. Ver max-width:100% como
+       tope para no desbordar en viewports angostos. */
+    width: max-content;
+    max-width: 100%;
 }
 
 .tc-mp-alt-row--reverse {
@@ -7567,6 +7595,12 @@ body,
         flex-direction: column;
         margin: 0;
         gap: 10px;
+        /* En columna (apilado) SÍ debe volver a llenar el ancho disponible
+           — max-content aquí encogería el texto a una sola línea sin
+           envolver, que es el comportamiento de escritorio (fila), no el
+           de este breakpoint apilado. */
+        width: 100%;
+        max-width: 100%;
     }
 
     .tc-mp-birria-sides .tc-mp-alt-photo {
@@ -7623,6 +7657,10 @@ body,
     align-items: center;
     gap: clamp(16px, 3vw, 24px);
     padding: 16px 0;
+    /* Ver comentario completo en .tc-mp-alt-row: la fila no debe estirarse
+       al ancho del contenedor cuando se redimensiona a mano. */
+    width: max-content;
+    max-width: 100%;
 }
 
 .tc-mp-fusion-row + .tc-mp-fusion-row,
@@ -7655,6 +7693,9 @@ body,
         border-top: none;
         padding: 12px 0;
         gap: 6px;
+        /* En columna dentro de la grilla 2x2 SÍ debe llenar su celda. */
+        width: 100%;
+        max-width: 100%;
     }
 
     .tc-mp-fusion-list .tc-mp-fusion-row:nth-child(n + 3),
@@ -7736,6 +7777,10 @@ body,
     align-items: center;
     gap: 14px;
     padding: 14px 0;
+    /* Ver comentario completo en .tc-mp-alt-row: la fila no debe estirarse
+       al ancho del contenedor cuando se redimensiona a mano. */
+    width: max-content;
+    max-width: 100%;
 }
 
 .tc-mp-dessert-row--reverse {
@@ -7793,6 +7838,10 @@ body,
     .tc-mp-dessert-list .tc-mp-dessert-row--reverse {
         flex-direction: column;
         padding: 0;
+        /* En columna dentro de la grilla con áreas nombradas SÍ debe
+           llenar su área. */
+        width: 100%;
+        max-width: 100%;
     }
 
     .tc-mp-dessert-list .tc-mp-dessert-photo {
@@ -8134,6 +8183,9 @@ body,
     .tc-mp-fusion-row {
         flex-direction: column;
         text-align: center;
+        /* En columna (apilado angosto) SÍ debe llenar el ancho disponible. */
+        width: 100%;
+        max-width: 100%;
     }
 
     .tc-mp-alt-photo,

@@ -481,7 +481,18 @@ defineExpose({ root });
 </script>
 
 <template>
+    <!-- Oculto SOLO en la vista resuelta actual (config.hidden, discreto por
+         breakpoint — ver ElementConfig/DISCRETE_FIELDS en types.ts): se saca
+         del DOM por completo, en editor Y público por igual, en vez de
+         display:none — mismo criterio que ya usaban los adornos vía
+         visibleDecorations() en Menu.vue, generalizado aquí para que
+         cualquier elemento (categoría/item/adorno) lo herede sin duplicar la
+         condición en cada *Page.vue. Recuperarlo: la lista lateral de
+         "Elementos de la sección"/platillo en Index.vue sigue listando el
+         elemento y permite reseleccionarlo aunque no esté en el DOM del
+         lienzo (igual que ya pasa con adornos ocultos). -->
     <div
+        v-if="!config.hidden"
         ref="root"
         class="tc-mev"
         :class="{
