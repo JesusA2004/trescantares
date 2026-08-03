@@ -447,6 +447,11 @@ for (const device of DEVICES) {
 }
 
 test('una configuración guardada solo en una vista no afecta a las demás', async ({ page }) => {
+    // 2 navegaciones completas del editor + 2 cargas de /menu bajo el
+    // servidor de desarrollo de este entorno (sin opcache) pueden superar el
+    // timeout por defecto de 30s sin que haya ningún bloqueo real — mismo
+    // criterio que las pruebas más pesadas de menu-editor-hide-and-altclick.spec.ts.
+    test.setTimeout(60000);
     await login(page);
 
     const frame = await openEditorAtDevice(page, 'Escritorio');

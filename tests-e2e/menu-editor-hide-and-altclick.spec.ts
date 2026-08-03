@@ -45,6 +45,13 @@ async function openEditorAtDevice(page: Page, deviceLabel: string) {
 }
 
 test('el checkbox "Ocultar solo en {vista}" ahora existe para elementos de categoría (tagline) y no solo adornos', async ({ page }) => {
+    // Este flujo hace 4 navegaciones completas del editor (Escritorio/Móvil/
+    // Escritorio/Móvil) más varias esperas — bajo el servidor de desarrollo
+    // de este entorno (sin opcache, SQLite) el tiempo acumulado puede superar
+    // el timeout POR DEFECTO de 30s sin que haya ningún bloqueo real (mismo
+    // criterio que ya usan otras pruebas más pesadas de esta carpeta, p. ej.
+    // menu-multi-resolution-audit.spec.ts).
+    test.setTimeout(60000);
     await page.setViewportSize({ width: 1440, height: 1300 });
     await login(page);
 
@@ -66,6 +73,13 @@ test('el checkbox "Ocultar solo en {vista}" ahora existe para elementos de categ
     const taglineKey = keys.find((k) => k && /^category-\d+:tagline$/.test(k)) as string;
     expect(taglineKey, 'Pancita debe tener un tagline de texto editable').toBeTruthy();
 
+    // El tagline vive cerca del final de la sección de Pancita —
+    // `scrollIntoViewIfNeeded()` explícito antes del clic: `force:true` omite
+    // el auto-scroll normal de `.click()`, así que sin esto el clic puede
+    // caer fuera del viewport visible (coordenadas inválidas) y no
+    // seleccionar nada — confirmado con un repro aislado que medía
+    // `document.elementFromPoint()` en ese punto exacto.
+    await frame.locator(`[data-element-key="${taglineKey}"]`).scrollIntoViewIfNeeded();
     await frame.locator(`[data-element-key="${taglineKey}"]`).click({ force: true });
     await page.waitForTimeout(300);
 
@@ -81,6 +95,7 @@ test('el checkbox "Ocultar solo en {vista}" ahora existe para elementos de categ
     frame = await openEditorAtDevice(page, 'Móvil');
     await page.locator('aside.tc-editor-sidebar').getByRole('button', { name: 'Pancita', exact: true }).click();
     await page.waitForTimeout(300);
+    await frame.locator(`[data-element-key="${taglineKey}"]`).scrollIntoViewIfNeeded();
     await frame.locator(`[data-element-key="${taglineKey}"]`).click({ force: true });
     await page.waitForTimeout(300);
 
@@ -142,6 +157,11 @@ test('el checkbox "Ocultar solo en {vista}" ahora existe para elementos de categ
 });
 
 test('el admin puede forzar manualmente el alto de una sección, y volver a automático', async ({ page }) => {
+    // Ver comentario equivalente en la prueba anterior: varias navegaciones
+    // completas del editor más una recarga completa de iframe (ver
+    // scheduleIframeReload) exceden el timeout por defecto de 30s bajo este
+    // servidor de desarrollo.
+    test.setTimeout(60000);
     await page.setViewportSize({ width: 1440, height: 1300 });
     await login(page);
     const frame = await openEditorAtDevice(page, 'Escritorio');
@@ -163,10 +183,24 @@ test('el admin puede forzar manualmente el alto de una sección, y volver a auto
     const heightInput = inspector.locator('.tc-field').filter({ hasText: 'Alto (px)' }).locator('input[type="number"]');
     await heightInput.fill('3000');
     await heightInput.dispatchEvent('change');
-    await page.waitForTimeout(1200);
+
+    // Cambiar el alto forzado dispara scheduleIframeReload() (Index.vue) —
+    // 400ms de debounce propio MÁS una recarga COMPLETA del iframe (navegación
+    // real, no postMessage) — bajo el servidor de desarrollo de este entorno
+    // (sin opcache, SQLite) una recarga completa puede tardar bastante más
+    // que el waitForTimeout(1200) fijo que había aquí antes, dando lugar a
+    // falsos negativos (se medía la altura ANTES de que la recarga
+    // terminara). Sondear hasta que el alto realmente refleje el valor
+    // forzado es robusto frente a esa variabilidad sin debilitar la
+    // aserción en sí.
+    await expect
+        .poll(
+            async () => frame.locator('#cat-2').evaluate((el) => el.getBoundingClientRect().height),
+            { timeout: 10000, message: 'la sección debe crecer al alto forzado' },
+        )
+        .toBeGreaterThanOrEqual(2990);
 
     const forcedHeight = await frame.locator('#cat-2').evaluate((el) => el.getBoundingClientRect().height);
-    expect(forcedHeight, 'la sección debe crecer al alto forzado').toBeGreaterThanOrEqual(2990);
     expect(forcedHeight, 'el alto forzado debe ser mayor al natural (contenido no se recorta, solo crece)').toBeGreaterThan(before);
 
     // Otro dispositivo (Móvil) no debía verse afectado — discreto por vista.

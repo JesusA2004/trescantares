@@ -203,6 +203,25 @@ test.beforeAll(async () => {
     await ensureFixturePng();
 });
 
+// Ancho REAL del ancla de cada vista (ver MENU_DEVICE_WIDTH en types.ts) —
+// distinto del ancho de VENTANA del admin (`width` abajo, elegido solo por
+// espacio de pantalla del panel, p. ej. 500/900 para Móvil/Tablet). El
+// iframe del editor para Móvil/Tablet SIEMPRE renderiza a su ancla fija
+// (390/768) sin importar cuán ancha sea la ventana del admin — solo
+// Escritorio usa el ancho real de la ventana. Comparar contra /menu abierto
+// a un ancho DISTINTO del ancla (p. ej. 500 en vez de 390) exige que la
+// configuración guardada en px "legacy" (V1, ver ElementConfig) se
+// extrapole linealmente entre anchos — una aproximación real pero NUNCA
+// pixel-exacta (a diferencia del formato % V2, resolución-independiente por
+// diseño) — así que la comparación editor/público debe hacerse en el MISMO
+// ancho ancla que el editor realmente usó, no en el ancho de la ventana del
+// admin.
+const DEVICE_ANCHOR_WIDTH: Record<string, number> = {
+    Móvil: 390,
+    Tablet: 768,
+    Escritorio: 1440,
+};
+
 test.describe('adornos: seleccionar otro elemento no debe moverlos ni ocultarlos', () => {
     for (const { label, width } of [
         { label: 'Móvil', width: 500 },
@@ -311,8 +330,11 @@ test.describe('adornos: seleccionar otro elemento no debe moverlos ni ocultarlos
 
             // Abrir /menu directamente (no navegado desde el editor) y
             // comparar el rectángulo — mismo componente/datos, debe coincidir.
+            // Al ANCHO ANCLA real de esta vista (ver DEVICE_ANCHOR_WIDTH),
+            // no al ancho de ventana del admin — son cosas distintas (ver
+            // comentario arriba).
             const freshPage = await page.context().newPage();
-            await freshPage.setViewportSize({ width, height: 1300 });
+            await freshPage.setViewportSize({ width: DEVICE_ANCHOR_WIDTH[label], height: 1300 });
             await freshPage.goto('/menu');
             await freshPage.waitForTimeout(500);
             const publicRect = await waitForStableRect(() =>

@@ -410,16 +410,26 @@ async function persist(
     }
 }
 
+/** Salto de sección disparado por el sidebar del EDITOR (postMessage, ver
+ * bridge.onScrollToCategory más abajo) — nunca por un visitante real (ese
+ * caso usa `scrollTo()` arriba, con behavior:'smooth' a propósito). `html`
+ * tiene `scroll-behavior:smooth` global (app.css), así que sin forzar
+ * behavior:'auto' aquí este salto heredaría esa animación — varios cientos
+ * de ms en los que un clic inmediato sobre el lienzo (admin real o
+ * Playwright con `force:true`, que no espera a que el elemento esté
+ * "estable") puede caer en el punto de pantalla equivocado mientras el
+ * scroll todavía se mueve. Instantáneo es además mejor UX para cambiar de
+ * sección mientras se edita. */
 function scrollToCategoryId(categoryId: number | null) {
     if (categoryId === null) {
-        window.scrollTo({ top: 0 });
+        window.scrollTo({ top: 0, behavior: 'auto' });
 
         return;
     }
 
     document
         .getElementById(`cat-${categoryId}`)
-        ?.scrollIntoView({ block: 'start' });
+        ?.scrollIntoView({ block: 'start', behavior: 'auto' });
 }
 
 function measureRect(elementKey: string) {

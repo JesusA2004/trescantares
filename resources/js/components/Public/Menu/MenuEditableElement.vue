@@ -90,6 +90,7 @@ onMounted(() => {
     teleportTarget.value = positioningRoot.customizedLayerFor(root.value);
 });
 
+
 // Arranca en false a propósito, incluso si el config YA es 'normalized' al
 // montar: el destino de Teleport solo puede resolverse una vez el nodo está
 // en el DOM (closest() necesita un padre real) — el primer tick renderiza en
@@ -173,8 +174,24 @@ const legacyHeight = computed(() =>
 // curso (gesture), aunque el config aún no tenga tamaño propio, para que el
 // PRIMER resize de un elemento aún no personalizado ya se vea en vivo
 // mientras se arrastra, no solo al soltar.
+//
+// Rama V1-vs-V2 decidida por `isV2` (¿el formato guardado es %?), NUNCA por
+// `isNormalized` (¿además se sacó del flujo con position:absolute?) — son
+// ejes independientes: un resize PURO (nunca movido) guarda width_pct/
+// height_pct en formato V2 pero deja position_mode:'flow' a propósito (ver
+// startResize/finish más abajo, comentario "Un resize puro NO fuerza
+// position:absolute"). Bug real encontrado y corregido: al condicionar esto
+// por `isNormalized` en vez de `isV2`, un elemento V2 solo-redimensionado
+// (jamás movido) caía SIEMPRE a la rama legacy — `legacyWidth`/`legacyHeight`
+// devuelven `null` para CUALQUIER config V2 (ver definición arriba) — así
+// que `hasCustomWidth` daba `false` aunque `width_pct` estuviera realmente
+// guardado: el ancho se persistía correctamente (confirmado en el inspector
+// y en la base de datos) pero JAMÁS se aplicaba visualmente al soltar el
+// puntero, porque `sized`/`liveWidth` nunca lo veían. Este era el bug real
+// detrás de "el redimensionamiento no se ve" para cualquier imagen que no
+// hubiera sido movida antes con el ratón — la inmensa mayoría de los casos.
 const hasCustomWidth = computed(() =>
-    isNormalized.value
+    isV2.value
         ? (props.config as ElementConfigV2).width_pct !== null
         : legacyWidth.value !== null,
 );
@@ -183,7 +200,7 @@ const baseWidthPx = computed<number | null>(() => {
         return null;
     }
 
-    return isNormalized.value
+    return isV2.value
         ? pctToPx(
               (props.config as ElementConfigV2).width_pct as number,
               positioningRoot.width.value,
@@ -215,8 +232,10 @@ const liveWidth = computed(() => {
 // el checkbox "Proporcional" del inspector (toggleAutoHeight en Index.vue).
 // En este modo el alto SIEMPRE lo decide la proporción intrínseca de la
 // imagen (height:auto), nunca un valor arrastrado.
+// Misma corrección que hasCustomWidth/baseWidthPx arriba: decidido por
+// isV2, no por isNormalized.
 const hasCustomHeight = computed(() =>
-    isNormalized.value
+    isV2.value
         ? (props.config as ElementConfigV2).height_pct !== null
         : legacyHeight.value !== null,
 );
@@ -225,7 +244,7 @@ const baseHeightPx = computed<number | null>(() => {
         return null;
     }
 
-    return isNormalized.value
+    return isV2.value
         ? pctToPx(
               (props.config as ElementConfigV2).height_pct as number,
               positioningRoot.width.value,
@@ -298,7 +317,17 @@ const style = computed(() => {
     // queda position:relative, exactamente igual que el editor histórico
     // (ver comentarios de MenuEditableElement previos a este rewrite sobre
     // por qué position:relative SIEMPRE, nunca condicionado a "¿tiene
-    // transform?"). z-index explícito, nunca condicionado.
+    // transform?"). z-index explícito, nunca condicionado a la selección:
+    // se intentó elevar el z-index del elemento seleccionado (para resolver
+    // una colisión de la manija de resize con un hermano vecino, ver
+    // .tc-mev-resize-hitarea más abajo) pero eso rompía Alt+clic — cada vez
+    // que un adorno se selecciona saltaría al frente de
+    // `elementsFromPoint()` (Menu.vue), así que el ciclo de Alt+clic quedaba
+    // atrapado alternando para siempre entre los dos elementos más altos sin
+    // alcanzar nunca el tercero (confirmado con Playwright: 8 Alt+clics
+    // seguidos alternando decoration-2/decoration-1 sin llegar al título
+    // tapado). La colisión de la manija se resolvió en su lugar reduciendo
+    // el desborde del hit area (-6px en vez de -14px, ver más abajo).
     const out: Record<string, string | number> = {
         position: props.decoration || isNormalized.value ? 'absolute' : 'relative',
         zIndex: c.z_index,
@@ -801,6 +830,23 @@ function selectFromFocus() {
     }
 }
 
+// La raíz de esta plantilla es un <Teleport> (necesario para poder mover
+// elementos normalizados a .tc-mp-customized-layer) — Vue NO reenvía los
+// atributos "fallthrough" (class/style/etc. que un padre pasa sin declararlos
+// como prop) a través de un <Teleport> de la misma forma que a un elemento
+// normal, incluso con disabled:true (caso de items/categorías en flujo y de
+// TODOS los adornos, que nunca se teleportan). Confirmado empíricamente vía
+// Playwright: `class="tc-mp-photo"` (MenuItemVisual.vue) y
+// `class="tc-mp-decoration"` (Menu.vue) NUNCA llegaban al div real
+// (outerHTML solo mostraba tc-mev/tc-mev--image) — eso rompía en silencio
+// tanto el ancho responsivo por defecto de fotos de platillo (`.tc-mp-photo
+// img{width:100%}` nunca aplicaba) como `pointer-events:auto` de adornos en
+// modo editable (`.tc-mp--editable .tc-mp-decoration` nunca aplicaba, dejando
+// los adornos inertes a los clics). Fix: inheritAttrs:false + v-bind="$attrs"
+// explícito en el div real — Vue SÍ fusiona correctamente una clase recibida
+// por $attrs con la class/:class ya declarada en el mismo elemento.
+defineOptions({ inheritAttrs: false });
+
 defineExpose({ root });
 </script>
 
@@ -822,6 +868,7 @@ defineExpose({ root });
     >
         <div
             ref="root"
+            v-bind="$attrs"
             class="tc-mev"
             :class="{
                 'tc-mev--editable': editable,
@@ -953,13 +1000,29 @@ defineExpose({ root });
 }
 
 /* Hit area real (28×28) — deliberadamente NO una capa transparente sobre
-   toda la imagen: right/bottom negativos la centran exactamente sobre la
-   esquina inferior derecha, sin invadir el centro/bordes/zonas
-   transparentes del elemento, que deben seguir arrastrando (mover). */
+   toda la imagen: right/bottom negativos la acercan a la esquina inferior
+   derecha, sin invadir el centro/bordes/zonas transparentes del elemento,
+   que deben seguir arrastrando (mover).
+   Desborde de solo -6px (no -14px, mitad del tamaño del hit area) —
+   bug real encontrado con Playwright: con -14px el hit area se centraba
+   EXACTO en la esquina (14px hacia cada lado), así que su mitad exterior
+   caía sistemáticamente en el `gap` entre la foto y el bloque de texto
+   vecino en filas flex compactas (.tc-mp-dessert-row/.tc-mp-alt-row, ambas
+   con gap:14px — un desborde igual al gap completo garantiza la colisión).
+   El punto CENTRAL del hit area — exactamente donde un test (o un usuario)
+   apunta al arrastrar — terminaba geométricamente en el borde/fuera de la
+   caja de la imagen, así que el navegador resolvía el hit-test contra el
+   contenedor/hermano de al lado en vez de contra la propia manija.
+   Confirmado con document.elementsFromPoint() en el centro exacto del hit
+   area: devolvía item-N:container, nunca item-N:image. Con -6px, el 78% del
+   área (22 de 28px) queda dentro de la propia caja del elemento — sigue
+   siendo un objetivo táctil amplio y cómodo, pero ya no desborda lo
+   suficiente para alcanzar sistemáticamente el gap típico (14px+) de estas
+   filas. */
 .tc-mev-resize-hitarea {
     position: absolute;
-    right: -14px;
-    bottom: -14px;
+    right: -6px;
+    bottom: -6px;
     width: 28px;
     height: 28px;
     display: flex;
