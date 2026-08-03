@@ -81,6 +81,10 @@ function v2Anchor(x_pct: number, y_pct: number): ElementConfigV2 {
     return { ...defaultElementConfigV2(), x_pct, y_pct };
 }
 
+function v2NormalizedAnchor(x_pct: number, y_pct: number): ElementConfigV2 {
+    return { ...defaultElementConfigV2(), position_mode: 'normalized', x_pct, y_pct };
+}
+
 describe('resolveElementConfig interpolation', () => {
     it('4. interpolates linearly between mobile and tablet anchors', () => {
         const settings: ElementSettings = {
@@ -171,6 +175,72 @@ describe('resolveElementConfig interpolation', () => {
 
         expect(isV2Config(resolved)).toBe(true);
         expect(resolved.x_pct).toBeCloseTo(30, 4); // lerp(10, 50, 0.5)
+    });
+
+    // Regresión: resolveElementConfig forzaba position_mode:'normalized' con
+    // solo que UNA de las dos anclas fuera V2, aunque ninguna hubiera salido
+    // realmente de flujo (p. ej. un elemento solo redimensionado, nunca
+    // movido — ver startResize, que preserva 'flow'). Los 4 casos de abajo
+    // cubren exactamente la matriz que pide el arreglo.
+    it('10. V2 flow + V2 flow -> flow', () => {
+        const settings: ElementSettings = {
+            mobile: v2Anchor(10, 0),
+            tablet: v2Anchor(50, 0),
+        };
+        const midpoint = (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+        const resolved = resolveElementConfig(settings, midpoint) as ElementConfigV2;
+
+        expect(resolved.position_mode).toBe('flow');
+    });
+
+    it('11. V1 + V2 flow -> flow', () => {
+        const settings: ElementSettings = {
+            mobile: { x: 39, y: 0, width: null, height: null, scale: 1, rotation: 0, z_index: 1 },
+            tablet: v2Anchor(50, 0),
+        };
+        const midpoint = (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+        const resolved = resolveElementConfig(settings, midpoint) as ElementConfigV2;
+
+        expect(resolved.position_mode).toBe('flow');
+    });
+
+    it('12. V2 normalized + V2 flow -> normalized', () => {
+        const settings: ElementSettings = {
+            mobile: v2NormalizedAnchor(10, 0),
+            tablet: v2Anchor(50, 0),
+        };
+        const midpoint = (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+        const resolved = resolveElementConfig(settings, midpoint) as ElementConfigV2;
+
+        expect(resolved.position_mode).toBe('normalized');
+    });
+
+    it('13. V2 normalized + V1 -> normalized', () => {
+        const settings: ElementSettings = {
+            mobile: v2NormalizedAnchor(10, 0),
+            tablet: { x: 195, y: 0, width: null, height: null, scale: 1, rotation: 0, z_index: 1 },
+        };
+        const midpoint = (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+        const resolved = resolveElementConfig(settings, midpoint) as ElementConfigV2;
+
+        expect(resolved.position_mode).toBe('normalized');
+    });
+
+    it('14. an element resized but never moved does not jump out of flow at an intermediate width', () => {
+        // Simula: el admin redimensionó este elemento en las anclas mobile Y
+        // tablet (ambas se quedaron en 'flow', ver startResize, que nunca
+        // fuerza 'normalized' en un resize puro) — resolver en un ancho
+        // intermedio debe seguir siendo 'flow' (position:relative en
+        // MenuEditableElement.vue, nunca salta a position:absolute).
+        const settings: ElementSettings = {
+            mobile: { ...v2Anchor(0, 0), width_pct: 40 },
+            tablet: { ...v2Anchor(0, 0), width_pct: 30 },
+        };
+        const midpoint = (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+        const resolved = resolveElementConfig(settings, midpoint) as ElementConfigV2;
+
+        expect(resolved.position_mode).toBe('flow');
+        expect(resolved.width_pct).toBeCloseTo(35, 6);
     });
 });
 

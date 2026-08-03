@@ -7074,20 +7074,27 @@ body,
 
 /* ---- Jerarquía de capas de una sección de menú ----
    section.tc-mp-page (section-root, isolation:isolate arriba) contiene
-   exactamente dos capas hermanas, en este orden:
+   TRES capas hermanas de nivel de sección, en este orden y con esta
+   jerarquía visual (de abajo hacia arriba):
 
-     .tc-mp-content-layer    → título/fotos/precios/ingredientes/etiquetas…
-     .tc-mp-decoration-layer → flores/curvas/texturas (adornos de sección)
+     contenido normal          .tc-mp-content-layer            z-index: 0
+     elementos personalizados  .tc-mp-customized-layer (ANIDADA dentro de
+                                .tc-mp-content-layer, ver más abajo)
+     adornos                   .tc-mp-decoration-layer         z-index: 2
+     interfaz del editor       .tc-mp-editor-interaction-layer z-index: 3
 
-   La capa de adornos SIEMPRE pinta encima de la capa de contenido — no por
-   una comparación numérica de z-index (que dependería de qué valor haya
-   elegido cada quien y sería frágil), sino porque .tc-mp-content-layer
-   aísla TODO su interior en su propio stacking context (isolation:isolate):
-   ningún z-index interno, por alto que sea (el inspector permite hasta 999
-   vía "Al frente"), puede escapar de esa burbuja y competir directamente
-   con .tc-mp-decoration-layer. Dentro de esta última, el z_index individual
-   de cada adorno (ElementConfig.z_index) sí decide el orden entre adornos
-   entre sí, tal como antes. */
+   Los adornos SIEMPRE pintan por encima del contenido normal Y de cualquier
+   elemento personalizado/seleccionado — nunca al revés, sin importar qué se
+   esté editando — porque .tc-mp-content-layer (que contiene a
+   .tc-mp-customized-layer, ver por qué más abajo) aísla TODO su interior en
+   su propio stacking context (isolation:isolate): ningún z-index interno,
+   por alto que sea (el inspector permite hasta 999 vía "Al frente", y
+   .tc-mp-customized-layer añade su propio z-index:1 local), puede escapar de
+   esa burbuja y competir directamente con .tc-mp-decoration-layer (z:2,
+   hermana de nivel de sección). Dentro de la capa de adornos, el z_index
+   individual de cada adorno (ElementConfig.z_index) sí decide el orden entre
+   adornos entre sí, tal como antes. .tc-mp-editor-interaction-layer (z:3,
+   reservada para contornos/manijas del editor) queda por encima de todo. */
 .tc-mp-content-layer {
     position: relative;
     z-index: 0;
@@ -7098,8 +7105,9 @@ body,
    partida (esquina superior izquierda de la caja de relleno de .tc-mp-page)
    que tenían los adornos cuando eran hijos directos de la sección — el x/y
    guardado de cada adorno (ver ElementConfig) sigue siendo un translate()
-   adicional sobre ese mismo origen, sin ningún reescalado. z-index > 0 la
-   coloca por encima de .tc-mp-content-layer sin importar su contenido.
+   adicional sobre ese mismo origen, sin ningún reescalado. z-index:2 la
+   coloca por encima de .tc-mp-content-layer (0, que ya contiene anidada a
+   .tc-mp-customized-layer, ver abajo) sin importar su contenido.
    pointer-events:none en la capa entera para que el hueco vacío entre
    adornos nunca capture clics destinados al contenido de abajo — cada
    <MenuEditableElement decoration> individual reactiva pointer-events:auto
@@ -7107,44 +7115,73 @@ body,
 .tc-mp-decoration-layer {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    z-index: 2;
     pointer-events: none;
 }
 
-/* Tercera capa hermana de .tc-mp-content-layer/.tc-mp-decoration-layer —
-   hospeda los elementos que el admin reposicionó a coordenadas normalizadas
+/* Hospeda los elementos que el admin reposicionó a coordenadas normalizadas
    (position_mode:'normalized', ver ElementConfigV2/MenuEditableElement.vue),
-   Teleported fuera de su padre natural en flujo. Mismo truco de origen que
-   .tc-mp-decoration-layer (position:absolute + inset:0 = esquina superior
-   izquierda de la caja de relleno de .tc-mp-page), así que x_pct/y_pct se
-   miden y renderizan contra el MISMO root sin importar en qué capa termine
-   viviendo el elemento.
+   Teleported fuera de su padre natural en flujo.
 
-   z-index:2, POR ENCIMA de decoraciones (1) y contenido (0): las decoraciones
-   son adorno ambiental de fondo; un elemento normalizado es contenido en
-   primer plano que el admin colocó a propósito en un punto exacto — debe
-   verse ahí, sin que una flor/curva ambiental que caiga en el mismo punto lo
-   tape. isolation:isolate espeja a .tc-mp-content-layer: un z_index alto
+   HIJA de .tc-mp-content-layer (NO hermana de nivel de sección, a
+   diferencia de antes) — a propósito: measureRootRect() (ver
+   useMenuPositioningRoot) mide SIEMPRE el rect de .tc-mp-content-layer para
+   convertir/renderizar x_pct/y_pct contra ese origen. Cuando esta capa era
+   hermana de .tc-mp-content-layer dentro de la sección con padding
+   (.tc-mp-page), un hijo position:absolute;inset:0 de la SECCIÓN se ancla a
+   su PADDING BOX (el borde donde el padding EMPIEZA), mientras que
+   .tc-mp-content-layer, hijo en flujo normal de esa misma sección, arranca
+   en su CONTENT BOX (donde el padding TERMINA) — un desplazamiento real
+   entre ambos orígenes de hasta el padding completo de la sección,
+   confirmado con getBoundingClientRect() vía Playwright (~65px en Móvil, muy
+   por encima de los 2px de tolerancia esperados), no una suposición. Anidada
+   aquí dentro, su inset:0 se ancla al padding box de .tc-mp-content-layer
+   (que no tiene padding propio) = su content box = el mismo rect que mide
+   measureRootRect(): mismo origen exacto, sin salto.
+
+   z-index:1 LOCAL (dentro del stacking context aislado de
+   .tc-mp-content-layer): por encima del contenido normal (0/auto) de esa
+   misma capa, pero sin poder escapar a competir con .tc-mp-decoration-layer
+   (hermana de sección, z:2) — las decoraciones son adorno ambiental de
+   fondo; un elemento normalizado es contenido en primer plano que el admin
+   colocó a propósito, debe verse por encima del contenido normal, pero
+   nunca por encima de un adorno. isolation:isolate propia: un z_index alto
    ("Al frente") en un elemento normalizado queda contenido aquí dentro, sin
-   tener que compararse numéricamente contra el z-index interno de las otras
-   dos capas.
+   tener que compararse numéricamente contra el resto del contenido normal.
 
-   Al ser HERMANA de .tc-mp-content-layer (no descendiente), cualquier
-   elemento Teleported aquí deja de tener como ancestro los contenedores flex
-   que cambian de fila a columna en ciertos anchos (.tc-mp-alt-row,
-   .tc-mp-dessert-row, .tc-mp-fusion-row, .tc-mp-birria-sides, etc.) — ningún
-   media query de flex-direction/grid puede alcanzarlo, la misma razón por la
-   que .tc-mp-decoration-layer ya es inmune hoy. */
+   Al vivir dentro de .tc-mp-content-layer en vez de un contenedor flex/grid
+   interno de la plantilla, cualquier elemento Teleported aquí deja de tener
+   como ancestro los contenedores que cambian de fila a columna en ciertos
+   anchos (.tc-mp-alt-row, .tc-mp-dessert-row, .tc-mp-fusion-row,
+   .tc-mp-birria-sides, etc.) — ningún media query de flex-direction/grid
+   puede alcanzarlo, la misma razón por la que .tc-mp-decoration-layer ya es
+   inmune hoy. */
 .tc-mp-customized-layer {
     position: absolute;
     inset: 0;
-    z-index: 2;
+    z-index: 1;
     isolation: isolate;
     pointer-events: none;
 }
 
 .tc-mp--editable .tc-mp-customized-layer .tc-mev {
     pointer-events: auto;
+}
+
+/* Cuarta capa, hermana de nivel de sección — reservada para la interfaz del
+   editor (contornos/manijas de selección/resize). z-index:3, por encima de
+   TODO (incluyendo adornos): editar debe seguir siendo posible aunque un
+   adorno quede visualmente encima del elemento seleccionado. Vacía por
+   defecto — hoy el contorno de selección y la manija de resize siguen
+   viviendo dentro del propio .tc-mev (ver MenuEditableElement.vue), así que
+   esto NO cambia el apilamiento real de ningún elemento, solo reserva el
+   nivel más alto para el día que ese contorno/manija se saque a una capa
+   propia. pointer-events:none para no interceptar nada mientras esté vacía. */
+.tc-mp-editor-interaction-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
 }
 
 /* ---- Adornos de sección (flores, curvas, texturas… nunca pertenecen a un

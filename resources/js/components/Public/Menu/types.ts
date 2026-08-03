@@ -627,13 +627,26 @@ export function resolveElementConfig(
         out[field] = a[field];
     }
 
-    // Cualquier ancla V2 en el par implica que el elemento ya salió del
-    // flujo (position:absolute) — el resultado interpolado debe seguir
-    // siéndolo en TODO el rango intermedio, nunca "volver" a flow a mitad
-    // de camino solo porque la otra ancla del par todavía es V1.
+    // Cualquier ancla V2 en el par hace que el resultado sea V2 (nunca
+    // "vuelve" a V1 a mitad de camino), PERO eso NO implica normalized: una
+    // config puede ser V2 y seguir en 'flow' (p. ej. un elemento solo
+    // redimensionado, nunca movido — ver upgradeV1ToV2/startResize, que
+    // preservan position_mode:'flow' en un resize puro). Solo escapa del
+    // flujo en el resultado interpolado si ALGUNA de las dos anclas YA
+    // estaba, de verdad, en 'normalized' — nunca por el mero hecho de ser
+    // V2. Bug anterior: un elemento redimensionado pero nunca movido saltaba
+    // fuera de flujo (position:absolute) en cualquier ancho intermedio entre
+    // dos anclas donde una fuera V2, aunque ninguna estuviera normalized.
     if (lowerIsV2 || upperIsV2) {
+        const lowerNormalized =
+            lowerIsV2 &&
+            (lower.config as ElementConfigV2).position_mode === 'normalized';
+        const upperNormalized =
+            upperIsV2 &&
+            (upper.config as ElementConfigV2).position_mode === 'normalized';
+
         out.coordinate_version = 2;
-        out.position_mode = 'normalized';
+        out.position_mode = lowerNormalized || upperNormalized ? 'normalized' : 'flow';
     }
 
     return out as unknown as StoredElementConfig;

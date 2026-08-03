@@ -544,7 +544,10 @@ function onElementCommit(key: string, config: StoredElementConfig) {
                      .tc-mp-content-layer/.tc-mp-customized-layer como
                      cualquier otra sección, para que un elemento
                      personalizado tenga el mismo positioning-root estable
-                     (ver useMenuPositioningRoot). -->
+                     (ver useMenuPositioningRoot). .tc-mp-customized-layer
+                     vive DENTRO de .tc-mp-content-layer (no hermana) — ver
+                     comentario detallado en la rama de abajo (misma razón:
+                     mismo origen exacto para medir y renderizar %). -->
                 <div class="tc-mp-content-layer">
                     <component
                         :is="layoutFor(category)"
@@ -555,8 +558,8 @@ function onElementCommit(key: string, config: StoredElementConfig) {
                         @select="onElementSelect"
                         @commit="onElementCommit"
                     />
+                    <div class="tc-mp-customized-layer" />
                 </div>
-                <div class="tc-mp-customized-layer" />
             </section>
             <section
                 v-else
@@ -572,7 +575,29 @@ function onElementCommit(key: string, config: StoredElementConfig) {
                      aislada en su propio stacking context (isolation:isolate,
                      ver app.css) para que NINGÚN z-index interno, por alto
                      que sea, pueda competir directamente con la capa de
-                     adornos de abajo — ver .tc-mp-content-layer. -->
+                     adornos de abajo — ver .tc-mp-content-layer.
+
+                     .tc-mp-customized-layer vive DENTRO de esta capa (no
+                     hermana en la sección) a propósito: measureRootRect()
+                     (useMenuPositioningRoot) mide SIEMPRE el rect de
+                     .tc-mp-content-layer para convertir/renderizar x_pct/
+                     y_pct, así que el Teleport de un elemento normalizado
+                     debe aterrizar en un contenedor que comparta EXACTAMENTE
+                     ese mismo origen. .tc-mp-content-layer y
+                     .tc-mp-decoration-layer eran ambas hermanas directas de
+                     esta sección CON padding propio (clamp(...) en
+                     .tc-mp-page) — un hijo position:absolute;inset:0 de la
+                     sección se ancla al PADDING BOX de la sección (el borde
+                     donde el padding EMPIEZA), mientras que un hijo en flujo
+                     normal (.tc-mp-content-layer) arranca en su CONTENT BOX
+                     (donde el padding TERMINA): un desplazamiento real de
+                     hasta el padding completo de la sección (confirmado con
+                     getBoundingClientRect() vía Playwright: ~65px en Móvil,
+                     muy por encima de los 2px de tolerancia), no una
+                     suposición. Anidar .tc-mp-customized-layer aquí dentro
+                     hace que su inset:0 se ancle al padding box de
+                     .tc-mp-content-layer (sin padding propio) = su propio
+                     content box = el mismo rect que mide measureRootRect(). -->
                 <div class="tc-mp-content-layer">
                     <component
                         :is="layoutFor(category)"
@@ -584,15 +609,18 @@ function onElementCommit(key: string, config: StoredElementConfig) {
                         @select="onElementSelect"
                         @commit="onElementCommit"
                     />
+                    <div class="tc-mp-customized-layer" />
                 </div>
 
                 <!-- Capa de adornos: SIEMPRE por encima de la capa de
-                     contenido (ver .tc-mp-decoration-layer), sin importar
-                     qué elemento esté seleccionado. position:absolute +
-                     inset:0 reproduce EXACTAMENTE el mismo origen de
-                     coordenadas que tenían los adornos como hijos directos
-                     de .tc-mp-page (top:0/left:0 de su caja de relleno), así
-                     que ningún x/y guardado cambia de significado. -->
+                     contenido Y de los elementos personalizados (ver
+                     jerarquía en app.css: content(0) < customized(1, anidada
+                     arriba) < decoration(2)), sin importar qué elemento esté
+                     seleccionado o personalizado. position:absolute + inset:0
+                     reproduce EXACTAMENTE el mismo origen de coordenadas que
+                     tenían los adornos como hijos directos de .tc-mp-page
+                     (top:0/left:0 de su caja de relleno), así que ningún x/y
+                     guardado cambia de significado. -->
                 <div class="tc-mp-decoration-layer">
                     <MenuEditableElement
                         v-for="decoration in visibleDecorations(category)"
@@ -612,14 +640,16 @@ function onElementCommit(key: string, config: StoredElementConfig) {
                     />
                 </div>
 
-                <!-- Tercera capa hermana: elementos personalizados
-                     (position_mode:'normalized', ver ElementConfigV2)
-                     Teleported aquí desde MenuEditableElement.vue — pinta
-                     por encima de los adornos (ver .tc-mp-customized-layer
-                     en app.css). Empieza vacía; nunca se referencia
-                     directamente desde este template, solo por selector
-                     dentro de la sección (ver useMenuPositioningRoot). -->
-                <div class="tc-mp-customized-layer" />
+                <!-- Cuarta capa, reservada para la interfaz del editor
+                     (contornos/manijas) — siempre por encima de adornos, sin
+                     alterar el apilamiento real de ningún elemento (ver
+                     app.css). Vacía por defecto: hoy el contorno de selección
+                     y la manija de resize siguen viviendo dentro del propio
+                     elemento (ver MenuEditableElement.vue), así que esta capa
+                     no tiene aún contenido propio salvo que un adorno quede
+                     literalmente encima de la manija de un elemento
+                     seleccionado — caso límite no cubierto en este cambio. -->
+                <div class="tc-mp-editor-interaction-layer" />
             </section>
         </template>
 

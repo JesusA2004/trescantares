@@ -103,16 +103,39 @@ const shouldTeleport = computed(
     () => !props.decoration && isNormalized.value && !!teleportTarget.value,
 );
 
+/** Máquina de estados de gestos — decidida UNA SOLA VEZ en pointerdown y
+ * jamás reasignada a otro tipo después (ver startDrag/startResize):
+ * 'pending-move' (recién presionado, aún no se sabe si el toque es un
+ * simple clic/selección o un arrastre real) solo puede promoverse a 'move'
+ * al superar el umbral de desplazamiento (ver MOVE_THRESHOLD_*) — nunca a
+ * 'resize'. 'resize' se decide exclusivamente al presionar la manija (ver
+ * startResize) y jamás toca x_pct/y_pct. */
+type GestureKind = 'pending-move' | 'move' | 'resize' | 'rotate';
+
 // Delta en curso (px REALES del documento — este componente siempre vive
 // dentro del documento del iframe de vista previa, que nunca tiene un
 // transform:scale aplicado a sí mismo, así que getBoundingClientRect() y
 // clientX/clientY están siempre en el mismo sistema de coordenadas sin
-// necesidad de dividir por ningún "scaleFactor" externo).
+// necesidad de dividir por ningún "scaleFactor" externo). `pointerId` filtra
+// eventos de OTROS punteros (multi-touch) que lleguen a los listeners
+// globales de document mientras este gesto está en curso.
 const gesture = ref<{
-    kind: 'move' | 'resize' | 'rotate';
+    kind: GestureKind;
+    pointerId: number;
     dx: number;
     dy: number;
 } | null>(null);
+
+// Umbral de desplazamiento para promover 'pending-move' -> 'move' — más alto
+// en touch que en ratón porque un dedo se mueve más al posarse que un
+// puntero fino; por debajo del umbral, soltar el puntero SOLO selecciona
+// (ver startDrag/finish) sin emitir ningún commit de posición.
+const MOVE_THRESHOLD_MOUSE = 4;
+const MOVE_THRESHOLD_TOUCH = 8;
+
+function moveThresholdFor(pointerType: string): number {
+    return pointerType === 'touch' ? MOVE_THRESHOLD_TOUCH : MOVE_THRESHOLD_MOUSE;
+}
 
 function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value));
@@ -414,18 +437,62 @@ function currentConfigAsV2(
     return upgradeV1ToV2(props.config, elRect, rootRect, positionMode);
 }
 
+/** true si el pointerdown procede de la manija de resize — comprobado tanto
+ * por closest() (regla 1) como por composedPath() (regla 1, defensa
+ * adicional por si el nodo llega retargeted, p. ej. a través de un
+ * Teleport) — en cualquiera de los dos casos, startDrag debe abandonar de
+ * inmediato: la manija ya maneja su propio pointerdown de forma exclusiva
+ * (ver @pointerdown.stop.prevent="startResize" en el template), esto es
+ * defensa en profundidad, no la única barrera. */
+function originatesFromResizeHandle(event: PointerEvent): boolean {
+    if ((event.target as HTMLElement | null)?.closest?.('[data-mev-resize-handle]')) {
+        return true;
+    }
+
+    return event
+        .composedPath()
+        .some(
+            (node) =>
+                node instanceof HTMLElement &&
+                node.hasAttribute('data-mev-resize-handle'),
+        );
+}
+
 function startDrag(event: PointerEvent) {
     if (!interactive.value) {
         return;
     }
 
-    if ((event.target as HTMLElement).closest('[data-mev-handle]')) {
+    // Regla 7: ignora botones secundarios (clic derecho) y punteros no
+    // primarios (un segundo dedo en multi-touch) — nunca inician un gesto.
+    if (event.button !== 0 || !event.isPrimary) {
+        return;
+    }
+
+    // Regla 1: un pointerdown que procede de la manija de resize jamás
+    // inicia un gesto de movimiento.
+    if (originatesFromResizeHandle(event)) {
         return;
     }
 
     event.preventDefault();
     event.stopPropagation();
     emit('select', props.elementKey);
+
+    const pointerId = event.pointerId;
+    const threshold = moveThresholdFor(event.pointerType);
+    // Regla 8: mantiene los eventos dirigidos a este puntero aunque salga
+    // físicamente del elemento durante el arrastre.
+    try {
+        (event.currentTarget as Element | null)?.setPointerCapture?.(pointerId);
+    } catch {
+        // Algunos navegadores/entornos rechazan la captura para un puntero
+        // que no reconocen como "activo" en ese instante exacto (p. ej.
+        // eventos sintéticos en pruebas automatizadas) — no debe abortar el
+        // resto del gesto: los listeners de document siguen funcionando
+        // igual, la captura solo ayuda a que el arrastre siga funcionando
+        // si el puntero sale físicamente del elemento.
+    }
 
     // Medido ANTES de que exista cualquier gesto en curso — captura la
     // posición real tal como se ve en pantalla en este instante, sin
@@ -441,17 +508,34 @@ function startDrag(event: PointerEvent) {
     let lastClientY = event.clientY;
     let autoScrollFrame = 0;
 
-    gesture.value = { kind: 'move', dx: 0, dy: 0 };
+    // Regla 3: arranca en 'pending-move' — todavía nada se mueve
+    // visualmente (los computed de arriba solo reaccionan a kind==='move').
+    gesture.value = { kind: 'pending-move', pointerId, dx: 0, dy: 0 };
 
     function applyDelta() {
+        if (gesture.value?.pointerId !== pointerId) {
+            return;
+        }
+
         const scroller = document.scrollingElement ?? document.documentElement;
         const scrolled = scroller.scrollTop - startScrollY;
+        const dx = lastClientX - startX;
+        const dy = lastClientY - startY + scrolled;
 
-        gesture.value = {
-            kind: 'move',
-            dx: lastClientX - startX,
-            dy: lastClientY - startY + scrolled,
-        };
+        if (gesture.value.kind === 'pending-move') {
+            // Regla 3+5: promueve a 'move' solo al superar el umbral —
+            // jamás a 'resize'. Bajo el umbral no pasa nada (sigue pending).
+            if (Math.hypot(dx, dy) < threshold) {
+                return;
+            }
+
+            gesture.value = { kind: 'move', pointerId, dx, dy };
+            return;
+        }
+
+        if (gesture.value.kind === 'move') {
+            gesture.value = { kind: 'move', pointerId, dx, dy };
+        }
     }
 
     // Auto-scroll cuando el puntero se acerca al borde superior/inferior del
@@ -484,26 +568,46 @@ function startDrag(event: PointerEvent) {
     autoScrollFrame = requestAnimationFrame(autoScrollTick);
 
     const move = (e: PointerEvent) => {
+        if (e.pointerId !== pointerId) {
+            return;
+        }
+
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         applyDelta();
     };
 
-    const up = (e: PointerEvent) => {
+    // Regla 9+10: pointerup COMMITEA (solo si de verdad se promovió a
+    // 'move'); pointercancel SIEMPRE descarta sin guardar nada, sin importar
+    // cuánto se haya desplazado ya.
+    function finish(e: PointerEvent, shouldCommit: boolean) {
+        if (e.pointerId !== pointerId) {
+            return;
+        }
+
         document.removeEventListener('pointermove', move);
         document.removeEventListener('pointerup', up);
-        document.removeEventListener('pointercancel', up);
+        document.removeEventListener('pointercancel', cancel);
         cancelAnimationFrame(autoScrollFrame);
 
-        lastClientX = e.clientX;
-        lastClientY = e.clientY;
+        try {
+            (event.currentTarget as Element | null)?.releasePointerCapture?.(
+                pointerId,
+            );
+        } catch {
+            // El navegador ya pudo haber liberado la captura por su cuenta
+            // (p. ej. el puntero se desconectó) — no es un error real.
+        }
 
-        const scroller = document.scrollingElement ?? document.documentElement;
-        const dx = lastClientX - startX;
-        const dy = lastClientY - startY + (scroller.scrollTop - startScrollY);
+        const wasMove = gesture.value?.kind === 'move';
+        const dx = gesture.value?.dx ?? 0;
+        const dy = gesture.value?.dy ?? 0;
         gesture.value = null;
 
-        if (dx === 0 && dy === 0) {
+        // Regla 4: sin promoción a 'move' (toque/clic corto sin superar el
+        // umbral) nunca commitea, solo seleccionó (ya emitido arriba).
+        // pointercancel (regla 10) tampoco commitea nunca.
+        if (!shouldCommit || !wasMove) {
             return;
         }
 
@@ -515,11 +619,14 @@ function startDrag(event: PointerEvent) {
             x_pct: clampPct(baseline.x_pct + pxToPct(dx, rootWidth)),
             y_pct: clampPct(baseline.y_pct + pxToPct(dy, rootWidth)),
         });
-    };
+    }
+
+    const up = (e: PointerEvent) => finish(e, true);
+    const cancel = (e: PointerEvent) => finish(e, false);
 
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
-    document.addEventListener('pointercancel', up);
+    document.addEventListener('pointercancel', cancel);
 }
 
 function startResize(event: PointerEvent) {
@@ -527,9 +634,27 @@ function startResize(event: PointerEvent) {
         return;
     }
 
+    // Regla 7: igual que startDrag, ignora botones secundarios/punteros no
+    // primarios.
+    if (event.button !== 0 || !event.isPrimary) {
+        return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     emit('select', props.elementKey);
+
+    const pointerId = event.pointerId;
+    try {
+        (event.currentTarget as Element | null)?.setPointerCapture?.(pointerId);
+    } catch {
+        // Algunos navegadores/entornos rechazan la captura para un puntero
+        // que no reconocen como "activo" en ese instante exacto (p. ej.
+        // eventos sintéticos en pruebas automatizadas) — no debe abortar el
+        // resto del gesto: los listeners de document siguen funcionando
+        // igual, la captura solo ayuda a que el arrastre siga funcionando
+        // si el puntero sale físicamente del elemento.
+    }
 
     const baseline = currentConfigAsV2('flow');
     const rootWidth = positioningRoot.width.value;
@@ -544,26 +669,50 @@ function startResize(event: PointerEvent) {
             : (startEl?.getBoundingClientRect().height ?? 100);
     const startX = event.clientX;
     const startY = event.clientY;
-    gesture.value = { kind: 'resize', dx: 0, dy: 0 };
+
+    // Regla 2: decidido EXCLUSIVAMENTE aquí, al presionar la manija — nunca
+    // cambia a otro kind durante el resto del gesto (regla 5: jamás se
+    // promueve a 'move'; regla 6: `next` de abajo solo copia baseline.x_pct/
+    // y_pct sin modificarlos, nunca los mueve).
+    gesture.value = { kind: 'resize', pointerId, dx: 0, dy: 0 };
 
     const move = (e: PointerEvent) => {
+        if (e.pointerId !== pointerId) {
+            return;
+        }
+
         gesture.value = {
             kind: 'resize',
+            pointerId,
             dx: e.clientX - startX,
             dy: e.clientY - startY,
         };
     };
 
-    const up = (e: PointerEvent) => {
+    // Regla 9+10: igual que en startDrag — pointerup commitea, pointercancel
+    // siempre descarta.
+    function finish(e: PointerEvent, shouldCommit: boolean) {
+        if (e.pointerId !== pointerId) {
+            return;
+        }
+
         document.removeEventListener('pointermove', move);
         document.removeEventListener('pointerup', up);
-        document.removeEventListener('pointercancel', up);
+        document.removeEventListener('pointercancel', cancel);
 
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+        try {
+            (event.currentTarget as Element | null)?.releasePointerCapture?.(
+                pointerId,
+            );
+        } catch {
+            // Ver comentario equivalente en startDrag/finish.
+        }
+
+        const dx = gesture.value?.dx ?? 0;
+        const dy = gesture.value?.dy ?? 0;
         gesture.value = null;
 
-        if (dx === 0 && dy === 0) {
+        if (!shouldCommit || (dx === 0 && dy === 0)) {
             return;
         }
 
@@ -572,6 +721,7 @@ function startResize(event: PointerEvent) {
         // normalizado sigue normalizado): solo cambia el FORMATO guardado a
         // % (nunca px persistidos, ver spec), la posición natural de flujo
         // sigue decidiendo dónde queda mientras no se mueva también a mano.
+        // x_pct/y_pct heredan de `...baseline` sin modificar (regla 6).
         const next: ElementConfigV2 = {
             ...baseline,
             width_pct: clampPct(pxToPct(Math.max(10, startWidthPx + dx), rootWidth)),
@@ -588,11 +738,14 @@ function startResize(event: PointerEvent) {
         }
 
         emit('commit', props.elementKey, next);
-    };
+    }
+
+    const up = (e: PointerEvent) => finish(e, true);
+    const cancel = (e: PointerEvent) => finish(e, false);
 
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
-    document.addEventListener('pointercancel', up);
+    document.addEventListener('pointercancel', cancel);
 }
 
 function nudge(event: KeyboardEvent) {
@@ -614,6 +767,14 @@ function nudge(event: KeyboardEvent) {
     }
 
     event.preventDefault();
+    // Sin esto, la tecla de flecha además de nudgear ESTE elemento burbujea
+    // hasta el @keydown="nudge" de cualquier ANCESTRO MenuEditableElement
+    // (p. ej. item-N:container envolviendo item-N:price) y lo nudgea TAMBIÉN
+    // — bug real encontrado probando el arrastre repetido: cada tecla movía
+    // el precio Y su contenedor a la vez, y el contenedor (mucho más grande,
+    // con su propia matemática de %) terminaba dominando visualmente. Igual
+    // que startDrag/startResize ya hacen stopPropagation() en pointerdown.
+    event.stopPropagation();
     emit('select', props.elementKey);
 
     const step = event.shiftKey ? 10 : 1;
@@ -698,12 +859,21 @@ defineExpose({ root });
                 aria-hidden="true"
                 >Fuera del lienzo</span
             >
+            <!-- Área táctil ampliada (28×28, ver spec) restringida a la
+                 esquina inferior derecha — el indicador VISUAL de adentro se
+                 queda en 12×12 (ver .tc-mev-handle). data-mev-resize-handle
+                 es el marcador exclusivo que closest()/composedPath() buscan
+                 en startDrag para abandonar de inmediato (regla 1); .stop
+                 .prevent aquí evita ADEMÁS que el pointerdown llegue a
+                 burbujear hasta el @pointerdown="startDrag" del wrapper. -->
             <div
                 v-if="editable && selected && !locked"
-                data-mev-handle
-                class="tc-mev-handle"
-                @pointerdown="startResize"
-            />
+                data-mev-resize-handle
+                class="tc-mev-resize-hitarea"
+                @pointerdown.stop.prevent="startResize"
+            >
+                <span class="tc-mev-handle" aria-hidden="true" />
+            </div>
         </div>
     </Teleport>
 </template>
@@ -724,6 +894,15 @@ defineExpose({ root });
     user-select: none;
     -webkit-user-select: none;
     touch-action: none;
+}
+
+/* El wrapper editable (arriba) es quien debe recibir SIEMPRE el pointerdown
+   de arrastre — la imagen interior no debe interceptar nada (ni robar el
+   target del evento hacia un hijo que no tiene su propia lógica de gesto).
+   Solo aplica al <img> propio de kind="image"; el resto de contenido por
+   slot no se ve afectado. */
+.tc-mev--editable > img {
+    pointer-events: none;
 }
 
 .tc-mev--editable:hover {
@@ -773,16 +952,33 @@ defineExpose({ root });
     pointer-events: none;
 }
 
-.tc-mev-handle {
+/* Hit area real (28×28) — deliberadamente NO una capa transparente sobre
+   toda la imagen: right/bottom negativos la centran exactamente sobre la
+   esquina inferior derecha, sin invadir el centro/bordes/zonas
+   transparentes del elemento, que deben seguir arrastrando (mover). */
+.tc-mev-resize-hitarea {
     position: absolute;
-    right: -6px;
-    bottom: -6px;
+    right: -14px;
+    bottom: -14px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: nwse-resize;
+    touch-action: none;
+    z-index: 999;
+}
+
+/* Indicador visual — se queda en 12×12, centrado dentro del hit area de
+   arriba; pointer-events:none porque el pointerdown lo maneja el hit area
+   contenedor, no este span. */
+.tc-mev-handle {
     width: 12px;
     height: 12px;
     border-radius: 3px;
     background: var(--tc-blue, #144e8f);
     border: 2px solid #fff;
-    cursor: nwse-resize;
-    z-index: 999;
+    pointer-events: none;
 }
 </style>
