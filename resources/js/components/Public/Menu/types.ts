@@ -97,18 +97,212 @@ export function defaultElementConfig(): ElementConfig {
     };
 }
 
+/** 'flow' = sigue dependiendo del flujo natural de flex/grid (como TODO
+ * elemento hoy, V1 o V2 recién creado); 'normalized' = ya se movió/redimensionó
+ * a mano al menos una vez, position:absolute permanente dentro de
+ * .tc-mp-customized-layer, fuera del flujo por completo (ver
+ * MenuEditableElement.vue). */
+export type ElementPositionMode = 'flow' | 'normalized';
+
+/**
+ * Formato V2 — coordenadas normalizadas contra el ANCHO real renderizado del
+ * "positioning root" de la sección (.tc-mp-content-layer), nunca contra
+ * window.innerWidth/el iframe/el propio ancho del elemento. Reemplaza x/y/
+ * width/height en px del V1 (ver ElementConfig) — el resto de campos
+ * (tipografía, imagen, capa) se conservan sin cambio, nunca necesitaron ser
+ * porcentuales para dejar de "congelarse" fuera del rango 390-1440
+ * configurado (ver resolveElementConfig: la extrapolación proporcional ya
+ * los cubre igual que a x_pct/y_pct).
+ */
+export interface ElementConfigV2 {
+    coordinate_version: 2;
+    position_mode: ElementPositionMode;
+    /** % del ANCHO del root (0-100 típico, puede salir de rango si el
+     * elemento está parcial o totalmente fuera del lienzo). */
+    x_pct: number;
+    /** También en % del ANCHO del root (NUNCA del alto) — a propósito,
+     * conserva la escala uniforme de la composición entre teléfonos. */
+    y_pct: number;
+    width_pct: number | null;
+    height_pct: number | null;
+    scale: number;
+    rotation: number;
+    z_index: number;
+    locked?: boolean;
+    hidden?: boolean;
+    opacity?: number | null;
+    // Mismos campos no geométricos que ElementConfig — sin cambio de forma.
+    font_size?: number | null;
+    line_height?: number | null;
+    letter_spacing?: number | null;
+    align?: 'left' | 'center' | 'right' | null;
+    max_width?: number | null;
+    color?: string | null;
+    fit?: 'contain' | 'cover' | null;
+    object_x?: number | null;
+    object_y?: number | null;
+    inner_scale?: number | null;
+}
+
+export function defaultElementConfigV2(): ElementConfigV2 {
+    return {
+        coordinate_version: 2,
+        position_mode: 'flow',
+        x_pct: 0,
+        y_pct: 0,
+        width_pct: null,
+        height_pct: null,
+        scale: 1,
+        rotation: 0,
+        z_index: 1,
+    };
+}
+
+/** Cualquier configuración guardada — V1 (px, formato histórico, ver
+ * ElementConfig) o V2 (%, ver ElementConfigV2). Un config es V1 SIEMPRE que
+ * no tenga `coordinate_version === 2` — "clave ausente" es el marcador
+ * permanente e inambiguo de V1 tanto aquí como en el backend
+ * (MenuEditorController::configRules), nunca se reescribe una fila V1 para
+ * "marcarla" como tal. */
+export type StoredElementConfig = ElementConfig | ElementConfigV2;
+
+export function isV2Config(
+    config: StoredElementConfig | null | undefined,
+): config is ElementConfigV2 {
+    return !!config && (config as ElementConfigV2).coordinate_version === 2;
+}
+
+/** Forma mínima de un DOMRect que necesitan las conversiones de abajo —
+ * permite pasar un objeto plano en pruebas unitarias sin depender de un DOM
+ * real. */
+export interface RectLike {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
+
+/** Guardado contra rootWidthPx <= 0 / no finito (el root aún no tiene layout,
+ * p. ej. antes del primer paint) — 0 en vez de NaN/Infinity, nunca debe
+ * propagar un valor no numérico al style calculado. */
+export function pxToPct(px: number, rootWidthPx: number): number {
+    if (!Number.isFinite(rootWidthPx) || rootWidthPx <= 0) {
+        return 0;
+    }
+
+    return (px / rootWidthPx) * 100;
+}
+
+export function pctToPx(pct: number, rootWidthPx: number): number {
+    if (!Number.isFinite(rootWidthPx) || rootWidthPx <= 0) {
+        return 0;
+    }
+
+    return (pct / 100) * rootWidthPx;
+}
+
+/**
+ * Único punto que traduce una medición REAL del DOM (rect del elemento +
+ * rect del positioning-root) a porcentajes — fórmula exacta del spec: ambos
+ * ejes (x Y y) se dividen entre el ANCHO del root, nunca su alto.
+ */
+export function measuredRectToNormalized(
+    elementRect: RectLike,
+    rootRect: RectLike,
+): { x_pct: number; y_pct: number; width_pct: number; height_pct: number } {
+    return {
+        x_pct: pxToPct(elementRect.left - rootRect.left, rootRect.width),
+        y_pct: pxToPct(elementRect.top - rootRect.top, rootRect.width),
+        width_pct: pxToPct(elementRect.width, rootRect.width),
+        height_pct: pxToPct(elementRect.height, rootRect.width),
+    };
+}
+
+/** Inversa de measuredRectToNormalized — alimenta el style calculado de
+ * MenuEditableElement (left/top/width/height reales) a partir del ancho real
+ * medido del root en ESE momento (vía ResizeObserver, nunca el viewport). */
+export function normalizedToPx(
+    config: Pick<ElementConfigV2, 'x_pct' | 'y_pct' | 'width_pct' | 'height_pct'>,
+    rootWidthPx: number,
+): { left: number; top: number; width: number | null; height: number | null } {
+    return {
+        left: pctToPx(config.x_pct, rootWidthPx),
+        top: pctToPx(config.y_pct, rootWidthPx),
+        width:
+            config.width_pct !== null
+                ? pctToPx(config.width_pct, rootWidthPx)
+                : null,
+        height:
+            config.height_pct !== null
+                ? pctToPx(config.height_pct, rootWidthPx)
+                : null,
+    };
+}
+
+/**
+ * Construye un ElementConfigV2 a partir de una medición real del DOM,
+ * conservando los campos no geométricos de la config V1 previa (o los
+ * valores por defecto si el elemento nunca se había personalizado).
+ * Idempotente por construcción: si `baseline` YA es V2, se devuelve tal cual
+ * — nunca se vuelve a medir ni se divide porcentaje-sobre-porcentaje (cubierto
+ * también por una prueba unitaria explícita, ver types.spec.ts).
+ */
+export function upgradeV1ToV2(
+    baseline: StoredElementConfig | null | undefined,
+    elementRect: RectLike,
+    rootRect: RectLike,
+    positionMode: ElementPositionMode,
+): ElementConfigV2 {
+    if (isV2Config(baseline)) {
+        return baseline;
+    }
+
+    const v1 = baseline as ElementConfig | null | undefined;
+    const measured = measuredRectToNormalized(elementRect, rootRect);
+
+    return {
+        coordinate_version: 2,
+        position_mode: positionMode,
+        x_pct: measured.x_pct,
+        y_pct: measured.y_pct,
+        // Solo hereda un tamaño personalizado si el V1 YA tenía uno propio
+        // (width/height !== null) — si no, se queda "automático" (null),
+        // igual que hoy, en vez de fijar el tamaño intrínseco medido.
+        width_pct: v1?.width != null ? measured.width_pct : null,
+        height_pct: v1?.height != null ? measured.height_pct : null,
+        scale: v1?.scale ?? 1,
+        rotation: v1?.rotation ?? 0,
+        z_index: v1?.z_index ?? 1,
+        opacity: v1?.opacity ?? null,
+        locked: v1?.locked,
+        hidden: v1?.hidden,
+        font_size: v1?.font_size ?? null,
+        line_height: v1?.line_height ?? null,
+        letter_spacing: v1?.letter_spacing ?? null,
+        align: v1?.align ?? null,
+        max_width: v1?.max_width ?? null,
+        color: v1?.color ?? null,
+        fit: v1?.fit ?? null,
+        object_x: v1?.object_x ?? null,
+        object_y: v1?.object_y ?? null,
+        inner_scale: v1?.inner_scale ?? null,
+    };
+}
+
 /** Un elemento tiene como máximo tres configuraciones guardadas (una por
  * MenuDevice) — todo ancho intermedio se calcula interpolando entre ellas,
  * nunca se guarda un cuarto/quinto/sexto valor. `_legacy_breakpoints` es un
  * respaldo de solo lectura que deja la migración de datos del formato
  * anterior (base/sm/md/lg/xl/2xl) — el código público nunca lo lee. */
-export type ElementSettings = Partial<Record<MenuDevice, ElementConfig>> & {
+export type ElementSettings = Partial<Record<MenuDevice, StoredElementConfig>> & {
     _legacy_breakpoints?: unknown;
 };
 
 const INTERPOLATED_FIELDS = [
     'x',
     'y',
+    'x_pct',
+    'y_pct',
     'scale',
     'rotation',
     'font_size',
@@ -119,7 +313,7 @@ const INTERPOLATED_FIELDS = [
     'object_y',
     'inner_scale',
     'opacity',
-] as const satisfies readonly (keyof ElementConfig)[];
+] as const satisfies readonly (keyof ElementConfig | keyof ElementConfigV2)[];
 
 /** Campos discretos: no tiene sentido "mezclar" un z-index o una alineación
  * a medio camino — siempre toman el valor del ancla inferior más cercana. */
@@ -130,7 +324,7 @@ const DISCRETE_FIELDS = [
     'align',
     'fit',
     'color',
-] as const satisfies readonly (keyof ElementConfig)[];
+] as const satisfies readonly (keyof ElementConfig | keyof ElementConfigV2)[];
 
 function clamp01(t: number): number {
     return Math.min(1, Math.max(0, t));
@@ -197,18 +391,27 @@ const SCALABLE_PX_FIELDS = [
     'max_width',
 ] as const satisfies readonly (keyof ElementConfig)[];
 
-function scaleConfigByRatio(
-    config: ElementConfig,
+/** Genérico en T para aceptar tanto ElementConfig (V1: x/y/width/height
+ * escalan) como ElementConfigV2 (ninguno de sus campos está en
+ * SCALABLE_PX_FIELDS salvo los no-geométricos heredados como font_size/
+ * letter_spacing/max_width — así que en V2 esto escala SOLO tipografía, un
+ * no-op deliberado para x_pct/y_pct/width_pct/height_pct, que ya son
+ * resolución-independientes por diseño). */
+function scaleConfigByRatio<T extends ElementConfig | ElementConfigV2>(
+    config: T,
     ratio: number,
-): ElementConfig {
+): T {
     if (ratio === 1 || !Number.isFinite(ratio)) {
         return config;
     }
 
-    const out: ElementConfig = { ...config };
+    const out = { ...config } as T;
 
     for (const field of SCALABLE_PX_FIELDS) {
-        const value = config[field] as number | null | undefined;
+        const value = (config as unknown as Record<string, unknown>)[field] as
+            | number
+            | null
+            | undefined;
 
         if (value !== null && value !== undefined) {
             (out as unknown as Record<string, number>)[field] = value * ratio;
@@ -227,11 +430,11 @@ function scaleConfigByRatio(
  * === c (salvo error de punto flotante), la propiedad que garantizan las
  * pruebas de ida y vuelta render→editar→guardar→render.
  */
-export function toAnchorCoordinates(
-    config: ElementConfig,
+export function toAnchorCoordinates<T extends ElementConfig | ElementConfigV2>(
+    config: T,
     editedAtWidth: number,
     anchorWidth: number = MENU_DEVICE_WIDTH.desktop,
-): ElementConfig {
+): T {
     return scaleConfigByRatio(config, anchorWidth / editedAtWidth);
 }
 
@@ -243,18 +446,18 @@ export function toAnchorCoordinates(
  * monitor más ancho que 1440px, para que la geometría personalizada no se
  * quede "congelada" en px absolutos mientras crece el espacio disponible.
  */
-export function fromAnchorCoordinates(
-    config: ElementConfig,
+export function fromAnchorCoordinates<T extends ElementConfig | ElementConfigV2>(
+    config: T,
     targetWidth: number,
     anchorWidth: number = MENU_DEVICE_WIDTH.desktop,
-): ElementConfig {
+): T {
     return scaleConfigByRatio(config, targetWidth / anchorWidth);
 }
 
 interface DeviceAnchor {
     device: MenuDevice;
     width: number;
-    config: ElementConfig;
+    config: StoredElementConfig;
 }
 
 function anchorsOf(
@@ -273,18 +476,54 @@ function anchorsOf(
     return anchors;
 }
 
+function defaultConfigFor(config: StoredElementConfig): StoredElementConfig {
+    return isV2Config(config) ? defaultElementConfigV2() : defaultElementConfig();
+}
+
+/** Convierte SOLO PARA MEZCLAR una config V1 a pct transitorio, usando el
+ * ancho de SU PROPIA ancla como referencia (p. ej. x/390*100 para un ancla
+ * mobile) — nunca se persiste, es puro azúcar para que la interpolación
+ * entre un ancla V1 y una V2 (mientras el admin migra sus anclas una por
+ * una tocándolas en el editor) no "salte" bruscamente de un valor a otro en
+ * vez de mezclarse. La conversión real y persistida SIEMPRE se hace desde el
+ * rect medido del DOM (ver upgradeV1ToV2) — esta es la única excepción
+ * documentada al requisito de "nunca x/ancho a secas". */
+function toTransientPct(config: ElementConfig, deviceWidth: number) {
+    return {
+        x_pct: (config.x / deviceWidth) * 100,
+        y_pct: (config.y / deviceWidth) * 100,
+        width_pct: config.width !== null ? (config.width / deviceWidth) * 100 : null,
+        height_pct: config.height !== null ? (config.height / deviceWidth) * 100 : null,
+    };
+}
+
 /**
  * Calcula la configuración real de un elemento para un ancho de viewport
  * arbitrario, interpolando linealmente entre las dos vistas configuradas más
  * cercanas (spec: t = (viewportWidth - anchoInferior) / (anchoSuperior -
- * anchoInferior), clamp 0..1). Por debajo de la vista más angosta configurada
- * usa esa misma sin cambios; por encima de la más ancha, ídem — nunca
- * extrapola fuera del rango que el administrador definió.
+ * anchoInferior), clamp 0..1).
+ *
+ * Fuera del rango configurado (por debajo del ancla más angosta o por
+ * encima de la más ancha), la geometría escala PROPORCIONALMENTE en vez de
+ * congelarse, para las TRES vistas (mobile/tablet/desktop) — no solo
+ * 'desktop' como antes. Ese era exactamente el bug reportado: un ancla
+ * mobile-only se quedaba pixel-idéntica tanto por debajo de 390px como en
+ * CUALQUIER otro teléfono más ancho sin ancla propia (p. ej. 430px),
+ * confirmado en el repro de Birria — ver comentario junto a
+ * `viewportWidth >= last.width` más abajo sobre por qué NO se restringió
+ * esto a 'desktop' pese a una sospecha inicial de regresión.
+ *
+ * Para un ancla V2 esta escala es un no-op sobre x_pct/y_pct/width_pct/
+ * height_pct (ya son resolución-independientes por diseño — pctToPx hace el
+ * trabajo real en el momento de renderizar contra el ancho REAL medido del
+ * root), pero SÍ sigue escalando los campos no geométricos heredados
+ * (font_size/letter_spacing/max_width) igual que en V1. Ver
+ * fromAnchorCoordinates/toAnchorCoordinates para el sentido inverso.
  */
 export function resolveElementConfig(
     settings: ElementSettings | null | undefined,
     viewportWidth: number,
-): ElementConfig {
+): StoredElementConfig {
     const anchors = anchorsOf(settings);
 
     if (anchors.length === 0) {
@@ -294,29 +533,30 @@ export function resolveElementConfig(
     const first = anchors[0];
     const last = anchors[anchors.length - 1];
 
-    // Fuera del rango configurado, el comportamiento histórico "congelaba"
-    // la geometría en px absolutos — visible en cualquier ancho real de
-    // pantalla distinto de exactamente 1440px como un bloque de tamaño fijo
-    // (con espacio en blanco creciendo alrededor si el monitor es más
-    // ancho). Solo el ancla 'desktop' (pensada para representar "pantallas
-    // grandes" en general, no exactamente 1440px) se extrapola de forma
-    // fluida en CUALQUIER dirección fuera de su ancho de referencia —
-    // mobile/tablet conservan el comportamiento congelado de siempre (fuera
-    // de alcance de este arreglo). Ver fromAnchorCoordinates/
-    // toAnchorCoordinates para el sentido inverso (guardar desde un ancho
-    // real de edición distinto de 1440).
     if (viewportWidth <= first.width) {
-        const resolved = { ...defaultElementConfig(), ...first.config };
+        const resolved = { ...defaultConfigFor(first.config), ...first.config };
 
-        return first.device === 'desktop' && viewportWidth !== first.width
+        return viewportWidth !== first.width
             ? fromAnchorCoordinates(resolved, viewportWidth, first.width)
             : resolved;
     }
 
     if (anchors.length === 1 || viewportWidth >= last.width) {
-        const resolved = { ...defaultElementConfig(), ...last.config };
+        const resolved = { ...defaultConfigFor(last.config), ...last.config };
 
-        return last.device === 'desktop' && viewportWidth !== last.width
+        // Igual que el límite inferior: proporcional para CUALQUIER vista,
+        // nunca congelado — un ancla mobile-only vista en OTRO teléfono más
+        // ancho (p. ej. 430px) debe escalar, no quedarse pixel-idéntica (el
+        // caso exacto del bug reportado, confirmado en el repro de Birria a
+        // 360/390/430px). Nota: se investigó restringir esto solo a
+        // 'desktop' tras ver fallar tests-e2e/menu-decorations-stacking.spec.ts
+        // y menu-editor-hide-and-altclick.spec.ts con este cambio activo —
+        // pero se confirmó (comparando contra el código sin tocar, vía `git
+        // stash`) que esas mismas pruebas YA fallaban de forma idéntica en
+        // el código original, sin relación alguna con esta función: son
+        // fallas preexistentes de ese entorno, no una regresión de este
+        // arreglo. Ver fromAnchorCoordinates para el sentido inverso.
+        return viewportWidth !== last.width
             ? fromAnchorCoordinates(resolved, viewportWidth, last.width)
             : resolved;
     }
@@ -338,26 +578,65 @@ export function resolveElementConfig(
     const t = clamp01(
         (viewportWidth - lower.width) / (upper.width - lower.width),
     );
-    const a: ElementConfig = { ...defaultElementConfig(), ...lower.config };
-    const b: ElementConfig = { ...defaultElementConfig(), ...upper.config };
-    const out: ElementConfig = { ...a };
+    const lowerIsV2 = isV2Config(lower.config);
+    const upperIsV2 = isV2Config(upper.config);
+    const mixedVersions = lowerIsV2 !== upperIsV2;
+
+    let a: Record<string, unknown> = {
+        ...defaultConfigFor(lower.config),
+        ...lower.config,
+    };
+    let b: Record<string, unknown> = {
+        ...defaultConfigFor(upper.config),
+        ...upper.config,
+    };
+
+    if (mixedVersions) {
+        if (!lowerIsV2) {
+            a = { ...a, ...toTransientPct(a as unknown as ElementConfig, lower.width) };
+        }
+        if (!upperIsV2) {
+            b = { ...b, ...toTransientPct(b as unknown as ElementConfig, upper.width) };
+        }
+    }
+
+    const out: Record<string, unknown> = { ...a };
 
     for (const field of INTERPOLATED_FIELDS) {
-        (out as unknown as Record<string, unknown>)[field] = lerpOptional(
+        out[field] = lerpOptional(
             a[field] as number | null | undefined,
             b[field] as number | null | undefined,
             t,
         );
     }
 
-    out.width = lerpSize(a.width, b.width, t);
-    out.height = lerpSize(a.height, b.height, t);
+    out.width = lerpSize(a.width as number | null, b.width as number | null, t);
+    out.height = lerpSize(a.height as number | null, b.height as number | null, t);
+    out.width_pct = lerpSize(
+        a.width_pct as number | null,
+        b.width_pct as number | null,
+        t,
+    );
+    out.height_pct = lerpSize(
+        a.height_pct as number | null,
+        b.height_pct as number | null,
+        t,
+    );
 
     for (const field of DISCRETE_FIELDS) {
-        (out as unknown as Record<string, unknown>)[field] = a[field];
+        out[field] = a[field];
     }
 
-    return out;
+    // Cualquier ancla V2 en el par implica que el elemento ya salió del
+    // flujo (position:absolute) — el resultado interpolado debe seguir
+    // siéndolo en TODO el rango intermedio, nunca "volver" a flow a mitad
+    // de camino solo porque la otra ancla del par todavía es V1.
+    if (lowerIsV2 || upperIsV2) {
+        out.coordinate_version = 2;
+        out.position_mode = 'normalized';
+    }
+
+    return out as unknown as StoredElementConfig;
 }
 
 export function hasOwnElementConfig(
@@ -507,7 +786,7 @@ export function sectionHeightFor(
 export function decorationElementFor(
     decoration: Pick<MenuDecorationData, 'visual_settings'>,
     breakpoint: MenuBreakpoint,
-): ElementConfig {
+): StoredElementConfig {
     return resolveElementConfig(decoration.visual_settings, breakpoint);
 }
 
@@ -526,7 +805,7 @@ export function itemElementFor(
     item: Pick<MenuItemData, 'layout_settings'>,
     key: ItemElementKey,
     breakpoint: MenuBreakpoint,
-): ElementConfig {
+): StoredElementConfig {
     return resolveElementConfig(item.layout_settings?.[key], breakpoint);
 }
 
@@ -534,7 +813,7 @@ export function categoryElementFor(
     category: Pick<MenuCategoryData, 'visual_settings'>,
     key: CategoryElementKey,
     breakpoint: MenuBreakpoint,
-): ElementConfig {
+): StoredElementConfig {
     return resolveElementConfig(category.visual_settings?.[key], breakpoint);
 }
 

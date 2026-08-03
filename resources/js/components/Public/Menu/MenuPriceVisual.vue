@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import MenuTextVisual from './MenuTextVisual.vue';
 import { money } from './types';
-import type { ElementConfig } from './types';
+import type { StoredElementConfig } from './types';
 
 withDefaults(
     defineProps<{
         elementKey: string;
         label: string;
-        config: ElementConfig;
+        config: StoredElementConfig;
         value: number | string | null | undefined;
         editable?: boolean;
         selectedKey?: string | null;
@@ -20,7 +20,7 @@ withDefaults(
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, config: ElementConfig];
+    commit: [key: string, config: StoredElementConfig];
 }>();
 </script>
 

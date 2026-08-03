@@ -92,10 +92,14 @@ async function selectElement(page: Page, elementLabel: string) {
 /** Los campos X/Y numéricos viven dentro del acordeón "Ajustes avanzados"
  * (colapsado por defecto) — hay que abrirlo antes de tocarlos. Se revisa la
  * visibilidad REAL del campo (no el atributo `open`) porque cambiar de
- * elemento seleccionado puede re-render los bloques hermanos del acordeón. */
+ * elemento seleccionado puede re-render los bloques hermanos del acordeón.
+ * Se localiza por `data-field`, NO por el texto de la etiqueta ("X (px)"
+ * cambia a "X (%)" en cuanto el elemento pasa a coordenadas normalizadas,
+ * ver ElementConfigV2/Index.vue) — data-field es estable frente a esa
+ * relabel (TcInput reenvía $attrs al <input> real). */
 async function openAdvancedSettings(page: Page) {
     const inspector = page.locator('aside.tc-editor-inspector');
-    const xField = inspector.locator('.tc-field').filter({ hasText: 'X (px)' }).locator('input');
+    const xField = inspector.locator('input[data-field="x"]');
 
     if (await xField.isVisible()) {
         return;
@@ -109,8 +113,8 @@ async function setInspectorXY(page: Page, x: number, y: number) {
     await openAdvancedSettings(page);
 
     const inspector = page.locator('aside.tc-editor-inspector');
-    const xField = inspector.locator('.tc-field').filter({ hasText: 'X (px)' }).locator('input');
-    const yField = inspector.locator('.tc-field').filter({ hasText: 'Y (px)' }).locator('input');
+    const xField = inspector.locator('input[data-field="x"]');
+    const yField = inspector.locator('input[data-field="y"]');
 
     await xField.fill(String(x));
     await xField.press('Tab');
@@ -134,22 +138,16 @@ async function openEditorAtRealDesktopWidth(page: Page, width: number) {
     return openEditorAtDevice(page, 'Escritorio');
 }
 
-/** Campo "Ancho (px)" del bloque de tamaño del inspector (fuera del
- * acordeón de ajustes avanzados, siempre visible) — el mismo .tc-field
- * también contiene la casilla "Automático", así que hay que apuntar al
- * input numérico específicamente. */
+/** Campo "Ancho (px)"/"Ancho (%)" del bloque de tamaño del inspector (fuera
+ * del acordeón de ajustes avanzados, siempre visible) — localizado por
+ * data-field="width" (estable frente al relabel px->% al normalizar, ver
+ * openAdvancedSettings). */
 function widthField(page: Page) {
-    return page
-        .locator('aside.tc-editor-inspector .tc-field')
-        .filter({ hasText: 'Ancho (px)' })
-        .locator('input[type="number"]');
+    return page.locator('aside.tc-editor-inspector input[data-field="width"]');
 }
 
 function heightField(page: Page) {
-    return page
-        .locator('aside.tc-editor-inspector .tc-field')
-        .filter({ hasText: 'Alto (px)' })
-        .locator('input[type="number"]');
+    return page.locator('aside.tc-editor-inspector input[data-field="height"]');
 }
 
 /** Casilla "Automático" del campo Ancho — el input numérico está
@@ -157,7 +155,7 @@ function heightField(page: Page) {
 function autoWidthCheckbox(page: Page) {
     return page
         .locator('aside.tc-editor-inspector .tc-field')
-        .filter({ hasText: 'Ancho (px)' })
+        .filter({ has: page.locator('input[data-field="width"]') })
         .locator('input[type="checkbox"]');
 }
 
@@ -176,7 +174,7 @@ async function setInspectorWidth(page: Page, width: number) {
 function proportionalCheckbox(page: Page) {
     return page
         .locator('aside.tc-editor-inspector .tc-field')
-        .filter({ hasText: 'Alto (px)' })
+        .filter({ has: page.locator('input[data-field="height"]') })
         .locator('input[type="checkbox"]');
 }
 

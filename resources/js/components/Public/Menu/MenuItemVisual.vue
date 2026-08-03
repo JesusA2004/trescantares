@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import MenuEditableElement from './MenuEditableElement.vue';
 import { itemElementFor, MENU_DEVICE_WIDTH } from './types';
 import type {
-    ElementConfig,
+    StoredElementConfig,
     ItemLayoutSettings,
     MenuBreakpoint,
 } from './types';
@@ -41,7 +41,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, config: ElementConfig];
+    commit: [key: string, config: StoredElementConfig];
 }>();
 
 // Solo los platillos reales (con id) tienen layout_settings — el hero de

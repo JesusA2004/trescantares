@@ -2,7 +2,7 @@
 import MenuEditableElement from './MenuEditableElement.vue';
 import MenuPageFrame from './MenuPageFrame.vue';
 import { categoryElementFor } from './types';
-import type { ElementConfig, MenuBreakpoint, MenuCategoryData } from './types';
+import type { StoredElementConfig, MenuBreakpoint, MenuCategoryData } from './types';
 
 withDefaults(
     defineProps<{
@@ -21,14 +21,14 @@ withDefaults(
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, config: ElementConfig];
+    commit: [key: string, config: StoredElementConfig];
 }>();
 
 function onSelect(key: string) {
     emit('select', key);
 }
 
-function onCommit(key: string, config: ElementConfig) {
+function onCommit(key: string, config: StoredElementConfig) {
     emit('commit', key, config);
 }
 </script>

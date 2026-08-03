@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted } from 'vue';
 import type {
-    ElementConfig,
+    StoredElementConfig,
     MenuDevice,
 } from '@/components/Public/Menu/types';
 
@@ -26,7 +26,7 @@ export interface PreviewToEditorMessage {
     type: 'ready' | 'select' | 'commit' | 'deselect' | 'rect';
     elementKey?: string;
     label?: string;
-    config?: ElementConfig;
+    config?: StoredElementConfig;
     breakpoint?: MenuDevice;
     requestId?: string;
     rect?: { element: RectData; parent: RectData } | null;
@@ -41,7 +41,7 @@ export interface EditorToPreviewMessage {
         | 'scrollToCategory'
         | 'requestRect';
     elementKey?: string;
-    config?: ElementConfig;
+    config?: StoredElementConfig;
     breakpoint?: MenuDevice;
     categoryId?: number | null;
     requestId?: string;
@@ -56,7 +56,7 @@ export function useMenuPreviewChild(handlers: {
     onSelectElement?: (key: string) => void;
     onUpdateConfig?: (
         key: string,
-        config: ElementConfig,
+        config: StoredElementConfig,
         breakpoint?: MenuDevice,
     ) => void;
     onClearElement?: (key: string, breakpoint?: MenuDevice) => void;
@@ -128,8 +128,8 @@ export function useMenuPreviewParent(
     iframe: () => HTMLIFrameElement | null | undefined,
     handlers: {
         onReady?: () => void;
-        onSelect?: (key: string, label: string, config: ElementConfig) => void;
-        onCommit?: (key: string, config: ElementConfig) => void;
+        onSelect?: (key: string, label: string, config: StoredElementConfig) => void;
+        onCommit?: (key: string, config: StoredElementConfig) => void;
         onDeselect?: () => void;
     },
 ) {
@@ -224,7 +224,7 @@ export function useMenuPreviewParent(
             post({ type: 'selectElement', elementKey: key }),
         updateConfig: (
             key: string,
-            config: ElementConfig,
+            config: StoredElementConfig,
             breakpoint?: MenuDevice,
         ) =>
             post({ type: 'updateConfig', elementKey: key, config, breakpoint }),

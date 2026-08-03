@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MenuCategory;
 use App\Models\MenuDecoration;
 use App\Models\MenuMediaAsset;
+use App\Support\MenuElementConfigRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -157,24 +158,11 @@ class MenuDecorationController extends Controller
             return response()->json(['visual_settings' => $menuDecoration->fresh()->visual_settings]);
         }
 
-        $data = $request->validate([
-            'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
-            'config' => 'required|array',
-            'config.x' => 'required|numeric|min:-20000|max:20000',
-            'config.y' => 'required|numeric|min:-20000|max:20000',
-            'config.width' => 'nullable|numeric|min:1|max:20000',
-            'config.height' => 'nullable|numeric|min:1|max:20000',
-            'config.scale' => 'required|numeric|min:0.1|max:5',
-            'config.rotation' => 'required|numeric|min:-360|max:360',
-            'config.z_index' => 'required|integer|min:0|max:999',
-            'config.locked' => 'nullable|boolean',
-            'config.hidden' => 'nullable|boolean',
-            'config.opacity' => 'nullable|numeric|min:0|max:1',
-            'config.fit' => ['nullable', Rule::in(['contain', 'cover'])],
-            'config.object_x' => 'nullable|numeric|min:0|max:100',
-            'config.object_y' => 'nullable|numeric|min:0|max:100',
-            'config.inner_scale' => 'nullable|numeric|min:0.1|max:5',
-        ]);
+        $data = $request->validate(array_merge(
+            ['breakpoint' => ['required', Rule::in(self::BREAKPOINTS)]],
+            // Los adornos nunca tienen texto — sin reglas de tipografía.
+            MenuElementConfigRules::forConfig($request->input('config'), includeTypography: false),
+        ));
 
         $settings = $menuDecoration->visual_settings ?? [];
         $settings[$data['breakpoint']] = $data['config'];

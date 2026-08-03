@@ -53,17 +53,20 @@ import {
     categoryElementKeysFor,
     decorationElementFor,
     hasOwnElementConfig,
+    isV2Config,
     itemElementFor,
     toAnchorCoordinates,
 } from '@/components/Public/Menu/types';
 import type {
     CategoryElementKey,
     ElementConfig,
+    ElementConfigV2,
     ItemElementKey,
     MenuCategoryData,
     MenuDecorationData,
     MenuDevice,
     MenuItemData,
+    StoredElementConfig,
 } from '@/components/Public/Menu/types';
 import TcInput from '@/components/tc/TcInput.vue';
 import TcMediaLibraryModal from '@/components/tc/TcMediaLibraryModal.vue';
@@ -448,7 +451,7 @@ function findDecorationGlobal(id: number): MenuDecorationData | null {
     return null;
 }
 
-function resolveConfigAtWidth(key: string, width: number): ElementConfig {
+function resolveConfigAtWidth(key: string, width: number): StoredElementConfig {
     const parsed = parseKey(key);
 
     if (!parsed) {
@@ -486,7 +489,7 @@ function resolveConfigAtWidth(key: string, width: number): ElementConfig {
 /** Config tal como se VE/EDITA en el lienzo — para 'desktop' esto usa el
  * ancho REAL de la ventana (ver effectiveDeviceWidth), así los valores que
  * muestra el inspector siempre coinciden con lo que hay en pantalla. */
-function resolveConfig(key: string, device: MenuDevice): ElementConfig {
+function resolveConfig(key: string, device: MenuDevice): StoredElementConfig {
     return resolveConfigAtWidth(key, effectiveDeviceWidth.value[device]);
 }
 
@@ -494,15 +497,25 @@ function resolveConfig(key: string, device: MenuDevice): ElementConfig {
  * ancho real de edición) — se usa como línea base de deshacer/rehacer para
  * que undo/redo nunca mezcle valores ya escalados con valores ancla. Ver
  * toAnchorCoordinates/fromAnchorCoordinates. */
-function resolveAnchorConfig(key: string, device: MenuDevice): ElementConfig {
+function resolveAnchorConfig(key: string, device: MenuDevice): StoredElementConfig {
     return resolveConfigAtWidth(key, MENU_DEVICE_WIDTH[device]);
 }
 
 /** Convierte una config REAL (tal como se ve/edita, ver resolveConfig) a la
  * representación ancla que se persiste — chokepoint único que deben cruzar
  * TODAS las escrituras del inspector (updateInspectorField/commitFieldNow)
- * antes de tocar el mirror local o enviar el cambio al iframe. */
-function toAnchor(config: ElementConfig, device: MenuDevice): ElementConfig {
+ * antes de tocar el mirror local o enviar el cambio al iframe. Para V2 esto
+ * es la IDENTIDAD: % ya es resolución-independiente (no depende del ancho
+ * real de edición como sí le pasaba a px), así que no hay nada que
+ * reescalar — solo el camino V1 histórico necesita la conversión real. */
+function toAnchor(
+    config: StoredElementConfig,
+    device: MenuDevice,
+): StoredElementConfig {
+    if (isV2Config(config)) {
+        return config;
+    }
+
     return toAnchorCoordinates(
         config,
         effectiveDeviceWidth.value[device],
@@ -542,7 +555,7 @@ function hasOwnConfig(key: string, device: MenuDevice): boolean {
 
 function applyMirror(
     key: string,
-    config: ElementConfig | null,
+    config: StoredElementConfig | null,
     device: MenuDevice,
 ) {
     const parsed = parseKey(key);
@@ -607,7 +620,7 @@ function applyMirror(
 function applyChange(
     key: string,
     device: MenuDevice,
-    config: ElementConfig | null,
+    config: StoredElementConfig | null,
 ) {
     applyMirror(key, config, device);
     pulseSaving();
@@ -753,7 +766,7 @@ const selectedKind = computed<'image' | 'text' | 'container'>(() => {
     return 'container';
 });
 
-const inspectorConfig = computed<ElementConfig | null>(() =>
+const inspectorConfig = computed<StoredElementConfig | null>(() =>
     selectedKey.value
         ? resolveConfig(selectedKey.value, selectedDevice.value)
         : null,
@@ -777,8 +790,8 @@ function onSelectFromSidebar(key: string) {
 interface UndoAction {
     key: string;
     device: MenuDevice;
-    prev: ElementConfig | null;
-    next: ElementConfig | null;
+    prev: StoredElementConfig | null;
+    next: StoredElementConfig | null;
 }
 
 const undoStack = ref<UndoAction[]>([]);
@@ -839,7 +852,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 // mismo (Menu.vue en modo editable) — aquí solo espejamos el resultado para
 // que la barra lateral/inspector no queden desincronizados, y registramos
 // el deshacer.
-function onIframeCommit(key: string, config: ElementConfig) {
+function onIframeCommit(key: string, config: StoredElementConfig) {
     const device = selectedDevice.value;
     const prev = hasOwnConfig(key, device)
         ? resolveAnchorConfig(key, device)
@@ -876,11 +889,18 @@ function pulseSaving() {
 /* ------------------------------------------------------------------ */
 
 let inspectorDebounce: ReturnType<typeof setTimeout> | null = null;
-let inspectorBurstPrev: ElementConfig | null | undefined;
+let inspectorBurstPrev: StoredElementConfig | null | undefined;
 
-function updateInspectorField<K extends keyof ElementConfig>(
+/** Unión de las claves de ambas versiones — un campo geométrico (x/width…)
+ * solo tiene sentido pedirlo en la forma que YA tiene el elemento
+ * seleccionado (ver isSelectedV2/setX/setY/setWidth/setHeight más abajo);
+ * el resto de campos (rotation/z_index/opacity/locked/hidden/tipografía…)
+ * existen con el mismo nombre y tipo en las dos formas. */
+type AnyConfigField = keyof ElementConfig | keyof ElementConfigV2;
+
+function updateInspectorField<K extends AnyConfigField>(
     field: K,
-    value: ElementConfig[K],
+    value: (ElementConfig & ElementConfigV2)[K],
 ) {
     if (!selectedKey.value) {
         return;
@@ -898,7 +918,10 @@ function updateInspectorField<K extends keyof ElementConfig>(
     // nextReal está en el espacio REAL en que se ve/edita (coincide con lo
     // que muestra el inspector); se convierte UNA vez a espacio-ancla antes
     // de tocar el mirror local o enviarlo al iframe — ver toAnchor().
-    const nextReal = { ...resolveConfig(key, device), [field]: value };
+    const nextReal = {
+        ...(resolveConfig(key, device) as unknown as Record<string, unknown>),
+        [field]: value,
+    } as unknown as StoredElementConfig;
     const next = toAnchor(nextReal, device);
     applyMirror(key, next, device);
     pulseSaving();
@@ -918,9 +941,9 @@ function updateInspectorField<K extends keyof ElementConfig>(
 
 /** Cambia un campo y lo confirma de inmediato (sin lote) — para acciones
  * discretas de un solo clic (bloquear, traer al frente, centrar…). */
-function commitFieldNow<K extends keyof ElementConfig>(
+function commitFieldNow<K extends AnyConfigField>(
     field: K,
-    value: ElementConfig[K],
+    value: (ElementConfig & ElementConfigV2)[K],
 ) {
     if (!selectedKey.value) {
         return;
@@ -931,24 +954,89 @@ function commitFieldNow<K extends keyof ElementConfig>(
     const prev = hasOwnConfig(key, device)
         ? resolveAnchorConfig(key, device)
         : null;
-    const nextReal = { ...resolveConfig(key, device), [field]: value };
+    const nextReal = {
+        ...(resolveConfig(key, device) as unknown as Record<string, unknown>),
+        [field]: value,
+    } as unknown as StoredElementConfig;
     const next = toAnchor(nextReal, device);
     recordUndo({ key, device, prev, next });
     applyChange(key, device, next);
 }
 
-function toggleAutoHeight(auto: boolean) {
+/** true cuando el elemento seleccionado YA está en formato V2 (%) — decide
+ * qué nombre de campo/etiqueta usar para tamaño/posición (ver setX/setY/
+ * setWidth/setHeight y las plantillas "Ancho/Alto/X/Y"). Un elemento aún V1
+ * sigue mostrándose y editándose en px exactamente como hoy — la conversión
+ * a V2 ocurre al arrastrar/redimensionar en el lienzo (ver
+ * MenuEditableElement.vue), no todavía al escribir en el inspector. */
+const isSelectedV2 = computed(() => isV2Config(inspectorConfig.value));
+const sizeUnit = computed(() => (isSelectedV2.value ? '%' : 'px'));
+
+const widthValue = computed<number | null>(() => {
+    const c = inspectorConfig.value;
+
+    if (!c) {
+        return null;
+    }
+
+    return isV2Config(c) ? c.width_pct : c.width;
+});
+const heightValue = computed<number | null>(() => {
+    const c = inspectorConfig.value;
+
+    if (!c) {
+        return null;
+    }
+
+    return isV2Config(c) ? c.height_pct : c.height;
+});
+const xValue = computed<number>(() => {
+    const c = inspectorConfig.value;
+
+    if (!c) {
+        return 0;
+    }
+
+    return isV2Config(c) ? c.x_pct : c.x;
+});
+const yValue = computed<number>(() => {
+    const c = inspectorConfig.value;
+
+    if (!c) {
+        return 0;
+    }
+
+    return isV2Config(c) ? c.y_pct : c.y;
+});
+
+function setWidth(value: number | null) {
     updateInspectorField(
-        'height',
-        auto ? null : Math.round(inspectorConfig.value?.height ?? 200),
+        isSelectedV2.value ? 'width_pct' : 'width',
+        value as never,
     );
 }
 
-function toggleAutoWidth(auto: boolean) {
+function setHeight(value: number | null) {
     updateInspectorField(
-        'width',
-        auto ? null : Math.round(inspectorConfig.value?.width ?? 200),
+        isSelectedV2.value ? 'height_pct' : 'height',
+        value as never,
     );
+}
+
+function setX(value: number) {
+    updateInspectorField(isSelectedV2.value ? 'x_pct' : 'x', value as never);
+}
+
+function setY(value: number) {
+    updateInspectorField(isSelectedV2.value ? 'y_pct' : 'y', value as never);
+}
+
+function toggleAutoHeight(auto: boolean) {
+    setHeight(auto ? null : Math.round(heightValue.value ?? 200));
+}
+
+function toggleAutoWidth(auto: boolean) {
+    setWidth(auto ? null : Math.round(widthValue.value ?? 200));
 }
 
 /** Restaura solo los ajustes de "la imagen dentro del bloque" (encuadre) —
@@ -964,7 +1052,7 @@ function restoreImageAdjustments() {
     const prev = hasOwnConfig(key, device)
         ? resolveAnchorConfig(key, device)
         : null;
-    const nextReal: ElementConfig = {
+    const nextReal: StoredElementConfig = {
         ...resolveConfig(key, device),
         fit: null,
         inner_scale: null,
@@ -1004,7 +1092,15 @@ async function centerHorizontally() {
         rect.parent.left +
         rect.parent.width / 2 -
         (rect.element.left + rect.element.width / 2);
-    commitFieldNow('x', Math.round(current.x + dx));
+
+    if (isV2Config(current)) {
+        // % siempre contra el ANCHO del root (nunca window/iframe/zoom) —
+        // rect.parent YA es ese mismo root medido en el documento real.
+        const dxPct = (dx / rect.parent.width) * 100;
+        setX(current.x_pct + dxPct);
+    } else {
+        setX(Math.round(current.x + dx));
+    }
 }
 
 async function centerVertically() {
@@ -1023,7 +1119,50 @@ async function centerVertically() {
         rect.parent.top +
         rect.parent.height / 2 -
         (rect.element.top + rect.element.height / 2);
-    commitFieldNow('y', Math.round(current.y + dy));
+
+    if (isV2Config(current)) {
+        // También contra el ANCHO del root (ver measuredRectToNormalized) —
+        // NUNCA el alto, a propósito, conserva la escala uniforme.
+        const dyPct = (dy / rect.parent.width) * 100;
+        setY(current.y_pct + dyPct);
+    } else {
+        setY(Math.round(current.y + dy));
+    }
+}
+
+/** Fuera del lienzo horizontalmente (mismo umbral que el badge de
+ * MenuEditableElement.vue) — solo tiene sentido para un elemento YA
+ * normalizado, cuyo x_pct/width_pct SON directamente su posición real, sin
+ * necesidad de medir el DOM. */
+const isSelectedOffCanvas = computed(() => {
+    const c = inspectorConfig.value;
+
+    if (!c || !isV2Config(c) || c.position_mode !== 'normalized') {
+        return false;
+    }
+
+    const w = c.width_pct ?? 20;
+    const visibleFraction = Math.min(c.x_pct + w, 100) - Math.max(c.x_pct, 0);
+
+    return visibleFraction < w * 0.1;
+});
+
+/** Trae de vuelta un elemento normalizado que quedó fuera del lienzo —
+ * clampa x_pct para que al menos una porción (20% de su propio ancho, o del
+ * ancho por defecto si aún no tiene uno propio) quede dentro de 0-100%.
+ * Calculado puramente desde el % ya guardado, sin ninguna medición del DOM:
+ * para un elemento V2 el % ES la posición real. */
+function bringIntoView() {
+    const c = inspectorConfig.value;
+
+    if (!c || !isV2Config(c)) {
+        return;
+    }
+
+    const w = c.width_pct ?? 20;
+    const margin = Math.min(20, w);
+    const nextX = Math.min(Math.max(c.x_pct, margin - w), 100 - margin);
+    setX(nextX);
 }
 
 function restoreCurrentView() {
@@ -2084,15 +2223,17 @@ function onDecorationHandleDown(
                         <p class="tc-inspector-label">Tamaño del bloque</p>
                         <div class="grid grid-cols-2 gap-2">
                             <div class="tc-field">
-                                <label class="tc-field-label">Ancho (px)</label>
+                                <label class="tc-field-label"
+                                    >Ancho ({{ sizeUnit }})</label
+                                >
                                 <input
                                     type="number"
                                     class="tc-input"
-                                    :disabled="inspectorConfig.width === null"
-                                    :value="inspectorConfig.width ?? ''"
+                                    data-field="width"
+                                    :disabled="widthValue === null"
+                                    :value="widthValue ?? ''"
                                     @input="
-                                        updateInspectorField(
-                                            'width',
+                                        setWidth(
                                             Number(
                                                 (
                                                     $event.target as HTMLInputElement
@@ -2106,9 +2247,7 @@ function onDecorationHandleDown(
                                 >
                                     <input
                                         type="checkbox"
-                                        :checked="
-                                            inspectorConfig.width === null
-                                        "
+                                        :checked="widthValue === null"
                                         @change="
                                             toggleAutoWidth(
                                                 (
@@ -2121,15 +2260,17 @@ function onDecorationHandleDown(
                                 </label>
                             </div>
                             <div class="tc-field">
-                                <label class="tc-field-label">Alto (px)</label>
+                                <label class="tc-field-label"
+                                    >Alto ({{ sizeUnit }})</label
+                                >
                                 <input
                                     type="number"
                                     class="tc-input"
-                                    :disabled="inspectorConfig.height === null"
-                                    :value="inspectorConfig.height ?? ''"
+                                    data-field="height"
+                                    :disabled="heightValue === null"
+                                    :value="heightValue ?? ''"
                                     @input="
-                                        updateInspectorField(
-                                            'height',
+                                        setHeight(
                                             Number(
                                                 (
                                                     $event.target as HTMLInputElement
@@ -2143,9 +2284,7 @@ function onDecorationHandleDown(
                                 >
                                     <input
                                         type="checkbox"
-                                        :checked="
-                                            inspectorConfig.height === null
-                                        "
+                                        :checked="heightValue === null"
                                         @change="
                                             toggleAutoHeight(
                                                 (
@@ -2178,6 +2317,16 @@ function onDecorationHandleDown(
                                 <AlignVerticalJustifyCenter
                                     class="mr-1 inline h-3.5 w-3.5"
                                 />Centrar V
+                            </button>
+                            <button
+                                v-if="isSelectedOffCanvas"
+                                type="button"
+                                class="tc-btn-secondary text-xs tc-badge-pink"
+                                @click="bringIntoView"
+                            >
+                                <ArrowUpToLine
+                                    class="mr-1 inline h-3.5 w-3.5"
+                                />Traer a la vista
                             </button>
                             <button
                                 type="button"
@@ -2451,20 +2600,18 @@ function onDecorationHandleDown(
                         </summary>
                         <div class="grid grid-cols-2 gap-2 pt-2.5">
                             <TcInput
-                                label="X (px)"
+                                :label="`X (${sizeUnit})`"
                                 type="number"
-                                :model-value="Math.round(inspectorConfig.x)"
-                                @update:model-value="
-                                    updateInspectorField('x', Number($event))
-                                "
+                                data-field="x"
+                                :model-value="Math.round(xValue)"
+                                @update:model-value="setX(Number($event))"
                             />
                             <TcInput
-                                label="Y (px)"
+                                :label="`Y (${sizeUnit})`"
                                 type="number"
-                                :model-value="Math.round(inspectorConfig.y)"
-                                @update:model-value="
-                                    updateInspectorField('y', Number($event))
-                                "
+                                data-field="y"
+                                :model-value="Math.round(yValue)"
+                                @update:model-value="setY(Number($event))"
                             />
                             <TcInput
                                 label="Rotación (°)"

@@ -8,6 +8,7 @@ import {
     MENU_DEVICE_WIDTH,
     categoryElementFor,
     decorationElementFor,
+    isV2Config,
     itemElementFor,
     resolveMenuDevice,
     sectionHeightFor,
@@ -15,11 +16,11 @@ import {
 } from '@/components/Public/Menu/types';
 import type {
     CategoryElementKey,
-    ElementConfig,
     ItemElementKey,
     MenuCategoryData,
     MenuDecorationData,
     MenuDevice,
+    StoredElementConfig,
 } from '@/components/Public/Menu/types';
 import { useViewportWidth } from '@/composables/useBreakpoint';
 import { useMenuPreviewChild } from '@/composables/useMenuPreviewBridge';
@@ -284,7 +285,7 @@ function visibleDecorations(category: MenuCategoryData): MenuDecorationData[] {
     );
 }
 
-function resolveConfig(key: string): ElementConfig | null {
+function resolveConfig(key: string): StoredElementConfig | null {
     const parsed = parseKey(key);
 
     if (!parsed) {
@@ -324,7 +325,7 @@ function resolveConfig(key: string): ElementConfig | null {
 
 function applyLocal(
     key: string,
-    config: ElementConfig | null,
+    config: StoredElementConfig | null,
     bp: MenuDevice = currentDevice.value,
 ) {
     const parsed = parseKey(key);
@@ -384,7 +385,7 @@ function applyLocal(
 
 async function persist(
     key: string,
-    config: ElementConfig | null,
+    config: StoredElementConfig | null,
     bp: MenuDevice = currentDevice.value,
 ) {
     const parsed = parseKey(key);
@@ -479,23 +480,27 @@ function onElementSelect(key: string) {
     }
 }
 
-function onElementCommit(key: string, config: ElementConfig) {
-    // config llega en el espacio REAL de este documento (px reales del
-    // arrastre/resize dentro del iframe) — para 'desktop' ese ancho puede
-    // ser cualquier ancho real de pantalla (ver Index.vue/desktopRealWidth),
-    // nunca exactamente 1440. Se convierte UNA vez al ancla de referencia
-    // antes de guardarlo en el mirror local, persistirlo y espejarlo al
-    // editor padre — así todo lo que vive fuera de ESTE documento (mirror
-    // del padre, base de datos) queda siempre en el mismo espacio-ancla,
-    // sin importar a qué ancho real se hizo el arrastre.
-    const anchorConfig = toAnchorCoordinates(
-        config,
-        viewportWidth.value,
-        MENU_DEVICE_WIDTH[currentDevice.value],
-    );
-    applyLocal(key, anchorConfig);
-    void persist(key, anchorConfig);
-    bridge.post({ type: 'commit', elementKey: key, config: anchorConfig });
+function onElementCommit(key: string, config: StoredElementConfig) {
+    // Un commit que se origina en un gesto de MenuEditableElement (arrastre,
+    // resize, nudge) YA llega en % (V2, ver currentConfigAsV2 ahí) — el %
+    // se mide contra el ancho REAL del positioning-root en el momento del
+    // gesto, así que es resolución-independiente por diseño: no hace falta
+    // ningún reescalado "ancho real de edición -> ancla de referencia" antes
+    // de guardarlo, a diferencia del viejo formato V1 en px (donde SÍ hacía
+    // falta, porque 'desktop' podía editarse a cualquier ancho real de
+    // pantalla — ver Index.vue/desktopRealWidth). La rama V1 se conserva
+    // solo por robustez, nunca debería activarse desde MenuEditableElement
+    // tal como está hoy (todo commit interactivo ya sale en V2).
+    const toSave = isV2Config(config)
+        ? config
+        : toAnchorCoordinates(
+              config,
+              viewportWidth.value,
+              MENU_DEVICE_WIDTH[currentDevice.value],
+          );
+    applyLocal(key, toSave);
+    void persist(key, toSave);
+    bridge.post({ type: 'commit', elementKey: key, config: toSave });
 }
 </script>
 
@@ -534,15 +539,24 @@ function onElementCommit(key: string, config: ElementConfig) {
                 v-if="category.layout === 'portada'"
                 :id="`cat-${category.id}`"
             >
-                <component
-                    :is="layoutFor(category)"
-                    :category="category"
-                    :breakpoint="viewportWidth"
-                    :editable="editable"
-                    :selected-key="selectedKey"
-                    @select="onElementSelect"
-                    @commit="onElementCommit"
-                />
+                <!-- Portada no soporta adornos (nunca los tuvo) — sin
+                     .tc-mp-decoration-layer a propósito, pero SÍ necesita
+                     .tc-mp-content-layer/.tc-mp-customized-layer como
+                     cualquier otra sección, para que un elemento
+                     personalizado tenga el mismo positioning-root estable
+                     (ver useMenuPositioningRoot). -->
+                <div class="tc-mp-content-layer">
+                    <component
+                        :is="layoutFor(category)"
+                        :category="category"
+                        :breakpoint="viewportWidth"
+                        :editable="editable"
+                        :selected-key="selectedKey"
+                        @select="onElementSelect"
+                        @commit="onElementCommit"
+                    />
+                </div>
+                <div class="tc-mp-customized-layer" />
             </section>
             <section
                 v-else
@@ -597,6 +611,15 @@ function onElementCommit(key: string, config: ElementConfig) {
                         @commit="onElementCommit"
                     />
                 </div>
+
+                <!-- Tercera capa hermana: elementos personalizados
+                     (position_mode:'normalized', ver ElementConfigV2)
+                     Teleported aquí desde MenuEditableElement.vue — pinta
+                     por encima de los adornos (ver .tc-mp-customized-layer
+                     en app.css). Empieza vacía; nunca se referencia
+                     directamente desde este template, solo por selector
+                     dentro de la sección (ver useMenuPositioningRoot). -->
+                <div class="tc-mp-customized-layer" />
             </section>
         </template>
 

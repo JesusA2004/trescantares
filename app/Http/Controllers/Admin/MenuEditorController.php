@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\SiteSetting;
+use App\Support\MenuElementConfigRules;
 use App\Support\MenuLayoutZones;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -90,8 +91,11 @@ class MenuEditorController extends Controller
         }
 
         $data = $request->validate(array_merge(
-            ['element' => ['required', Rule::in(self::ITEM_ELEMENTS)]],
-            $this->configRules(),
+            [
+                'element' => ['required', Rule::in(self::ITEM_ELEMENTS)],
+                'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
+            ],
+            MenuElementConfigRules::forConfig($request->input('config')),
         ));
 
         $settings = $menuItem->layout_settings ?? [];
@@ -112,8 +116,11 @@ class MenuEditorController extends Controller
         }
 
         $data = $request->validate(array_merge(
-            ['element' => ['required', Rule::in(self::CATEGORY_ELEMENTS)]],
-            $this->configRules(),
+            [
+                'element' => ['required', Rule::in(self::CATEGORY_ELEMENTS)],
+                'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
+            ],
+            MenuElementConfigRules::forConfig($request->input('config')),
         ));
 
         $settings = $category->visual_settings ?? [];
@@ -226,32 +233,5 @@ class MenuEditorController extends Controller
         Cache::flush();
 
         return response()->json(['settings' => $freshSettings()]);
-    }
-
-    private function configRules(): array
-    {
-        return [
-            'breakpoint' => ['required', Rule::in(self::BREAKPOINTS)],
-            'config' => 'required|array',
-            'config.x' => 'required|numeric|min:-20000|max:20000',
-            'config.y' => 'required|numeric|min:-20000|max:20000',
-            'config.width' => 'nullable|numeric|min:1|max:20000',
-            'config.height' => 'nullable|numeric|min:1|max:20000',
-            'config.scale' => 'required|numeric|min:0.1|max:5',
-            'config.rotation' => 'required|numeric|min:-360|max:360',
-            'config.z_index' => 'required|integer|min:0|max:999',
-            'config.locked' => 'nullable|boolean',
-            'config.hidden' => 'nullable|boolean',
-            'config.font_size' => 'nullable|numeric|min:1|max:400',
-            'config.line_height' => 'nullable|numeric|min:0.1|max:10',
-            'config.letter_spacing' => 'nullable|numeric|min:-20|max:100',
-            'config.align' => ['nullable', Rule::in(['left', 'center', 'right'])],
-            'config.max_width' => 'nullable|numeric|min:1|max:20000',
-            'config.color' => 'nullable|string|max:30',
-            'config.fit' => ['nullable', Rule::in(['contain', 'cover'])],
-            'config.object_x' => 'nullable|numeric|min:0|max:100',
-            'config.object_y' => 'nullable|numeric|min:0|max:100',
-            'config.inner_scale' => 'nullable|numeric|min:0.1|max:5',
-        ];
     }
 }

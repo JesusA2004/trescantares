@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import MenuEditableElement from './MenuEditableElement.vue';
-import type { ElementConfig } from './types';
+import type { StoredElementConfig } from './types';
 
 const props = withDefaults(
     defineProps<{
         elementKey: string;
         label: string;
-        config: ElementConfig;
+        config: StoredElementConfig;
         editable?: boolean;
         selectedKey?: string | null;
         as?: string;
@@ -21,7 +21,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, config: ElementConfig];
+    commit: [key: string, config: StoredElementConfig];
 }>();
 
 const textStyle = computed(() => {

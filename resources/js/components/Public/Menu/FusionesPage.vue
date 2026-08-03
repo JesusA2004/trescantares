@@ -5,7 +5,7 @@ import MenuPageFrame from './MenuPageFrame.vue';
 import MenuPriceVisual from './MenuPriceVisual.vue';
 import MenuTextVisual from './MenuTextVisual.vue';
 import { categoryElementFor, itemElementFor } from './types';
-import type { ElementConfig, MenuBreakpoint, MenuCategoryData } from './types';
+import type { StoredElementConfig, MenuBreakpoint, MenuCategoryData } from './types';
 
 withDefaults(
     defineProps<{
@@ -24,14 +24,14 @@ withDefaults(
 
 const emit = defineEmits<{
     select: [key: string];
-    commit: [key: string, config: ElementConfig];
+    commit: [key: string, config: StoredElementConfig];
 }>();
 
 function onSelect(key: string) {
     emit('select', key);
 }
 
-function onCommit(key: string, config: ElementConfig) {
+function onCommit(key: string, config: StoredElementConfig) {
     emit('commit', key, config);
 }
 </script>

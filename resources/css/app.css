@@ -7111,6 +7111,42 @@ body,
     pointer-events: none;
 }
 
+/* Tercera capa hermana de .tc-mp-content-layer/.tc-mp-decoration-layer —
+   hospeda los elementos que el admin reposicionó a coordenadas normalizadas
+   (position_mode:'normalized', ver ElementConfigV2/MenuEditableElement.vue),
+   Teleported fuera de su padre natural en flujo. Mismo truco de origen que
+   .tc-mp-decoration-layer (position:absolute + inset:0 = esquina superior
+   izquierda de la caja de relleno de .tc-mp-page), así que x_pct/y_pct se
+   miden y renderizan contra el MISMO root sin importar en qué capa termine
+   viviendo el elemento.
+
+   z-index:2, POR ENCIMA de decoraciones (1) y contenido (0): las decoraciones
+   son adorno ambiental de fondo; un elemento normalizado es contenido en
+   primer plano que el admin colocó a propósito en un punto exacto — debe
+   verse ahí, sin que una flor/curva ambiental que caiga en el mismo punto lo
+   tape. isolation:isolate espeja a .tc-mp-content-layer: un z_index alto
+   ("Al frente") en un elemento normalizado queda contenido aquí dentro, sin
+   tener que compararse numéricamente contra el z-index interno de las otras
+   dos capas.
+
+   Al ser HERMANA de .tc-mp-content-layer (no descendiente), cualquier
+   elemento Teleported aquí deja de tener como ancestro los contenedores flex
+   que cambian de fila a columna en ciertos anchos (.tc-mp-alt-row,
+   .tc-mp-dessert-row, .tc-mp-fusion-row, .tc-mp-birria-sides, etc.) — ningún
+   media query de flex-direction/grid puede alcanzarlo, la misma razón por la
+   que .tc-mp-decoration-layer ya es inmune hoy. */
+.tc-mp-customized-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    isolation: isolate;
+    pointer-events: none;
+}
+
+.tc-mp--editable .tc-mp-customized-layer .tc-mev {
+    pointer-events: auto;
+}
+
 /* ---- Adornos de sección (flores, curvas, texturas… nunca pertenecen a un
    platillo) ----
    MenuEditableElement ya fija position:absolute de forma PERMANENTE para
