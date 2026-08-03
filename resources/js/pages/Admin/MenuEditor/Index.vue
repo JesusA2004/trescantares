@@ -790,6 +790,63 @@ const selectedKind = computed<'image' | 'text' | 'container'>(() => {
     return 'container';
 });
 
+/** true si el elemento seleccionado es el tagline (texto) de UNA categoría —
+ * el admin pidió poder ELIMINARLO por completo (no solo ocultarlo por
+ * vista) para poner en su lugar un adorno con su propio texto de imagen.
+ * Solo tagline/tagline_sub: título/subtítulo no se pidieron y ya tienen su
+ * propio flujo de edición en la pantalla de Categorías. */
+const selectedCategoryTaglineField = computed<'tagline' | 'tagline_sub' | null>(() => {
+    const parsed = selectedKey.value ? parseKey(selectedKey.value) : null;
+
+    if (parsed?.kind !== 'category') {
+        return null;
+    }
+
+    return parsed.element === 'tagline' || parsed.element === 'tagline_sub'
+        ? (parsed.element as 'tagline' | 'tagline_sub')
+        : null;
+});
+
+async function deleteSelectedTagline() {
+    const field = selectedCategoryTaglineField.value;
+    const parsed = selectedKey.value ? parseKey(selectedKey.value) : null;
+
+    if (!field || parsed?.kind !== 'category') {
+        return;
+    }
+
+    const category = findCategoryGlobal(parsed.id);
+
+    if (!category) {
+        return;
+    }
+
+    const confirmed = await notify.confirmDanger(
+        '¿Eliminar este tagline?',
+        'El texto se borra por completo (no solo se oculta) — para recuperarlo habría que volver a escribirlo. Después puedes agregar un adorno con tu propio texto en su lugar.',
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    (category as unknown as Record<string, unknown>)[field] = null;
+
+    if (selectedKey.value === `category-${category.id}:${field}`) {
+        selectedKey.value = null;
+    }
+
+    try {
+        await patchJson(`/admin/menu-editor/categories/${category.id}/quick`, {
+            [field]: null,
+        });
+        scheduleIframeReload();
+        notify.success('Tagline eliminado.');
+    } catch {
+        notify.error('No se pudo eliminar el tagline.');
+    }
+}
+
 const inspectorConfig = computed<StoredElementConfig | null>(() =>
     selectedKey.value
         ? resolveConfig(selectedKey.value, selectedDevice.value)
@@ -2491,6 +2548,16 @@ function onDecorationHandleDown(
                                 "
                             />
                         </div>
+
+                        <button
+                            v-if="selectedCategoryTaglineField"
+                            type="button"
+                            class="tc-btn-danger w-full justify-center text-xs"
+                            @click="deleteSelectedTagline"
+                        >
+                            <Trash2 class="h-3.5 w-3.5" />Eliminar este
+                            tagline
+                        </button>
                     </div>
 
                     <div

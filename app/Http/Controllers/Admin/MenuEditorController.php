@@ -160,6 +160,31 @@ class MenuEditorController extends Controller
         return response()->json(['section_height' => $category->fresh()->section_height]);
     }
 
+    /**
+     * Edición rápida de texto de CATEGORÍA desde el editor visual — hoy solo
+     * cubre tagline/tagline_sub: el admin pidió poder ELIMINAR un tagline
+     * que no quiere (para poner en su lugar un adorno con su propio texto
+     * de imagen) sin salir del editor a la pantalla de Categorías. null
+     * borra el texto por completo (no es un "ocultar por vista" como
+     * config.hidden — ver ElementConfig/DISCRETE_FIELDS en types.ts, esto
+     * es contenido real de la categoría, igual que updateItemQuick con los
+     * campos de un platillo). Al quedar en null, categoryElementKeysFor()
+     * (types.ts) deja de listar la clave automáticamente — mismo mecanismo
+     * que ya decide title vs title_image, no hace falta un flag aparte.
+     */
+    public function updateCategoryQuick(Request $request, MenuCategory $category): JsonResponse
+    {
+        $data = $request->validate([
+            'tagline' => 'sometimes|nullable|string|max:255',
+            'tagline_sub' => 'sometimes|nullable|string|max:255',
+        ]);
+
+        $category->update($data);
+        Cache::flush();
+
+        return response()->json($category->fresh()->toPublicArray());
+    }
+
     public function updateItemQuick(Request $request, MenuItem $menuItem): JsonResponse
     {
         $layout = MenuCategory::find($request->input('menu_category_id', $menuItem->menu_category_id))?->layout;

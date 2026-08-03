@@ -66,6 +66,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'prevent
         ->middleware(['permission:categories.update|super-admin', 'module:categories']);
     Route::patch('menu-editor/categories/{category}/section-height', [MenuEditorController::class, 'updateCategorySectionHeight'])->name('menu-editor.categories.section-height')
         ->middleware(['permission:categories.update|super-admin', 'module:categories']);
+    Route::patch('menu-editor/categories/{category}/quick', [MenuEditorController::class, 'updateCategoryQuick'])->name('menu-editor.categories.quick')
+        ->middleware(['permission:categories.update|super-admin', 'module:categories']);
 
     Route::post('menu-decorations', [MenuDecorationController::class, 'store'])->name('menu-decorations.store')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
