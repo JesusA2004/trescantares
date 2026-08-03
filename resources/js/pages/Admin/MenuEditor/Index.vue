@@ -234,6 +234,30 @@ const bridge = useMenuPreviewParent(() => iframeEl.value, {
     onCommit: (key, config) => {
         onIframeCommit(key, config);
     },
+    onSectionHeightCommit: (categoryId, breakpoint, height) => {
+        // La manija de arrastre dentro del iframe (Menu.vue,
+        // startSectionResize/persistSectionHeight) ya hizo el PATCH ella
+        // misma — esto SOLO sincroniza el espejo local de categories para
+        // que el campo numérico "Alto (px)" del inspector (estado vacío,
+        // ver sectionHeightForCurrentDevice) no muestre un valor viejo si
+        // se abre después de arrastrar. Sin scheduleIframeReload: el propio
+        // iframe ya se actualizó en vivo durante el arrastre.
+        const category = findCategoryGlobal(categoryId);
+
+        if (!category) {
+            return;
+        }
+
+        const heights = { ...(category.section_height ?? {}) };
+
+        if (height === null) {
+            delete heights[breakpoint];
+        } else {
+            heights[breakpoint] = height;
+        }
+
+        category.section_height = Object.keys(heights).length ? heights : null;
+    },
 });
 
 let reloadTimer: ReturnType<typeof setTimeout> | null = null;

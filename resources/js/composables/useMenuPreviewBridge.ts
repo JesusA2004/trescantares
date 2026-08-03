@@ -23,13 +23,26 @@ export interface RectData {
 
 export interface PreviewToEditorMessage {
     source: 'tc-menu-preview';
-    type: 'ready' | 'select' | 'commit' | 'deselect' | 'rect';
+    type:
+        | 'ready'
+        | 'select'
+        | 'commit'
+        | 'deselect'
+        | 'rect'
+        | 'sectionHeightCommit';
     elementKey?: string;
     label?: string;
     config?: StoredElementConfig;
     breakpoint?: MenuDevice;
     requestId?: string;
     rect?: { element: RectData; parent: RectData } | null;
+    /** Solo para type:'sectionHeightCommit' — la manija de arrastre del alto
+     * de sección (Menu.vue) ya persistió el cambio ella misma (PATCH directo
+     * al endpoint, mismo mecanismo que Index.vue::updateSectionHeight); este
+     * mensaje solo sincroniza el espejo local del padre para que el campo
+     * numérico del inspector no quede desactualizado si se abre después. */
+    categoryId?: number;
+    sectionHeight?: number | null;
 }
 
 export interface EditorToPreviewMessage {
@@ -131,6 +144,11 @@ export function useMenuPreviewParent(
         onSelect?: (key: string, label: string, config: StoredElementConfig) => void;
         onCommit?: (key: string, config: StoredElementConfig) => void;
         onDeselect?: () => void;
+        onSectionHeightCommit?: (
+            categoryId: number,
+            breakpoint: MenuDevice,
+            height: number | null,
+        ) => void;
     },
 ) {
     const pendingRects = new Map<
@@ -181,6 +199,18 @@ export function useMenuPreviewParent(
 
         if (data.type === 'deselect') {
             handlers.onDeselect?.();
+        }
+
+        if (
+            data.type === 'sectionHeightCommit' &&
+            data.categoryId !== undefined &&
+            data.breakpoint
+        ) {
+            handlers.onSectionHeightCommit?.(
+                data.categoryId,
+                data.breakpoint,
+                data.sectionHeight ?? null,
+            );
         }
 
         if (data.type === 'rect' && data.requestId) {

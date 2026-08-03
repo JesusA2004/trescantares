@@ -6861,6 +6861,21 @@ body,
        de otra sección vecina; section-root es el bloque de referencia único
        para .tc-mp-content-layer/.tc-mp-decoration-layer de aquí abajo. */
     isolation: isolate;
+    /* display:flex column: cuando el admin fuerza un alto manual (min-height
+       más abajo, ver Menu.vue :style de esta misma sección), sin esto la
+       manija de arrastre solo agranda la CAJA de la sección pero el marco
+       decorativo de adentro (.tc-mp-frame — borde + fondo repetido +
+       adornos de esquina, ver MenuPageFrame.vue) se queda en su alto
+       natural de contenido, dejando un hueco vacío SIN marco al final de la
+       sección — justo el bug reportado ("el bg de abajo, el que tiene
+       márgenes, no cambia de tamaño"). flex-direction:column +
+       .tc-mp-content-layer{flex:1 1 auto} (arriba) + .tc-mp-frame{flex:1 1
+       auto} (más abajo) encadenan el estiramiento hasta el marco mismo. Sin
+       alto forzado (min-height:auto, el caso normal), esto es un no-op
+       visual: un solo hijo en flex-column sin exceso de espacio conserva su
+       alto de contenido de siempre. */
+    display: flex;
+    flex-direction: column;
 }
 
 .tc-mp-page + .tc-mp-page {
@@ -6898,6 +6913,23 @@ body,
     background-image: url('/storage/menu/design/fondo.png');
     background-repeat: repeat;
     background-size: 700px auto;
+    /* flex ITEM de .tc-mp-content-layer (flex column, ver arriba) — se
+       estira para llenar el alto forzado manualmente de la sección (si lo
+       hay). TAMBIÉN flex CONTAINER (column) de su único hijo real
+       (.tc-mp-frame-inner) — bug real encontrado aquí: un primer intento
+       con frame-inner en min-height:100% (porcentaje) NO se estiraba pese a
+       que este elemento SÍ tenía ya un alto final definido (confirmado con
+       getBoundingClientRect: frame creciendo de 3911px a 4804px, pero
+       frame-inner clavado en 1220px) — encadenar flex:1 1 auto en cada
+       nivel (igual patrón que .tc-mp-page -> .tc-mp-content-layer, que SÍ
+       funciona) es más fiable que depender de resolución de porcentaje
+       contra un alto que viene de flexbox. display:flex aquí NO cambia el
+       flujo interno de frame-inner (sigue siendo un solo hijo, ver abajo),
+       así que el contenido real de cada plantilla (dentro de frame-inner)
+       sigue en bloque normal sin alterar colapso de márgenes. */
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
 }
 
 @media (min-width: 1440px) {
@@ -6911,6 +6943,15 @@ body,
     border: 1.5px solid var(--tc-blue);
     padding: clamp(28px, 4vw, 34px) clamp(20px, 4vw, 32px)
         clamp(34px, 4vw, 42px);
+    /* flex ITEM de .tc-mp-frame (flex column, ver arriba) — ver comentario
+       ahí sobre por qué flex:1 1 auto (no min-height:100%, que no se
+       estiraba de forma fiable). El propio .tc-mp-frame-inner NO es
+       display:flex (sigue siendo su `display` normal, block) — su
+       contenido real (título, fotos, platillos… inyectado vía <slot> en
+       MenuPageFrame.vue) sigue en flujo de bloque normal exactamente como
+       antes, sin alterar el colapso de márgenes verticales entre esos
+       elementos en ninguna de las 10 plantillas. */
+    flex: 1 1 auto;
 }
 
 @media (min-width: 1024px) {
@@ -7099,6 +7140,23 @@ body,
     position: relative;
     z-index: 0;
     isolation: isolate;
+    /* Dos roles a la vez, cada uno necesita SU PROPIA declaración flex (bug
+       real encontrado aquí mismo: display:flex sin flex-grow no alcanza):
+       (1) flex ITEM de .tc-mp-page (flex column, ver más abajo) — flex:1 1
+       auto es lo que de verdad lo estira para llenar un alto de sección
+       forzado a mano; sin esto se queda en su alto de contenido pese a que
+       el padre sí creció (confirmado con getComputedStyle: flex-grow
+       quedaba en "0" por defecto). (2) flex CONTAINER column de su propio
+       hijo real (el layout de la categoría, cuya raíz SIEMPRE es
+       MenuPageFrame — .tc-mp-customized-layer es hermana pero absoluta,
+       fuera de flujo, no cuenta como flex item), para que ESE hijo pueda a
+       su vez estirarse con flex:1 (ver .tc-mp-frame). Sin alto forzado
+       (caso de siempre), esto es un no-op visual: un solo item en
+       flex-column sin exceso de espacio no se estira más allá de su propio
+       contenido. */
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
 }
 
 /* position:absolute + inset:0 reproduce EXACTAMENTE el mismo punto de
@@ -7182,6 +7240,42 @@ body,
     inset: 0;
     z-index: 3;
     pointer-events: none;
+}
+
+/* Manija de arrastre del alto MANUAL de una sección completa ("hoja") — no
+   es un elemento, así que no vive dentro de MenuEditableElement.vue como el
+   resto de manijas; vive directamente en .tc-mp-editor-interaction-layer
+   (ver Menu.vue, startSectionResize). Franja de todo el ancho al pie de la
+   sección, mitad dentro/mitad fuera (igual criterio que
+   .tc-mev-resize-hitarea: -6px de desborde, área táctil generosa sin invadir
+   demasiado el contenido de la sección de abajo). pointer-events:auto
+   necesario porque la capa contenedora lo tiene en none. */
+.tc-mp-section-resize-handle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: ns-resize;
+    touch-action: none;
+    pointer-events: auto;
+}
+
+.tc-mp-section-resize-grip {
+    width: 72px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--tc-blue, #144e8f);
+    opacity: 0.35;
+    transition: opacity 0.15s ease;
+}
+
+.tc-mp-section-resize-handle:hover .tc-mp-section-resize-grip,
+.tc-mp-section-resize-handle:active .tc-mp-section-resize-grip {
+    opacity: 0.85;
 }
 
 /* ---- Adornos de sección (flores, curvas, texturas… nunca pertenecen a un

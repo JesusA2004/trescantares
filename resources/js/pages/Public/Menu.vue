@@ -512,6 +512,136 @@ function onElementCommit(key: string, config: StoredElementConfig) {
     void persist(key, toSave);
     bridge.post({ type: 'commit', elementKey: key, config: toSave });
 }
+
+/* ------------------------------------------------------------------ */
+/* Manija de arrastre para el alto manual de una SECCIÓN completa        */
+/* (no de un elemento) — feature pedida explícitamente por el admin:     */
+/* antes solo se podía fijar el alto tecleando un número en el estado    */
+/* vacío del inspector (selección ninguna + categoría activa), que no    */
+/* era descubrible. Esta manija vive directamente en el lienzo, al pie   */
+/* de cada sección ("hoja"), igual que la manija de esquina de una       */
+/* imagen — mismo lenguaje visual/gestual, pero solo en el eje vertical  */
+/* y sobre .tc-mp-editor-interaction-layer (capa reservada para chrome   */
+/* del editor, z-index por encima de todo, ver esa capa en el template). */
+/* ------------------------------------------------------------------ */
+
+const draggingSectionId = ref<number | null>(null);
+const draggingSectionHeight = ref(0);
+
+/** Alto en vivo de la sección que se está arrastrando ahora mismo — el
+ * resto de secciones sigue usando sectionHeightFor() normal. Igual que
+ * liveWidth/liveHeight en MenuEditableElement.vue: el DOM se actualiza vía
+ * este computed reactivo, nunca escribiendo estilos a mano fuera de Vue. */
+function liveOrStoredSectionHeight(category: MenuCategoryData): number | null {
+    if (draggingSectionId.value === category.id) {
+        return draggingSectionHeight.value;
+    }
+
+    return sectionHeightFor(category, viewportWidth.value);
+}
+
+async function persistSectionHeight(category: MenuCategoryData, height: number) {
+    const device = currentDevice.value;
+    const heights = { ...(category.section_height ?? {}) };
+    heights[device] = height;
+    category.section_height = heights;
+
+    try {
+        await patchJson(
+            `/admin/menu-editor/categories/${category.id}/section-height`,
+            { breakpoint: device, height },
+        );
+    } catch {
+        // Sin toast aquí a propósito: este componente no tiene acceso a
+        // useNotify() del admin (vive dentro del iframe) — un fallo de red
+        // es indistinguible en la práctica de cualquier otro commit fallido
+        // de elemento en este mismo archivo, que tampoco notifica.
+    }
+
+    bridge.post({
+        type: 'sectionHeightCommit',
+        categoryId: category.id,
+        breakpoint: device,
+        sectionHeight: height,
+    });
+}
+
+function startSectionResize(event: PointerEvent, category: MenuCategoryData) {
+    if (!props.editable) {
+        return;
+    }
+
+    // Regla igual que MenuEditableElement: ignora botón secundario/puntero
+    // no primario.
+    if (event.button !== 0 || !event.isPrimary) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const pointerId = event.pointerId;
+    const sectionEl = document.getElementById(`cat-${category.id}`);
+    const startHeight = sectionEl?.getBoundingClientRect().height ?? 400;
+    const startY = event.clientY;
+
+    try {
+        (event.currentTarget as Element | null)?.setPointerCapture?.(pointerId);
+    } catch {
+        // Ver comentario equivalente en MenuEditableElement.vue.
+    }
+
+    draggingSectionId.value = category.id;
+    draggingSectionHeight.value = startHeight;
+
+    function move(e: PointerEvent) {
+        if (e.pointerId !== pointerId) {
+            return;
+        }
+
+        // Piso de 100px — evita colapsar la sección a un punto inútil por
+        // un arrastre accidental hacia arriba; nunca es un tope real (el
+        // contenido sigue pudiendo salirse, min-height nunca recorta).
+        draggingSectionHeight.value = Math.max(
+            100,
+            startHeight + (e.clientY - startY),
+        );
+    }
+
+    function finish(e: PointerEvent, shouldCommit: boolean) {
+        if (e.pointerId !== pointerId) {
+            return;
+        }
+
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', cancel);
+
+        try {
+            (event.currentTarget as Element | null)?.releasePointerCapture?.(
+                pointerId,
+            );
+        } catch {
+            // Ver comentario equivalente en MenuEditableElement.vue.
+        }
+
+        const finalHeight = Math.round(draggingSectionHeight.value);
+        draggingSectionId.value = null;
+
+        // pointercancel descarta sin guardar, igual que cualquier otro
+        // gesto de este editor.
+        if (shouldCommit) {
+            void persistSectionHeight(category, finalHeight);
+        }
+    }
+
+    const up = (e: PointerEvent) => finish(e, true);
+    const cancel = (e: PointerEvent) => finish(e, false);
+
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+}
 </script>
 
 <template>
@@ -576,8 +706,8 @@ function onElementCommit(key: string, config: StoredElementConfig) {
                 :id="`cat-${category.id}`"
                 class="tc-mp-page"
                 :style="{
-                    minHeight: sectionHeightFor(category, viewportWidth)
-                        ? `${sectionHeightFor(category, viewportWidth)}px`
+                    minHeight: liveOrStoredSectionHeight(category)
+                        ? `${liveOrStoredSectionHeight(category)}px`
                         : undefined,
                 }"
             >
@@ -653,13 +783,22 @@ function onElementCommit(key: string, config: StoredElementConfig) {
                 <!-- Cuarta capa, reservada para la interfaz del editor
                      (contornos/manijas) — siempre por encima de adornos, sin
                      alterar el apilamiento real de ningún elemento (ver
-                     app.css). Vacía por defecto: hoy el contorno de selección
-                     y la manija de resize siguen viviendo dentro del propio
-                     elemento (ver MenuEditableElement.vue), así que esta capa
-                     no tiene aún contenido propio salvo que un adorno quede
-                     literalmente encima de la manija de un elemento
-                     seleccionado — caso límite no cubierto en este cambio. -->
-                <div class="tc-mp-editor-interaction-layer" />
+                     app.css). Contorno de selección y manija de resize de UN
+                     elemento siguen viviendo dentro de él (ver
+                     MenuEditableElement.vue) — la única manija que vive aquí
+                     es la del alto de la SECCIÓN completa (no es un
+                     elemento), al pie de la sección, visible solo en modo
+                     editable. -->
+                <div class="tc-mp-editor-interaction-layer">
+                    <div
+                        v-if="editable"
+                        class="tc-mp-section-resize-handle"
+                        title="Arrastra para cambiar el alto de esta sección"
+                        @pointerdown="startSectionResize($event, category)"
+                    >
+                        <span class="tc-mp-section-resize-grip" aria-hidden="true" />
+                    </div>
+                </div>
             </section>
         </template>
 
