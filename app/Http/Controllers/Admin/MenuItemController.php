@@ -103,6 +103,18 @@ class MenuItemController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->storeFromRequest($request);
+
+        return redirect()->route('admin.menu-items.index')
+            ->with('flash', ['toast' => ['type' => 'success', 'message' => 'Platillo creado correctamente.']]);
+    }
+
+    /** Misma validación/creación que store(), pero devuelve el modelo en vez
+     * de un redirect — reutilizada por MenuEditorController::storeItem() (el
+     * modal rápido "Agregar platillo" del editor visual) para no duplicar
+     * las reglas de negocio en dos controladores. */
+    public function storeFromRequest(Request $request): MenuItem
+    {
         $data = $request->validate($this->rules($request));
 
         if ($request->hasFile('image')) {
@@ -113,7 +125,7 @@ class MenuItemController extends Controller
         unset($data['image_library_path']);
 
         $data['slug'] = Str::slug($data['name']);
-        $data['sort_order'] = $data['sort_order'] ?? 0;
+        $data['sort_order'] = $data['sort_order'] ?? $this->nextSortOrder($data['menu_category_id']);
 
         $item = MenuItem::create($data);
 
@@ -132,8 +144,7 @@ class MenuItemController extends Controller
 
         Cache::flush();
 
-        return redirect()->route('admin.menu-items.index')
-            ->with('flash', ['toast' => ['type' => 'success', 'message' => 'Platillo creado correctamente.']]);
+        return $item;
     }
 
     public function edit(MenuItem $menuItem): Response
@@ -170,7 +181,7 @@ class MenuItemController extends Controller
 
     public function update(Request $request, MenuItem $menuItem): RedirectResponse
     {
-        $data = $request->validate($this->rules($request));
+        $data = $request->validate($this->rules($request, $menuItem));
 
         if ($request->hasFile('image') || $request->filled('image_library_path')) {
             $newPath = $request->hasFile('image')
@@ -199,7 +210,12 @@ class MenuItemController extends Controller
             $data['caption_image'] = $this->storeUploadedImage($request->file('caption_image'));
         }
 
-        $data['sort_order'] = $data['sort_order'] ?? 0;
+        // Edit.vue nunca envía `sort_order` (el orden se controla arrastrando
+        // en el listado, ver Create.vue) — sin este fallback al valor YA
+        // guardado, cada edición normal (nombre/precio/descripción) reseteaba
+        // en silencio el orden del platillo a 0, empujándolo al frente de su
+        // categoría/zona cada vez que se guardaba el formulario completo.
+        $data['sort_order'] = $data['sort_order'] ?? $menuItem->sort_order;
         $menuItem->update($data);
 
         if (! empty($data['delete_image_ids'])) {
@@ -282,7 +298,15 @@ class MenuItemController extends Controller
         return back();
     }
 
-    private function rules(Request $request): array
+    /** Siguiente `sort_order` disponible dentro de la categoría — nunca 0 fijo,
+     * para que un platillo nuevo se agregue AL FINAL sin empatar con (ni
+     * desordenar) los que ya existían. */
+    private function nextSortOrder(int $menuCategoryId): int
+    {
+        return ((int) MenuItem::where('menu_category_id', $menuCategoryId)->max('sort_order')) + 1;
+    }
+
+    private function rules(Request $request, ?MenuItem $menuItem = null): array
     {
         $layout = MenuCategory::find($request->input('menu_category_id'))?->layout;
         $allowedZones = MenuLayoutZones::valuesFor($layout);
@@ -290,7 +314,30 @@ class MenuItemController extends Controller
         return [
             'menu_category_id' => 'required|exists:menu_categories,id',
             'zone' => $allowedZones !== [] ? ['nullable', Rule::in($allowedZones)] : 'nullable|string|max:40',
-            'name' => 'required|string|max:255',
+            'name' => [
+                'required', 'string', 'max:255',
+                // `slug` (derivado de `name`) tiene un índice ÚNICO a nivel de
+                // BD (ver migración 2025_01_01_000002) que nunca se validaba
+                // aquí — dos platillos con el mismo nombre (en cualquier
+                // categoría/zona) hacían que MenuItem::create()/update()
+                // lanzaran una UniqueConstraintViolationException sin
+                // capturar (500 genérico) en vez de un 422 con el campo
+                // exacto. Esto NO tiene relación con `zone`: se confirmó
+                // reproduciendo el 500 con dos categorías distintas y el
+                // mismo `name`.
+                function (string $attribute, mixed $value, \Closure $fail) use ($menuItem) {
+                    $slug = Str::slug($value);
+                    $query = MenuItem::where('slug', $slug);
+
+                    if ($menuItem) {
+                        $query->whereKeyNot($menuItem->id);
+                    }
+
+                    if ($query->exists()) {
+                        $fail('Ya existe un platillo con un nombre muy parecido a "'.$value.'". Usa un nombre distinto para diferenciarlo.');
+                    }
+                },
+            ],
             'description' => 'nullable|string',
             'badge' => 'nullable|string|max:60',
             'choice_label' => 'nullable|string|max:40',

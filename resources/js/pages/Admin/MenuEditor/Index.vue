@@ -44,6 +44,8 @@ import {
     watch,
 } from 'vue';
 import AdminPageHeader from '@/components/admin/AdminPageHeader.vue';
+import AddCategoryModal from '@/pages/Admin/MenuEditor/AddCategoryModal.vue';
+import AddItemModal from '@/pages/Admin/MenuEditor/AddItemModal.vue';
 import {
     CATEGORY_ELEMENT_LABELS,
     ITEM_ELEMENT_LABELS,
@@ -81,6 +83,7 @@ import { zonesForLayout } from '@/pages/Admin/MenuItems/zones';
 
 const props = defineProps<{
     categories: MenuCategoryData[];
+    layouts: string[];
 }>();
 
 // Copia local: refleja de inmediato lo que el usuario hace (arrastrar dentro
@@ -344,6 +347,19 @@ const visibleCategories = computed(() => {
     );
 });
 
+/* ------------------------------------------------------------------ */
+/* Nueva sección — modal rápido sin salir del editor                    */
+/* ------------------------------------------------------------------ */
+
+const showAddCategoryModal = ref(false);
+
+function onCategoryCreated(category: MenuCategoryData) {
+    categories.push(category);
+    showAddCategoryModal.value = false;
+    activeCategoryId.value = category.id;
+    notify.success(`"${category.name}" creada — ya puedes agregarle platillos.`);
+}
+
 const visibleItems = computed(() => {
     if (!activeCategory.value) {
         return [];
@@ -359,6 +375,32 @@ const visibleItems = computed(() => {
         normalize(item.name).includes(q),
     );
 });
+
+/* ------------------------------------------------------------------ */
+/* Agregar platillo — modal rápido sin salir del editor                 */
+/* ------------------------------------------------------------------ */
+
+const showAddItemModal = ref(false);
+
+/** El backend ya garantiza que el platillo nuevo se agrega al final (nunca
+ * reemplaza ni reordena los existentes, ver MenuItemController::
+ * nextSortOrder) — aquí solo se refleja localmente: se agrega a la lista de
+ * la categoría activa, se selecciona automáticamente, y se recarga el
+ * lienzo (iframe) para que aparezca de inmediato sin recargar la página
+ * completa ni perder sección/scroll/vista Móvil-Tablet-Escritorio. */
+function onItemCreated(item: MenuItemData) {
+    if (!activeCategory.value) {
+        return;
+    }
+
+    activeCategory.value.items = [...activeCategory.value.items, item];
+    showAddItemModal.value = false;
+    selectedKey.value = `item-${item.id}:container`;
+    scheduleIframeReload();
+    notify.success(
+        `"${item.name}" agregado — ya puedes moverlo/configurarlo.`,
+    );
+}
 
 function goToIndex(idx: number) {
     if (idx < 0 || idx >= categories.length) {
@@ -1285,6 +1327,42 @@ async function restoreAllViews() {
     notify.success('Se restauraron las tres vistas.');
 }
 
+/** El checkbox "Ocultar solo en {vista}" solo escribe `hidden` en la vista
+ * ACTIVA — si el elemento ya tenía anclas propias en las otras dos (p. ej.
+ * se movió/redimensionó alguna vez ahí), ocultarlo en Móvil lo deja visible
+ * en Tablet/Escritorio, que fue justo el reporte real: un admin escondió un
+ * título en Móvil esperando que desapareciera en todas partes (ya había
+ * puesto otro título en su lugar) y seguía viéndose en Escritorio. Esta
+ * acción escribe `hidden:true` en las TRES vistas de una sola vez — parte
+ * siempre del config YA RESUELTO de cada vista (resolveConfig, igual que
+ * commitFieldNow), así que una vista sin ancla propia también recibe una
+ * completa con hidden:true en vez de quedar sin tocar. */
+function hideInAllViews() {
+    if (!selectedKey.value) {
+        return;
+    }
+
+    const key = selectedKey.value;
+
+    for (const device of MENU_DEVICE_ORDER) {
+        const prev = hasOwnConfig(key, device)
+            ? resolveAnchorConfig(key, device)
+            : null;
+        const nextReal = {
+            ...(resolveConfig(key, device) as unknown as Record<
+                string,
+                unknown
+            >),
+            hidden: true,
+        } as unknown as StoredElementConfig;
+        const next = toAnchor(nextReal, device);
+        recordUndo({ key, device, prev, next });
+        applyChange(key, device, next);
+    }
+
+    notify.success('Ocultado en las tres vistas.');
+}
+
 /* ------------------------------------------------------------------ */
 /* Edición rápida de contenido del platillo seleccionado                */
 /* ------------------------------------------------------------------ */
@@ -1845,7 +1923,18 @@ function onDecorationHandleDown(
                     />
                 </div>
 
-                <h3 class="tc-sidebar-heading">Secciones</h3>
+                <h3 class="tc-sidebar-heading flex items-center justify-between">
+                    <span>Secciones</span>
+                    <button
+                        type="button"
+                        class="tc-icon-btn"
+                        aria-label="Nueva sección"
+                        title="Nueva sección"
+                        @click="showAddCategoryModal = true"
+                    >
+                        <Plus class="h-3.5 w-3.5" />
+                    </button>
+                </h3>
                 <ul class="mb-4 space-y-0.5">
                     <li v-for="cat in visibleCategories" :key="cat.id">
                         <button
@@ -1954,17 +2043,35 @@ function onDecorationHandleDown(
                     </ul>
                 </template>
 
-                <template v-if="activeCategory && visibleItems.length">
-                    <h3 class="tc-sidebar-heading">
-                        Platillos
-                        <span
-                            v-if="saving"
-                            class="ml-1 font-normal text-[var(--tc-blue)] normal-case"
-                        >
-                            guardando…
+                <template v-if="activeCategory">
+                    <h3 class="tc-sidebar-heading flex items-center justify-between">
+                        <span>
+                            Platillos
+                            <span
+                                v-if="saving"
+                                class="ml-1 font-normal text-[var(--tc-blue)] normal-case"
+                            >
+                                guardando…
+                            </span>
                         </span>
+                        <button
+                            type="button"
+                            class="tc-icon-btn"
+                            aria-label="Agregar platillo"
+                            title="Agregar platillo"
+                            @click="showAddItemModal = true"
+                        >
+                            <Plus class="h-3.5 w-3.5" />
+                        </button>
                     </h3>
+                    <p
+                        v-if="!visibleItems.length"
+                        class="mb-1 px-1.5 text-xs text-gray-400"
+                    >
+                        Todavía no hay platillos en esta sección.
+                    </p>
                     <ul
+                        v-if="visibleItems.length"
                         :ref="(el) => bindReorderZone(el as HTMLElement)"
                         class="space-y-0.5"
                     >
@@ -2469,6 +2576,16 @@ function onDecorationHandleDown(
                             {{ activeDevice.label.toLowerCase() }}
                         </label>
 
+                        <button
+                            type="button"
+                            class="tc-btn-secondary mt-1.5 text-xs"
+                            title="Oculta este elemento en Móvil, Tablet y Escritorio a la vez — útil cuando lo reemplazaste por otro y no debe verse en ninguna vista"
+                            @click="hideInAllViews"
+                        >
+                            <EyeOff class="mr-1 inline h-3.5 w-3.5" />Ocultar
+                            en las tres vistas
+                        </button>
+
                         <div class="flex flex-wrap gap-1.5 pt-1">
                             <button
                                 type="button"
@@ -2864,6 +2981,20 @@ function onDecorationHandleDown(
             </aside>
         </div>
     </div>
+
+    <AddItemModal
+        :open="showAddItemModal"
+        :category="activeCategory"
+        @close="showAddItemModal = false"
+        @created="onItemCreated"
+    />
+
+    <AddCategoryModal
+        :open="showAddCategoryModal"
+        :layouts="layouts"
+        @close="showAddCategoryModal = false"
+        @created="onCategoryCreated"
+    />
 
     <TcMediaLibraryModal
         :open="addDecorationOpen"

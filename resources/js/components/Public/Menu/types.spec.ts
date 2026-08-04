@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     MENU_DEVICE_WIDTH,
+    byZone,
     defaultElementConfigV2,
     isV2Config,
     measuredRectToNormalized,
@@ -12,6 +13,7 @@ import {
     type ElementConfig,
     type ElementConfigV2,
     type ElementSettings,
+    type MenuItemData,
     type RectLike,
 } from './types';
 
@@ -290,5 +292,58 @@ describe('V1 -> V2 conversion', () => {
 
         expect(first.x_pct).toBe(12);
         expect(second.x_pct).toBe(12);
+    });
+});
+
+describe('byZone', () => {
+    function item(overrides: Partial<MenuItemData>): MenuItemData {
+        return {
+            id: 1,
+            name: 'Item',
+            slug: 'item',
+            zone: null,
+            price: 0,
+            sort_order: 0,
+            ...overrides,
+        };
+    }
+
+    // Regresión: `zone` clasifica, NUNCA es una relación 1:1 — un mismo zone
+    // puede tener 0, 1 o N platillos activos a la vez. byZone() debe devolver
+    // el arreglo COMPLETO (nunca solo el primero); son las plantillas
+    // (*Page.vue) las que deciden si iteran todos o toman [0] a propósito —
+    // ver PozolePage/BirriaPage/PancitaPage/ComalPage, que ya no toman [0]
+    // para sus zonas 'main'/'accompaniment'/'footer'/'sope'.
+    it('returns EVERY item in the zone, not just the first match', () => {
+        const items = [
+            item({ id: 1, zone: 'main', name: 'Pozole Blanco' }),
+            item({ id: 2, zone: 'main', name: 'Pozole Verde' }),
+            item({ id: 3, zone: 'accompaniment', name: 'Tacos Dorados' }),
+        ];
+
+        const main = byZone(items, 'main');
+
+        expect(main).toHaveLength(2);
+        expect(main.map((i) => i.id)).toEqual([1, 2]);
+    });
+
+    it('never drops an existing item when a new one is added to the SAME zone', () => {
+        const existing = [item({ id: 1, zone: 'main', name: 'Ya existía' })];
+        const withNewOne = [
+            ...existing,
+            item({ id: 2, zone: 'main', name: 'Nuevo' }),
+        ];
+
+        const before = byZone(existing, 'main');
+        const after = byZone(withNewOne, 'main');
+
+        expect(before.map((i) => i.id)).toEqual([1]);
+        // El platillo que YA estaba sigue presente, en el mismo orden — el
+        // nuevo se agrega, nunca reemplaza.
+        expect(after.map((i) => i.id)).toEqual([1, 2]);
+    });
+
+    it('returns an empty array (not undefined) for a zone with no items', () => {
+        expect(byZone([], 'main')).toEqual([]);
     });
 });

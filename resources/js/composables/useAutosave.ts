@@ -1,6 +1,7 @@
 import type { Ref } from 'vue';
 import { ref } from 'vue';
 import { useNotify } from '@/composables/useNotify';
+import { ApiError } from '@/lib/jsonApi';
 
 export type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
@@ -35,12 +36,19 @@ export function useAutosave<P>(
             await save(payload);
             failedPayload = null;
             status.value = 'saved';
-        } catch {
+        } catch (err) {
             failedPayload = payload;
             status.value = 'error';
-            useNotify().error(
-                'No se pudo guardar el cambio. Se conservó localmente — intenta de nuevo.',
-            );
+            // Nunca un "Error al guardar" desnudo — si el fallo trae un
+            // mensaje real del servidor (422 con detalle de validación, 419
+            // de sesión expirada, 500), se muestra tal cual (ver
+            // lib/jsonApi.ts#messageFor); solo se cae al genérico si de
+            // verdad no hay nada más específico (p. ej. sin conexión).
+            const message =
+                err instanceof ApiError
+                    ? err.message
+                    : 'No se pudo guardar el cambio. Se conservó localmente — intenta de nuevo.';
+            useNotify().error(message);
         } finally {
             inFlight = false;
 

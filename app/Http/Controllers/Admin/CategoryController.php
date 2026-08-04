@@ -48,18 +48,28 @@ class CategoryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->storeFromRequest($request);
+
+        return redirect()->route('admin.categories.index')
+            ->with('flash', ['toast' => ['type' => 'success', 'message' => 'Categoría creada correctamente.']]);
+    }
+
+    /** Misma validación/creación que store(), pero devuelve el modelo en vez
+     * de un redirect — reutilizada por MenuEditorController::storeCategory()
+     * (el botón "+ Nueva sección" del editor visual). */
+    public function storeFromRequest(Request $request): MenuCategory
+    {
         $data = $request->validate($this->rules());
         $data = $this->handleUploads($request, $data);
 
         $data['slug'] = Str::slug($data['name']);
-        $data['sort_order'] = $data['sort_order'] ?? 0;
+        $data['sort_order'] = $data['sort_order'] ?? ((int) MenuCategory::max('sort_order') + 1);
         $data['layout'] = $data['layout'] ?? 'grid';
 
-        MenuCategory::create($data);
+        $category = MenuCategory::create($data);
         Cache::flush();
 
-        return redirect()->route('admin.categories.index')
-            ->with('flash', ['toast' => ['type' => 'success', 'message' => 'Categoría creada correctamente.']]);
+        return $category;
     }
 
     public function edit(MenuCategory $category): Response
@@ -77,7 +87,10 @@ class CategoryController extends Controller
         $data = $request->validate($this->rules());
         $data = $this->handleUploads($request, $data, $category);
 
-        $data['sort_order'] = $data['sort_order'] ?? 0;
+        // Edit.vue no envía `sort_order` (el orden se controla arrastrando en
+        // el listado) — sin este fallback al valor YA guardado, cada edición
+        // normal reseteaba en silencio el orden de la categoría a 0.
+        $data['sort_order'] = $data['sort_order'] ?? $category->sort_order;
         $category->update($data);
         Cache::flush();
 
@@ -138,8 +151,30 @@ class CategoryController extends Controller
 
     private function rules(): array
     {
+        $category = request()->route('category');
+
         return [
-            'name' => 'required|string|max:255',
+            'name' => [
+                'required', 'string', 'max:255',
+                // Mismo bug de MenuItemController::rules(): `slug` es único
+                // en BD pero nunca se validaba aquí — dos categorías con el
+                // mismo nombre hacían que MenuCategory::create()/update()
+                // lanzaran una UniqueConstraintViolationException sin
+                // capturar (500 genérico) en vez de un 422 con el campo
+                // exacto.
+                function (string $attribute, mixed $value, \Closure $fail) use ($category) {
+                    $slug = Str::slug($value);
+                    $query = MenuCategory::where('slug', $slug);
+
+                    if ($category instanceof MenuCategory) {
+                        $query->whereKeyNot($category->id);
+                    }
+
+                    if ($query->exists()) {
+                        $fail('Ya existe una categoría con un nombre muy parecido a "'.$value.'". Usa un nombre distinto.');
+                    }
+                },
+            ],
             'description' => 'nullable|string',
             'subtitle' => 'nullable|string|max:120',
             'tagline' => 'nullable|string|max:255',

@@ -4,6 +4,61 @@ function xsrfToken(): string {
     return match ? decodeURIComponent(match[1]) : '';
 }
 
+export class ApiError extends Error {
+    constructor(
+        message: string,
+        public status: number,
+        public data: unknown,
+    ) {
+        super(message);
+    }
+}
+
+/** Deriva un mensaje ENTENDIBLE (nunca "Error al guardar" a secas) del status
+ * + cuerpo de respuesta — 422 junta TODOS los mensajes de validación reales
+ * del backend, 419 explica que la sesión expiró, 500 no expone el detalle
+ * interno pero sí un mensaje claro (el detalle real ya queda en la consola
+ * vía `data` para depurar). Compartido por sendJson/postFormWithProgress/
+ * deleteJson para que cualquier fallo JSON del editor tenga el mismo nivel
+ * de detalle que un formulario Inertia normal. */
+function messageFor(status: number, data: unknown): string {
+    if (status === 422) {
+        const errors = (data as { errors?: Record<string, string[]> } | null)
+            ?.errors;
+        const messages = errors ? Object.values(errors).flat() : [];
+
+        if (messages.length > 0) {
+            return messages.join(' ');
+        }
+
+        return (
+            (data as { message?: string } | null)?.message ??
+            'Los datos enviados no son válidos.'
+        );
+    }
+
+    if (status === 419) {
+        return 'Tu sesión expiró. Vuelve a iniciar sesión y repite el cambio.';
+    }
+
+    if (status >= 500) {
+        return 'Ocurrió un error en el servidor al guardar. Intenta de nuevo; si se repite, avisa al equipo técnico.';
+    }
+
+    return (
+        (data as { message?: string } | null)?.message ??
+        `La solicitud falló (código ${status}).`
+    );
+}
+
+async function parseJsonBody(res: Response): Promise<unknown> {
+    try {
+        return await res.json();
+    } catch {
+        return null;
+    }
+}
+
 async function sendJson<T>(
     method: 'PATCH' | 'POST',
     url: string,
@@ -20,11 +75,13 @@ async function sendJson<T>(
         body: JSON.stringify(body),
     });
 
+    const data = await parseJsonBody(res);
+
     if (!res.ok) {
-        throw new Error(`${method} ${url} failed with status ${res.status}`);
+        throw new ApiError(messageFor(res.status, data), res.status, data);
     }
 
-    return (await res.json()) as T;
+    return data as T;
 }
 
 export function patchJson<T = unknown>(url: string, body: unknown): Promise<T> {
@@ -41,21 +98,13 @@ export async function getJson<T = unknown>(url: string): Promise<T> {
         headers: { Accept: 'application/json' },
     });
 
+    const data = await parseJsonBody(res);
+
     if (!res.ok) {
-        throw new Error(`GET ${url} failed with status ${res.status}`);
+        throw new ApiError(messageFor(res.status, data), res.status, data);
     }
 
-    return (await res.json()) as T;
-}
-
-export class ApiError extends Error {
-    constructor(
-        message: string,
-        public status: number,
-        public data: unknown,
-    ) {
-        super(message);
-    }
+    return data as T;
 }
 
 /** Sube un archivo (multipart/form-data) con progreso — usado por la
@@ -89,15 +138,24 @@ export function postFormWithProgress<T = unknown>(
             if (xhr.status >= 200 && xhr.status < 300) {
                 resolve(data as T);
             } else {
-                const message =
-                    (data as { message?: string } | null)?.message ??
-                    `POST ${url} failed with status ${xhr.status}`;
-                reject(new ApiError(message, xhr.status, data));
+                reject(
+                    new ApiError(
+                        messageFor(xhr.status, data),
+                        xhr.status,
+                        data,
+                    ),
+                );
             }
         };
 
         xhr.onerror = () =>
-            reject(new Error(`POST ${url} failed (network error)`));
+            reject(
+                new ApiError(
+                    'No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.',
+                    0,
+                    null,
+                ),
+            );
         xhr.send(form);
     });
 }
@@ -114,20 +172,10 @@ export async function deleteJson<T = unknown>(url: string): Promise<T> {
         },
     });
 
-    let data: unknown = null;
-
-    try {
-        data = await res.json();
-    } catch {
-        // sin cuerpo JSON — data se queda en null
-    }
+    const data = await parseJsonBody(res);
 
     if (!res.ok) {
-        const message =
-            (data as { message?: string } | null)?.message ??
-            `DELETE ${url} failed with status ${res.status}`;
-
-        throw new ApiError(message, res.status, data);
+        throw new ApiError(messageFor(res.status, data), res.status, data);
     }
 
     return data as T;

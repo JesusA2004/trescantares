@@ -37,7 +37,9 @@ function onCommit(key: string, config: StoredElementConfig) {
     emit('commit', key, config);
 }
 
-const main = computed(() => byZone(props.category.items, 'main')[0]);
+// Ver PozolePage.vue: 'main' ya no toma solo el primer platillo — se
+// itera el arreglo completo, apilando verticalmente si hay más de uno.
+const mains = computed(() => byZone(props.category.items, 'main'));
 const sides = computed(() => byZone(props.category.items, 'side'));
 </script>
 
@@ -83,44 +85,47 @@ const sides = computed(() => byZone(props.category.items, 'side'));
             </h2>
         </MenuEditableElement>
 
-        <MenuEditableElement
-            v-if="main"
-            :element-key="`item-${main.id}:container`"
-            :label="`${main.name} — contenedor`"
-            :config="itemElementFor(main, 'container', breakpoint)"
-            :editable="editable"
-            :selected="selectedKey === `item-${main.id}:container`"
-            @select="onSelect"
-            @commit="onCommit"
-        >
-            <div class="tc-mp-hero-row">
-                <MenuItemVisual
-                    :item="main"
-                    class="tc-mp-hero-photo"
-                    :breakpoint="breakpoint"
-                    :editable="editable"
-                    :selected-key="selectedKey"
-                    @select="onSelect"
-                    @commit="onCommit"
-                />
-                <DotOrnament
-                    :color="category.color_secondary ?? undefined"
-                    :size="50"
-                />
-                <MenuPriceVisual
-                    :element-key="`item-${main.id}:price`"
-                    :label="`${main.name} — precio`"
-                    :config="itemElementFor(main, 'price', breakpoint)"
-                    :value="main.price"
-                    :editable="editable"
-                    :selected-key="selectedKey"
-                    class="tc-mp-price tc-mp-price--xl"
-                    :style="{ color: category.color_secondary ?? undefined }"
-                    @select="onSelect"
-                    @commit="onCommit"
-                />
-            </div>
-        </MenuEditableElement>
+        <template v-for="main in mains" :key="main.id">
+            <MenuEditableElement
+                :element-key="`item-${main.id}:container`"
+                :label="`${main.name} — contenedor`"
+                :config="itemElementFor(main, 'container', breakpoint)"
+                :editable="editable"
+                :selected="selectedKey === `item-${main.id}:container`"
+                @select="onSelect"
+                @commit="onCommit"
+            >
+                <div class="tc-mp-hero-row">
+                    <MenuItemVisual
+                        :item="main"
+                        class="tc-mp-hero-photo"
+                        :breakpoint="breakpoint"
+                        :editable="editable"
+                        :selected-key="selectedKey"
+                        @select="onSelect"
+                        @commit="onCommit"
+                    />
+                    <DotOrnament
+                        :color="category.color_secondary ?? undefined"
+                        :size="50"
+                    />
+                    <MenuPriceVisual
+                        :element-key="`item-${main.id}:price`"
+                        :label="`${main.name} — precio`"
+                        :config="itemElementFor(main, 'price', breakpoint)"
+                        :value="main.price"
+                        :editable="editable"
+                        :selected-key="selectedKey"
+                        class="tc-mp-price tc-mp-price--xl"
+                        :style="{
+                            color: category.color_secondary ?? undefined,
+                        }"
+                        @select="onSelect"
+                        @commit="onCommit"
+                    />
+                </div>
+            </MenuEditableElement>
+        </template>
 
         <MenuEditableElement
             v-if="category.tagline"

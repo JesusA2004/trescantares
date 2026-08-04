@@ -36,9 +36,11 @@ function onCommit(key: string, config: StoredElementConfig) {
     emit('commit', key, config);
 }
 
-const main = computed(() => byZone(props.category.items, 'main')[0]);
+// Ver PozolePage.vue: 'main'/'sope' ya no toman solo el primer platillo —
+// se itera el arreglo completo, apilando verticalmente si hay más de uno.
+const mains = computed(() => byZone(props.category.items, 'main'));
 const fillings = computed(() => byZone(props.category.items, 'filling'));
-const sope = computed(() => byZone(props.category.items, 'sope')[0]);
+const sopes = computed(() => byZone(props.category.items, 'sope'));
 </script>
 
 <template>
@@ -88,64 +90,69 @@ const sope = computed(() => byZone(props.category.items, 'sope')[0]);
                 </h2>
             </MenuEditableElement>
 
-            <MenuEditableElement
-                v-if="main"
-                :element-key="`item-${main.id}:container`"
-                :label="`${main.name} — contenedor`"
-                :config="itemElementFor(main, 'container', breakpoint)"
-                :editable="editable"
-                :selected="selectedKey === `item-${main.id}:container`"
-                @select="onSelect"
-                @commit="onCommit"
-            >
-                <div class="tc-mp-comal-hero">
-                    <div class="tc-mp-comal-main">
-                        <MenuItemVisual
-                            :item="main"
-                            class="tc-mp-comal-main-photo"
-                            :breakpoint="breakpoint"
-                            :editable="editable"
-                            :selected-key="selectedKey"
-                            @select="onSelect"
-                            @commit="onCommit"
-                        />
-                    </div>
+            <template v-for="main in mains" :key="main.id">
+                <MenuEditableElement
+                    :element-key="`item-${main.id}:container`"
+                    :label="`${main.name} — contenedor`"
+                    :config="itemElementFor(main, 'container', breakpoint)"
+                    :editable="editable"
+                    :selected="selectedKey === `item-${main.id}:container`"
+                    @select="onSelect"
+                    @commit="onCommit"
+                >
+                    <div class="tc-mp-comal-hero">
+                        <div class="tc-mp-comal-main">
+                            <MenuItemVisual
+                                :item="main"
+                                class="tc-mp-comal-main-photo"
+                                :breakpoint="breakpoint"
+                                :editable="editable"
+                                :selected-key="selectedKey"
+                                @select="onSelect"
+                                @commit="onCommit"
+                            />
+                        </div>
 
-                    <div class="tc-mp-comal-name-block">
-                        <MenuTextVisual
-                            :element-key="`item-${main.id}:name`"
-                            :label="`${main.name} — nombre`"
-                            :config="itemElementFor(main, 'name', breakpoint)"
-                            :editable="editable"
-                            :selected-key="selectedKey"
-                            as="p"
-                            class="tc-mp-name tc-mp-name--lg"
-                            :style="{
-                                color: category.color ?? undefined,
-                                '--tc-mp-h': category.color ?? undefined,
-                            }"
-                            @select="onSelect"
-                            @commit="onCommit"
-                        >
-                            {{ main.name }}
-                        </MenuTextVisual>
-                        <MenuPriceVisual
-                            :element-key="`item-${main.id}:price`"
-                            :label="`${main.name} — precio`"
-                            :config="itemElementFor(main, 'price', breakpoint)"
-                            :value="main.price"
-                            :editable="editable"
-                            :selected-key="selectedKey"
-                            class="tc-mp-price tc-mp-price--md"
-                            :style="{
-                                color: category.color_secondary ?? undefined,
-                            }"
-                            @select="onSelect"
-                            @commit="onCommit"
-                        />
+                        <div class="tc-mp-comal-name-block">
+                            <MenuTextVisual
+                                :element-key="`item-${main.id}:name`"
+                                :label="`${main.name} — nombre`"
+                                :config="
+                                    itemElementFor(main, 'name', breakpoint)
+                                "
+                                :editable="editable"
+                                :selected-key="selectedKey"
+                                as="p"
+                                class="tc-mp-name tc-mp-name--lg"
+                                :style="{
+                                    color: category.color ?? undefined,
+                                    '--tc-mp-h': category.color ?? undefined,
+                                }"
+                                @select="onSelect"
+                                @commit="onCommit"
+                            >
+                                {{ main.name }}
+                            </MenuTextVisual>
+                            <MenuPriceVisual
+                                :element-key="`item-${main.id}:price`"
+                                :label="`${main.name} — precio`"
+                                :config="
+                                    itemElementFor(main, 'price', breakpoint)
+                                "
+                                :value="main.price"
+                                :editable="editable"
+                                :selected-key="selectedKey"
+                                class="tc-mp-price tc-mp-price--md"
+                                :style="{
+                                    color: category.color_secondary ?? undefined,
+                                }"
+                                @select="onSelect"
+                                @commit="onCommit"
+                            />
+                        </div>
                     </div>
-                </div>
-            </MenuEditableElement>
+                </MenuEditableElement>
+            </template>
 
             <div
                 v-if="fillings.length"
@@ -182,61 +189,66 @@ const sope = computed(() => byZone(props.category.items, 'sope')[0]);
                 </div>
             </div>
 
-            <MenuEditableElement
-                v-if="sope"
-                :element-key="`item-${sope.id}:container`"
-                :label="`${sope.name} — contenedor`"
-                :config="itemElementFor(sope, 'container', breakpoint)"
-                :editable="editable"
-                :selected="selectedKey === `item-${sope.id}:container`"
-                @select="onSelect"
-                @commit="onCommit"
-            >
-                <div class="tc-mp-alt-row tc-mp-comal-sope">
-                    <MenuItemVisual
-                        :item="sope"
-                        class="tc-mp-alt-photo"
-                        :breakpoint="breakpoint"
-                        :editable="editable"
-                        :selected-key="selectedKey"
-                        @select="onSelect"
-                        @commit="onCommit"
-                    />
-                    <div class="tc-mp-alt-text">
-                        <MenuTextVisual
-                            :element-key="`item-${sope.id}:name`"
-                            :label="`${sope.name} — nombre`"
-                            :config="itemElementFor(sope, 'name', breakpoint)"
+            <template v-for="sope in sopes" :key="sope.id">
+                <MenuEditableElement
+                    :element-key="`item-${sope.id}:container`"
+                    :label="`${sope.name} — contenedor`"
+                    :config="itemElementFor(sope, 'container', breakpoint)"
+                    :editable="editable"
+                    :selected="selectedKey === `item-${sope.id}:container`"
+                    @select="onSelect"
+                    @commit="onCommit"
+                >
+                    <div class="tc-mp-alt-row tc-mp-comal-sope">
+                        <MenuItemVisual
+                            :item="sope"
+                            class="tc-mp-alt-photo"
+                            :breakpoint="breakpoint"
                             :editable="editable"
                             :selected-key="selectedKey"
-                            as="p"
-                            class="tc-mp-name tc-mp-name--lg"
-                            :style="{
-                                color: category.color ?? undefined,
-                                '--tc-mp-h': category.color ?? undefined,
-                            }"
-                            @select="onSelect"
-                            @commit="onCommit"
-                        >
-                            {{ sope.name }}
-                        </MenuTextVisual>
-                        <MenuPriceVisual
-                            :element-key="`item-${sope.id}:price`"
-                            :label="`${sope.name} — precio`"
-                            :config="itemElementFor(sope, 'price', breakpoint)"
-                            :value="sope.price"
-                            :editable="editable"
-                            :selected-key="selectedKey"
-                            class="tc-mp-price tc-mp-price--md"
-                            :style="{
-                                color: category.color_secondary ?? undefined,
-                            }"
                             @select="onSelect"
                             @commit="onCommit"
                         />
+                        <div class="tc-mp-alt-text">
+                            <MenuTextVisual
+                                :element-key="`item-${sope.id}:name`"
+                                :label="`${sope.name} — nombre`"
+                                :config="
+                                    itemElementFor(sope, 'name', breakpoint)
+                                "
+                                :editable="editable"
+                                :selected-key="selectedKey"
+                                as="p"
+                                class="tc-mp-name tc-mp-name--lg"
+                                :style="{
+                                    color: category.color ?? undefined,
+                                    '--tc-mp-h': category.color ?? undefined,
+                                }"
+                                @select="onSelect"
+                                @commit="onCommit"
+                            >
+                                {{ sope.name }}
+                            </MenuTextVisual>
+                            <MenuPriceVisual
+                                :element-key="`item-${sope.id}:price`"
+                                :label="`${sope.name} — precio`"
+                                :config="
+                                    itemElementFor(sope, 'price', breakpoint)
+                                "
+                                :value="sope.price"
+                                :editable="editable"
+                                :selected-key="selectedKey"
+                                class="tc-mp-price tc-mp-price--md"
+                                :style="{
+                                    color: category.color_secondary ?? undefined,
+                                }"
+                                @select="onSelect"
+                                @commit="onCommit"
+                            />
+                        </div>
                     </div>
-                </div>
-            </MenuEditableElement>
+                </MenuEditableElement>
+            </template>
         </div>
     </MenuPageFrame>
 </template>

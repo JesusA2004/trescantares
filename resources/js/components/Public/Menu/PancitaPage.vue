@@ -36,9 +36,11 @@ function onCommit(key: string, config: StoredElementConfig) {
     emit('commit', key, config);
 }
 
-const main = computed(() => byZone(props.category.items, 'main')[0]);
+// Ver PozolePage.vue: 'main'/'footer' ya no toman solo el primer platillo
+// — se itera el arreglo completo, apilando verticalmente si hay más de uno.
+const mains = computed(() => byZone(props.category.items, 'main'));
 const options = computed(() => byZone(props.category.items, 'option'));
-const footer = computed(() => byZone(props.category.items, 'footer')[0]);
+const footers = computed(() => byZone(props.category.items, 'footer'));
 </script>
 
 <template>
@@ -88,67 +90,74 @@ const footer = computed(() => byZone(props.category.items, 'footer')[0]);
                 </h2>
             </MenuEditableElement>
 
-            <MenuEditableElement
-                v-if="main"
-                :element-key="`item-${main.id}:container`"
-                :label="`${main.name} — contenedor`"
-                :config="itemElementFor(main, 'container', breakpoint)"
-                :editable="editable"
-                :selected="selectedKey === `item-${main.id}:container`"
-                @select="onSelect"
-                @commit="onCommit"
-            >
-                <div class="tc-mp-pancita-hero">
-                    <div class="tc-mp-pancita-main">
-                        <MenuItemVisual
-                            :item="main"
-                            class="tc-mp-pancita-main-photo"
-                            :breakpoint="breakpoint"
-                            :editable="editable"
-                            :selected-key="selectedKey"
-                            @select="onSelect"
-                            @commit="onCommit"
-                        />
-                    </div>
+            <template v-for="main in mains" :key="main.id">
+                <MenuEditableElement
+                    :element-key="`item-${main.id}:container`"
+                    :label="`${main.name} — contenedor`"
+                    :config="itemElementFor(main, 'container', breakpoint)"
+                    :editable="editable"
+                    :selected="selectedKey === `item-${main.id}:container`"
+                    @select="onSelect"
+                    @commit="onCommit"
+                >
+                    <div class="tc-mp-pancita-hero">
+                        <div class="tc-mp-pancita-main">
+                            <MenuItemVisual
+                                :item="main"
+                                class="tc-mp-pancita-main-photo"
+                                :breakpoint="breakpoint"
+                                :editable="editable"
+                                :selected-key="selectedKey"
+                                @select="onSelect"
+                                @commit="onCommit"
+                            />
+                        </div>
 
-                    <div class="tc-mp-pancita-price">
-                        <MenuPriceVisual
-                            :element-key="`item-${main.id}:price`"
-                            :label="`${main.name} — precio`"
-                            :config="itemElementFor(main, 'price', breakpoint)"
-                            :value="main.price"
-                            :editable="editable"
-                            :selected-key="selectedKey"
-                            class="tc-mp-price tc-mp-price--xl"
-                            :style="{
-                                color: category.color_secondary ?? undefined,
-                            }"
-                            @select="onSelect"
-                            @commit="onCommit"
-                        />
-                        <MenuTextVisual
-                            v-if="main.choice_label"
-                            :element-key="`item-${main.id}:choice_label`"
-                            :label="`${main.name} — elección`"
-                            :config="
-                                itemElementFor(main, 'choice_label', breakpoint)
-                            "
-                            :editable="editable"
-                            :selected-key="selectedKey"
-                            as="p"
-                            class="tc-mp-choice"
-                            :style="{
-                                color: category.color ?? undefined,
-                                '--tc-mp-h': category.color ?? undefined,
-                            }"
-                            @select="onSelect"
-                            @commit="onCommit"
-                        >
-                            {{ main.choice_label }}
-                        </MenuTextVisual>
+                        <div class="tc-mp-pancita-price">
+                            <MenuPriceVisual
+                                :element-key="`item-${main.id}:price`"
+                                :label="`${main.name} — precio`"
+                                :config="
+                                    itemElementFor(main, 'price', breakpoint)
+                                "
+                                :value="main.price"
+                                :editable="editable"
+                                :selected-key="selectedKey"
+                                class="tc-mp-price tc-mp-price--xl"
+                                :style="{
+                                    color: category.color_secondary ?? undefined,
+                                }"
+                                @select="onSelect"
+                                @commit="onCommit"
+                            />
+                            <MenuTextVisual
+                                v-if="main.choice_label"
+                                :element-key="`item-${main.id}:choice_label`"
+                                :label="`${main.name} — elección`"
+                                :config="
+                                    itemElementFor(
+                                        main,
+                                        'choice_label',
+                                        breakpoint,
+                                    )
+                                "
+                                :editable="editable"
+                                :selected-key="selectedKey"
+                                as="p"
+                                class="tc-mp-choice"
+                                :style="{
+                                    color: category.color ?? undefined,
+                                    '--tc-mp-h': category.color ?? undefined,
+                                }"
+                                @select="onSelect"
+                                @commit="onCommit"
+                            >
+                                {{ main.choice_label }}
+                            </MenuTextVisual>
+                        </div>
                     </div>
-                </div>
-            </MenuEditableElement>
+                </MenuEditableElement>
+            </template>
 
             <div v-if="options.length" class="tc-mp-options-grid">
                 <div
@@ -213,7 +222,7 @@ const footer = computed(() => byZone(props.category.items, 'footer')[0]);
                 </div>
             </MenuEditableElement>
 
-            <div v-if="footer" class="tc-mp-footer-row">
+            <div v-if="footers.length" class="tc-mp-footer-row">
                 <MenuEditableElement
                     v-if="category.tagline_image_url"
                     :element-key="`category-${category.id}:tagline_image`"
@@ -231,13 +240,15 @@ const footer = computed(() => byZone(props.category.items, 'footer')[0]);
                     "
                     kind="image"
                     :src="category.tagline_image_url"
-                    :alt="category.tagline_sub ?? footer.name"
+                    :alt="category.tagline_sub ?? footers[0].name"
                     img-class="w-[55%]"
                     @select="onSelect"
                     @commit="onCommit"
                 />
 
                 <MenuItemVisual
+                    v-for="footer in footers"
+                    :key="footer.id"
                     :item="footer"
                     class="tc-mp-footer-photo"
                     :breakpoint="breakpoint"

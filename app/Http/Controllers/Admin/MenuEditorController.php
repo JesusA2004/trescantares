@@ -11,6 +11,7 @@ use App\Support\MenuLayoutZones;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -54,6 +55,7 @@ class MenuEditorController extends Controller
 
         return Inertia::render('Admin/MenuEditor/Index', [
             'categories' => $categories->map(fn (MenuCategory $c) => $c->toPublicArray())->values(),
+            'layouts' => CategoryController::LAYOUTS,
         ]);
     }
 
@@ -80,6 +82,41 @@ class MenuEditorController extends Controller
             'categories' => $categories,
             'editable' => true,
         ]);
+    }
+
+    /**
+     * "Agregar platillo" rápido del editor visual — misma validación/reglas
+     * de negocio que MenuItemController::store() (reutilizada vía
+     * storeFromRequest(), nunca duplicada), pero responde JSON en vez de
+     * redirigir para que el modal pueda insertar el platillo en la barra
+     * lateral y el lienzo sin salir del editor ni recargar la página. El
+     * `sort_order` se resuelve solo (MAX+1 de la categoría, ver
+     * MenuItemController::nextSortOrder) — un platillo nuevo SIEMPRE se
+     * agrega al final, nunca reemplaza ni reordena los que ya existían.
+     */
+    public function storeItem(Request $request, MenuItemController $menuItems): JsonResponse
+    {
+        $item = $menuItems->storeFromRequest($request);
+        $item->load(['images', 'primaryImage']);
+
+        return response()->json([
+            'item' => array_merge($item->toPublicArray(), [
+                'has_image' => $item->image !== null || $item->primaryImage !== null,
+            ]),
+        ], 201);
+    }
+
+    /**
+     * "+ Nueva sección" del editor visual — misma validación/reglas de
+     * negocio que CategoryController::store() (reutilizada vía
+     * storeFromRequest()), pero responde JSON para insertar la sección
+     * nueva en la barra lateral sin salir del editor.
+     */
+    public function storeCategory(Request $request, CategoryController $categories): JsonResponse
+    {
+        $category = $categories->storeFromRequest($request);
+
+        return response()->json(['category' => $category->toPublicArray()], 201);
     }
 
     public function updateItemElement(Request $request, MenuItem $menuItem): JsonResponse
@@ -191,7 +228,18 @@ class MenuEditorController extends Controller
         $allowedZones = MenuLayoutZones::valuesFor($layout);
 
         $data = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
+            // Mismo `slug` único de MenuItemController::rules() — un cambio
+            // de nombre rápido desde el editor puede colisionar igual que
+            // desde el formulario completo, y sin esto también terminaba en
+            // una UniqueConstraintViolationException sin capturar.
+            'name' => [
+                'sometimes', 'required', 'string', 'max:255',
+                function (string $attribute, mixed $value, \Closure $fail) use ($menuItem) {
+                    if (MenuItem::where('slug', Str::slug($value))->whereKeyNot($menuItem->id)->exists()) {
+                        $fail('Ya existe un platillo con un nombre muy parecido a "'.$value.'". Usa un nombre distinto para diferenciarlo.');
+                    }
+                },
+            ],
             'description' => 'nullable|string',
             'zone' => $allowedZones !== [] ? ['nullable', Rule::in($allowedZones)] : 'nullable|string|max:40',
             'price' => 'sometimes|required|numeric|min:0',
