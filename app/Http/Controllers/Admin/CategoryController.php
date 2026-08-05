@@ -74,7 +74,15 @@ class CategoryController extends Controller
 
     public function edit(MenuCategory $category): Response
     {
-        $category->load(['items' => fn ($q) => $q->orderBy('sort_order')->orderBy('name')]);
+        // 'items.primaryImage'/'items.images' — ver comentario completo en
+        // MenuCategory::forPublicMenu(): sin esto, la vista previa en vivo
+        // (MenuLivePreview.vue) tampoco mostraría fotos subidas por la
+        // galería de varias imágenes.
+        $category->load([
+            'items' => fn ($q) => $q->orderBy('sort_order')->orderBy('name'),
+            'items.primaryImage',
+            'items.images',
+        ]);
 
         return Inertia::render('Admin/Categories/Edit', [
             'category' => $category->toPublicArray(),

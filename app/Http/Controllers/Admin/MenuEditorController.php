@@ -45,8 +45,15 @@ class MenuEditorController extends Controller
         // de la barra lateral necesita poder listar (y reactivar) los
         // ocultos, aunque el iframe de vista previa (preview(), que sí usa
         // forPublicMenu) no los renderice mientras estén inactivos.
+        // 'items.primaryImage'/'items.images' — ver comentario completo en
+        // MenuCategory::forPublicMenu(): sin esto, la barra lateral del
+        // editor (itemElementKeys() en Index.vue, que decide si mostrar la
+        // fila "Imagen" según item.image_url) tampoco vería fotos subidas
+        // por la galería de varias imágenes.
         $categories = MenuCategory::with([
             'items' => fn ($q) => $q->orderBy('sort_order')->orderBy('name'),
+            'items.primaryImage',
+            'items.images',
             'decorations',
         ])
             ->orderBy('sort_order')

@@ -69,10 +69,18 @@ class MenuItemController extends Controller
         $menuItem->update($data);
         Cache::flush();
 
+        // fresh(['primaryImage']) — igual que en forPublicMenu(), sin cargar
+        // esta relación image_url cae al campo legacy `image` (null en un
+        // platillo cuya foto vive solo en la galería de varias imágenes),
+        // provocando que la miniatura desapareciera un instante en la lista
+        // del admin al alternar visibilidad, aunque la foto siguiera
+        // guardada correctamente.
+        $fresh = $menuItem->fresh(['primaryImage']);
+
         return response()->json([
-            'item' => array_merge($menuItem->fresh()->toArray(), [
-                'image_url' => $menuItem->fresh()->image_url,
-                'has_image' => $menuItem->image !== null || $menuItem->primaryImage()->exists(),
+            'item' => array_merge($fresh->toArray(), [
+                'image_url' => $fresh->image_url,
+                'has_image' => $fresh->image !== null || $fresh->primaryImage !== null,
             ]),
         ]);
     }
@@ -174,9 +182,17 @@ class MenuItemController extends Controller
      */
     private function categoriesForPreview()
     {
-        return MenuCategory::with(['items' => function ($q) {
-            $q->where('is_active', true)->orderBy('sort_order')->orderBy('name');
-        }])->orderBy('sort_order')->orderBy('name');
+        // 'items.primaryImage'/'items.images' — ver comentario completo en
+        // MenuCategory::forPublicMenu(): sin esto, la vista previa en vivo
+        // de Create.vue/Edit.vue tampoco mostraría fotos subidas por la
+        // galería de varias imágenes de los DEMÁS platillos ya existentes.
+        return MenuCategory::with([
+            'items' => function ($q) {
+                $q->where('is_active', true)->orderBy('sort_order')->orderBy('name');
+            },
+            'items.primaryImage',
+            'items.images',
+        ])->orderBy('sort_order')->orderBy('name');
     }
 
     public function update(Request $request, MenuItem $menuItem): RedirectResponse

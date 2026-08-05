@@ -105,38 +105,47 @@ const shouldTeleport = computed(
 );
 
 /**
- * Hueco reservado en el lugar de flujo original — bug real reportado por el
- * admin: al arrastrar el TÍTULO de Bebidas (o cualquier elemento que arranca
- * en flujo normal, no un adorno), Teleport lo saca por completo del árbol de
- * `.tc-mp-frame-inner` hacia `.tc-mp-customized-layer` sin dejar NADA en su
- * lugar — el espacio vertical que ocupaba desaparece de golpe, así que todo
- * el contenido que estaba DEBAJO (tabla de bebidas, grupos, etc., que siguen
- * en flujo normal) se recoloca hacia arriba para llenar el hueco. Esto hacía
- * que mover el título pareciera "mover todo el texto" y volvía el arrastre
- * casi inutilizable (el punto bajo el cursor se desplazaba en cada frame
- * porque el propio layout se reacomodaba mientras se arrastraba). Ya estaba
- * documentado como causa raíz conocida (ver memoria del proyecto, caso
- * análogo en filas flex de un platillo) pero nunca se había aplicado el
- * arreglo real: reservar el mismo tamaño en el lugar original con un
- * placeholder invisible mientras el elemento vive en la capa personalizada.
+ * Hueco reservado en el lugar de flujo original — SOLO mientras dura la
+ * sesión en la que el propio usuario saca un elemento del flujo a mano
+ * (arrastre real vía startDrag, o nudge con flechas). Bug real reportado:
+ * al arrastrar el TÍTULO de Bebidas, Teleport lo sacaba del árbol de
+ * `.tc-mp-frame-inner` hacia `.tc-mp-customized-layer` sin dejar nada en su
+ * lugar — el contenido de abajo (tabla de bebidas) subía para llenar el
+ * hueco, y el punto bajo el cursor se corría en cada frame del propio
+ * arrastre.
  *
- * Se mide con getBoundingClientRect() justo en la transición flujo->
- * personalizado (flush:'pre' — el watcher corre ANTES de que Vue vuelva a
- * pintar, así que `root` todavía está en su posición de flujo original en
- * ese instante), cubriendo tanto el primer arrastre en curso como un
- * elemento que YA nace 'normalized' al montar (ver comentario de
- * shouldTeleport: el primer tick siempre renderiza en flujo antes de
- * Teleportar).
+ * Regresión real encontrada en el primer intento de este fix: capturar el
+ * tamaño en un watcher genérico sobre `shouldTeleport` (cualquier transición
+ * flujo->normalizado) también disparaba para CUALQUIER elemento que YA
+ * cargaba con `position_mode:'normalized'` desde la base de datos — el
+ * "primer tick en flujo" antes de resolver `teleportTarget` (ver comentario
+ * de shouldTeleport) nunca lo pinta el navegador (mounted corre antes del
+ * primer paint), así que no hay ningún hueco real que preservar ahí; pero el
+ * watcher igual reservaba ese espacio "fantasma" para SIEMPRE. En secciones
+ * con muchos elementos ya personalizados (Pancita, Birria…) esos huecos
+ * fantasma se acumulaban y agrandaban el alto natural de toda la sección —
+ * el fondo/marco crecía de más y el selector de alto manual ya no podía
+ * bajar de ese mínimo inflado. Por eso `flowPlaceholderSize` ahora SOLO se
+ * fija explícitamente desde startDrag/nudge (nunca desde un watcher pasivo)
+ * — el único momento real en que un elemento visible en flujo, en ESTA
+ * sesión, está a punto de dejar de estarlo.
  */
 const flowPlaceholderSize = ref<{ width: number; height: number } | null>(
     null,
 );
 
-watch(shouldTeleport, (teleporting, wasTeleporting) => {
-    if (teleporting && !wasTeleporting && root.value) {
+/** Llamar SOLO justo antes de commitear `position_mode:'normalized'` desde
+ * un gesto real (startDrag/nudge) — si el elemento YA estaba normalizado no
+ * hace nada (ya está fuera de flujo, no hay hueco nuevo que reservar). */
+function captureFlowPlaceholderBeforeLeavingFlow() {
+    if (!isNormalized.value && root.value) {
         const rect = root.value.getBoundingClientRect();
         flowPlaceholderSize.value = { width: rect.width, height: rect.height };
-    } else if (!teleporting) {
+    }
+}
+
+watch(isNormalized, (normalized) => {
+    if (!normalized) {
         flowPlaceholderSize.value = null;
     }
 });
@@ -679,6 +688,10 @@ function startDrag(event: PointerEvent) {
 
         // Un arrastre siempre implica reposicionar a mano — a diferencia de
         // un resize puro (ver startResize), SIEMPRE escapa del flujo aquí.
+        // El elemento SIGUE en su posición de flujo real en este instante
+        // (el commit todavía no se aplicó) — último momento seguro para
+        // medir el hueco a reservar.
+        captureFlowPlaceholderBeforeLeavingFlow();
         emit('commit', props.elementKey, {
             ...baseline,
             position_mode: 'normalized',
@@ -848,7 +861,9 @@ function nudge(event: KeyboardEvent) {
     const rootWidth = positioningRoot.width.value;
 
     // Igual que un arrastre con el puntero: nudge SIEMPRE reposiciona a
-    // mano, así que siempre escapa del flujo.
+    // mano, así que siempre escapa del flujo. Medir el hueco a reservar
+    // ANTES del commit — ver comentario equivalente en startDrag/finish.
+    captureFlowPlaceholderBeforeLeavingFlow();
     emit('commit', props.elementKey, {
         ...baseline,
         position_mode: 'normalized',

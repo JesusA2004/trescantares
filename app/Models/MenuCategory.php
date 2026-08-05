@@ -70,6 +70,20 @@ class MenuCategory extends Model
                     ->orderBy('sort_order')
                     ->orderBy('name');
             },
+            // Bug real encontrado: MenuItem::getImageUrlAttribute() SOLO
+            // consulta primaryImage/images cuando esa relación ya viene
+            // cargada (relationLoaded()) — nunca hace lazy-load, a propósito,
+            // para no disparar una consulta por cada platillo. Sin cargar
+            // aquí estas dos relaciones, CUALQUIER platillo cuya foto se
+            // subió desde la galería de varias imágenes (el dropzone
+            // "Imágenes del platillo" del formulario completo, que crea
+            // filas en menu_item_images y deja el campo legacy `image` en
+            // null) se quedaba SIN imagen en el menú público — sin ningún
+            // error, la foto simplemente nunca aparecía. El modal rápido
+            // "Agregar platillo" del editor visual nunca tocó este bug
+            // porque solo usa el campo legacy `image`.
+            'items.primaryImage',
+            'items.images',
             'decorations' => function ($q) {
                 $q->where('is_active', true);
             },
