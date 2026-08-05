@@ -246,6 +246,147 @@ describe('resolveElementConfig interpolation', () => {
     });
 });
 
+describe('resolveElementConfig: incomplete breakpoints never erase Móvil (bug real de producción)', () => {
+    const MOBILE_PHONES = [360, 375, 390, 391, 393, 412, 414, 430];
+
+    it('15. Móvil V2 completo + Tablet ausente + Escritorio parcial (solo z_index): width_pct/height_pct sobreviven en todo el rango móvil', () => {
+        const settings: ElementSettings = {
+            mobile: { ...v2Anchor(10, 20), width_pct: 25, height_pct: 40 },
+            desktop: { z_index: 3 } as unknown as ElementConfigV2,
+        };
+
+        for (const width of MOBILE_PHONES) {
+            const resolved = resolveElementConfig(settings, width) as ElementConfigV2;
+
+            expect(resolved.width_pct).toBeCloseTo(25, 6);
+            expect(resolved.height_pct).toBeCloseTo(40, 6);
+            expect(resolved.x_pct).toBeCloseTo(10, 6);
+            expect(resolved.y_pct).toBeCloseTo(20, 6);
+        }
+    });
+
+    it('16. Móvil completo + Tablet parcial (solo z_index): la vista Móvil no se mezcla con Tablet dentro del rango móvil', () => {
+        const settings: ElementSettings = {
+            mobile: { ...v2Anchor(5, 5), width_pct: 30, height_pct: null },
+            tablet: { z_index: 2 } as unknown as ElementConfigV2,
+        };
+
+        for (const width of MOBILE_PHONES) {
+            const resolved = resolveElementConfig(settings, width) as ElementConfigV2;
+
+            expect(resolved.width_pct).toBeCloseTo(30, 6);
+            expect(resolved.x_pct).toBeCloseTo(5, 6);
+        }
+    });
+
+    it('17. Móvil completo + Tablet legacy (V1) real: sigue interpolando (comportamiento intencional, no un bug)', () => {
+        const settings: ElementSettings = {
+            mobile: v2Anchor(0, 0),
+            tablet: { x: 384, y: 0, width: null, height: null, scale: 1, rotation: 0, z_index: 1 }, // 384/768*100 = 50%
+        };
+
+        const midpoint = (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+        const resolved = resolveElementConfig(settings, midpoint) as ElementConfigV2;
+
+        expect(resolved.x_pct).toBeCloseTo(25, 4); // lerp(0, 50, 0.5)
+    });
+
+    it('18. width_pct definido abajo y AUSENTE (undefined) arriba: no colapsa a null', () => {
+        const settings: ElementSettings = {
+            mobile: { ...v2Anchor(0, 0), width_pct: 60 },
+            tablet: (() => {
+                const c = v2Anchor(50, 0);
+                delete (c as Partial<ElementConfigV2>).width_pct;
+                return c;
+            })(),
+        };
+
+        const midpoint = (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+        const resolved = resolveElementConfig(settings, midpoint) as ElementConfigV2;
+
+        expect(resolved.width_pct).toBe(60);
+    });
+
+    it('19. height_pct definido abajo y explícitamente null arriba: no colapsa el valor real', () => {
+        const settings: ElementSettings = {
+            mobile: { ...v2Anchor(0, 0), height_pct: 45 },
+            tablet: { ...v2Anchor(50, 0), height_pct: null },
+        };
+
+        const midpoint = (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+        const resolved = resolveElementConfig(settings, midpoint) as ElementConfigV2;
+
+        expect(resolved.height_pct).toBe(45);
+    });
+
+    it('20. repro real: decoración "Tacos Dorados" (mobile.width=112, sin tablet, desktop.width=null) conserva 112 en todo el rango móvil', () => {
+        const settings: ElementSettings = {
+            mobile: { x: 223.5, y: 788.9, width: 112, height: null, scale: 1, rotation: 0, z_index: 1 },
+            desktop: { x: 116.4, y: 1506.2, width: null, height: null, scale: 1, rotation: 0, z_index: 1 },
+        };
+
+        for (const width of MOBILE_PHONES) {
+            const resolved = resolveElementConfig(settings, width) as ElementConfig;
+
+            expect(resolved.width).toBeCloseTo(112 * (width / 390), 6);
+        }
+    });
+
+    it('21. repro real: decoración "Tú Eliges" (mobile+desktop completos en V1, sin tablet) NO deriva hacia Escritorio en ningún teléfono', () => {
+        const settings: ElementSettings = {
+            mobile: { x: 10, y: 337, width: 335, height: 40, scale: 1, rotation: 0, z_index: 1 },
+            desktop: { x: 111, y: 1128, width: 1237.5, height: 150, scale: 1, rotation: 0, z_index: 1 },
+        };
+
+        for (const width of MOBILE_PHONES) {
+            const resolved = resolveElementConfig(settings, width) as ElementConfig;
+
+            // Proporcional a la ANCLA MÓVIL (335), nunca mezclado hacia 1237.5.
+            expect(resolved.width).toBeCloseTo(335 * (width / 390), 6);
+        }
+    });
+
+    it('22. frontera 390 -> 391: sin salto brusco (solo escala continua ~1/390)', () => {
+        const settings: ElementSettings = {
+            mobile: { ...v2Anchor(10, 20), width_pct: 25 },
+            desktop: { z_index: 3 } as unknown as ElementConfigV2,
+        };
+
+        const at390 = resolveElementConfig(settings, 390) as ElementConfigV2;
+        const at391 = resolveElementConfig(settings, 391) as ElementConfigV2;
+
+        expect(at390.width_pct).toBeCloseTo(25, 6);
+        expect(at391.width_pct).toBeCloseTo(25, 6);
+        expect(at390.x_pct).toBeCloseTo(at391.x_pct, 1);
+    });
+
+    it("23. position_mode:'normalized' en Móvil se conserva en todo el rango móvil pese a Escritorio parcial", () => {
+        const settings: ElementSettings = {
+            mobile: v2NormalizedAnchor(15, 25),
+            desktop: { z_index: 5 } as unknown as ElementConfigV2,
+        };
+
+        for (const width of MOBILE_PHONES) {
+            const resolved = resolveElementConfig(settings, width) as ElementConfigV2;
+
+            expect(resolved.position_mode).toBe('normalized');
+        }
+    });
+});
+
+describe('resolveElementConfig: position_mode flow', () => {
+    it("24. position_mode:'flow' se conserva cuando Móvil está completo y Tablet/Escritorio están ausentes o parciales", () => {
+        const settings: ElementSettings = {
+            mobile: v2Anchor(10, 10),
+            desktop: { z_index: 1 } as unknown as ElementConfigV2,
+        };
+
+        const resolved = resolveElementConfig(settings, 412) as ElementConfigV2;
+
+        expect(resolved.position_mode).toBe('flow');
+    });
+});
+
 describe('V1 -> V2 conversion', () => {
     it('8. converts from a measured DOM rect', () => {
         const v1: ElementConfig = {

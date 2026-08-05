@@ -334,21 +334,26 @@ function lerp(a: number, b: number, t: number): number {
     return a + (b - a) * t;
 }
 
-/** Interpola width/height: si CUALQUIERA de las dos anclas es "automático"
- * (null — conserva la proporción original de la imagen), el resultado se
- * queda en automático en vez de forzar un tamaño intermedio arbitrario. */
-function lerpSize(
-    a: number | null | undefined,
-    b: number | null | undefined,
-    t: number,
-): number | null {
-    if (a === null || a === undefined || b === null || b === undefined) {
-        return null;
-    }
-
-    return lerp(a, b, t);
-}
-
+/**
+ * Interpola cualquier campo numérico opcional — INCLUYE width/height y
+ * width_pct/height_pct (antes tenían su propia `lerpSize`, que devolvía
+ * `null` en cuanto CUALQUIERA de las dos anclas fuera `null`/`undefined`,
+ * "automático"). Ese comportamiento se sentía razonable para dos anclas
+ * genuinamente completas donde el admin dejó una en automático a propósito,
+ * pero resultó ser la causa exacta del bug reportado en producción: un
+ * ancla incompleta (Tablet ausente + Escritorio con solo `{z_index:3}`, o
+ * simplemente un campo nunca tocado en esa vista) hacía que `width_pct`
+ * quedara `null` ahí — no por decisión del admin, sino por ausencia de
+ * datos — y esa `null` "ganaba" sobre el valor real de Móvil, devolviendo la
+ * imagen a su tamaño intrínseco desde 391px. Confirmado con datos reales:
+ * la decoración "Tacos Dorados" (Pozole) tiene `mobile.width:112` pero
+ * `desktop.width:null` (nunca se le asignó ancho en Escritorio) — con la
+ * `lerpSize` anterior, CUALQUIER ancho de viewport por encima de 390px
+ * perdía el 112 y volvía a `null`. Ahora, si solo un lado está definido, se
+ * usa ese lado (nunca se "apaga" un valor real por la ausencia del otro) —
+ * solo cuando AMBOS lados son `null`/`undefined` el resultado se queda en
+ * automático, que sigue siendo el único caso donde "automático" tiene un
+ * significado inambiguo. */
 function lerpOptional(
     a: number | null | undefined,
     b: number | null | undefined,
@@ -460,20 +465,83 @@ interface DeviceAnchor {
     config: StoredElementConfig;
 }
 
+/** true si `config` trae su PROPIA posición (x/y o x_pct/y_pct como número
+ * real) — falso para un objeto "huérfano" como `{ z_index: 3 }`, que suele
+ * quedar así porque el admin subió/bajó una capa en esa vista sin llegar a
+ * mover/redimensionar nada ahí. Usado exclusivamente por `completeAnchor`
+ * para decidir si una ancla necesita respaldo de otra — nunca cambia lo que
+ * se GUARDA, solo lo que se usa para resolver. */
+function hasOwnPosition(config: StoredElementConfig): boolean {
+    const c = config as unknown as Record<string, unknown>;
+
+    return (
+        (typeof c.x_pct === 'number' && typeof c.y_pct === 'number') ||
+        (typeof c.x === 'number' && typeof c.y === 'number')
+    );
+}
+
+/**
+ * Completa una ancla "huérfana" (sin posición propia, ver `hasOwnPosition`)
+ * adoptando la geometría COMPLETA del ancla real más cercana (por distancia
+ * en px de ancho, no por orden de dispositivo — Tablet está más cerca de
+ * Móvil que de Escritorio en px, aunque ambos estén a "un paso" en
+ * MENU_DEVICE_ORDER), y conservando encima cualquier campo que la propia
+ * ancla huérfana SÍ traiga explícito (z_index, hidden, locked, opacity…).
+ * Caso real confirmado en producción: un adorno con Móvil V2 completo,
+ * ninguna configuración Tablet y Escritorio = `{ z_index: 3 }` — antes de
+ * este fix, interpolar Móvil↔Escritorio "parcial" convertía width_pct/
+ * height_pct en `null` en cuanto el viewport pasaba de 390px, sin importar
+ * que Escritorio no tuviera NADA de posición propia que mezclar. Con el
+ * respaldo, esa ancla "parcial" termina siendo geométricamente idéntica a
+ * Móvil (solo con su z_index propio encima), así que interpolar contra ella
+ * en cualquier punto intermedio no mueve ni redimensiona nada — el mismo
+ * resultado que si Escritorio no tuviera ninguna configuración.
+ * Si NINGUNA otra ancla tiene posición propia tampoco (caso degenerado), se
+ * devuelve la ancla huérfana tal cual — el spread contra los valores por
+ * defecto que ya hace `resolveElementConfig` sigue aplicando después. */
+function completeAnchor(
+    anchor: DeviceAnchor,
+    others: DeviceAnchor[],
+): StoredElementConfig {
+    if (hasOwnPosition(anchor.config)) {
+        return anchor.config;
+    }
+
+    const nearest = [...others]
+        .filter((o) => hasOwnPosition(o.config))
+        .sort(
+            (a, b) =>
+                Math.abs(a.width - anchor.width) -
+                Math.abs(b.width - anchor.width),
+        )[0];
+
+    if (!nearest) {
+        return anchor.config;
+    }
+
+    return { ...nearest.config, ...anchor.config };
+}
+
 function anchorsOf(
     settings: ElementSettings | null | undefined,
 ): DeviceAnchor[] {
-    const anchors: DeviceAnchor[] = [];
+    const raw: DeviceAnchor[] = [];
 
     for (const device of MENU_DEVICE_ORDER) {
         const config = settings?.[device];
 
         if (config) {
-            anchors.push({ device, width: MENU_DEVICE_WIDTH[device], config });
+            raw.push({ device, width: MENU_DEVICE_WIDTH[device], config });
         }
     }
 
-    return anchors;
+    return raw.map((anchor) => ({
+        ...anchor,
+        config: completeAnchor(
+            anchor,
+            raw.filter((a) => a.device !== anchor.device),
+        ),
+    }));
 }
 
 function defaultConfigFor(config: StoredElementConfig): StoredElementConfig {
@@ -524,10 +592,41 @@ export function resolveElementConfig(
     settings: ElementSettings | null | undefined,
     viewportWidth: number,
 ): StoredElementConfig {
-    const anchors = anchorsOf(settings);
+    let anchors = anchorsOf(settings);
 
     if (anchors.length === 0) {
         return defaultElementConfig();
+    }
+
+    // Dentro del rango Móvil (resolveMenuDevice), si NO hay una ancla Tablet
+    // propia, ignora cualquier ancla más lejana (Escritorio) por completo —
+    // nunca empieces a mezclar hacia Escritorio solo porque el viewport pasó
+    // de 390px. Sin esto, un teléfono de 393/412/414/430px (anchors =
+    // [mobile, desktop], Tablet nunca se configuró) ya arrancaba una
+    // interpolación real hacia Escritorio con t > 0 desde el primer px por
+    // encima del ancla Móvil — confirmado con datos reales: la decoración
+    // "Tacos Dorados" (mobile.width:112, sin tablet, desktop.width:1237.5)
+    // crecía progresivamente en CUALQUIER teléfono más ancho que el S20 en
+    // vez de conservar el tamaño diseñado para Móvil. Deliberadamente NO se
+    // aplica cuando SÍ existe una ancla Tablet propia (con o sin posición —
+    // `completeAnchor` ya la respalda si es parcial): esa es la transición
+    // Móvil->Tablet real y probada (ver tests 4/5), que este arreglo no debe
+    // tocar. El límite superior es el mismo punto medio que ya usa
+    // `resolveMenuDevice` para clasificar el viewport como 'mobile' — nunca
+    // se activa por debajo del propio ancho del ancla Móvil (ahí ya extrapola
+    // solo, sin mezclar, vía la rama `viewportWidth <= first.width` de abajo).
+    const mobileAnchor = anchors.find((a) => a.device === 'mobile');
+    const hasTabletAnchor = anchors.some((a) => a.device === 'tablet');
+    const midMobileTablet =
+        (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+
+    if (
+        mobileAnchor &&
+        !hasTabletAnchor &&
+        viewportWidth > mobileAnchor.width &&
+        viewportWidth < midMobileTablet
+    ) {
+        anchors = [mobileAnchor];
     }
 
     const first = anchors[0];
@@ -610,14 +709,18 @@ export function resolveElementConfig(
         );
     }
 
-    out.width = lerpSize(a.width as number | null, b.width as number | null, t);
-    out.height = lerpSize(a.height as number | null, b.height as number | null, t);
-    out.width_pct = lerpSize(
+    out.width = lerpOptional(a.width as number | null, b.width as number | null, t);
+    out.height = lerpOptional(
+        a.height as number | null,
+        b.height as number | null,
+        t,
+    );
+    out.width_pct = lerpOptional(
         a.width_pct as number | null,
         b.width_pct as number | null,
         t,
     );
-    out.height_pct = lerpSize(
+    out.height_pct = lerpOptional(
         a.height_pct as number | null,
         b.height_pct as number | null,
         t,

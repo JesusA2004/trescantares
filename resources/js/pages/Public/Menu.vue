@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { layoutFor } from '@/components/Public/Menu/layoutRegistry';
 import MenuEditableElement from '@/components/Public/Menu/MenuEditableElement.vue';
 import MenuSideNav from '@/components/Public/Menu/MenuSideNav.vue';
@@ -187,6 +187,32 @@ onMounted(() => {
     });
 
     window.addEventListener('scroll', onScroll, { passive: true });
+
+    sectionOverflowObserver = new ResizeObserver(() => {
+        scheduleRemeasureAllSections();
+    });
+    window.addEventListener('resize', scheduleRemeasureAllSections);
+
+    // Primera medición: espera al siguiente tick (DOM ya montado con el
+    // markup final) Y a que toda imagen YA presente en el documento termine
+    // de decodificar — antes de eso su caja puede seguir en su alto
+    // intrínseco/0 provisional, lo que subestimaría maxBottom. `decode()`
+    // en un <img> sin `src` válido o ya roto rechaza la promesa: se ignora
+    // a propósito (igual se remide más tarde vía el ResizeObserver de cada
+    // elemento en cuanto su caja SÍ cambie de tamaño).
+    void nextTick(() => {
+        scheduleRemeasureAllSections();
+
+        const images = Array.from(document.querySelectorAll('.tc-mp img'));
+
+        void Promise.all(
+            images.map((img) =>
+                (img as HTMLImageElement).decode
+                    ? (img as HTMLImageElement).decode().catch(() => {})
+                    : Promise.resolve(),
+            ),
+        ).then(() => scheduleRemeasureAllSections());
+    });
 });
 
 onUnmounted(() => {
@@ -198,7 +224,22 @@ onUnmounted(() => {
 
     observer?.disconnect();
     window.removeEventListener('scroll', onScroll);
+
+    sectionOverflowObserver?.disconnect();
+    sectionOverflowObserver = null;
+    window.removeEventListener('resize', scheduleRemeasureAllSections);
+
+    if (remeasureFrame) {
+        cancelAnimationFrame(remeasureFrame);
+        remeasureFrame = 0;
+    }
 });
+
+// El propio ancho del viewport puede reposicionar un elemento (%) sin que
+// SU tamaño cambie — ResizeObserver no lo detectaría por sí solo (solo
+// reacciona a cambios de TAMAÑO, nunca de posición). `flush:'post'` espera
+// a que Vue ya haya vuelto a pintar con la nueva geometría antes de medir.
+watch(viewportWidth, () => scheduleRemeasureAllSections(), { flush: 'post' });
 
 function onScroll() {
     showScrollTop.value = window.scrollY > 600;
@@ -534,11 +575,105 @@ const draggingSectionHeight = ref(0);
  * liveWidth/liveHeight en MenuEditableElement.vue: el DOM se actualiza vía
  * este computed reactivo, nunca escribiendo estilos a mano fuera de Vue. */
 function liveOrStoredSectionHeight(category: MenuCategoryData): number | null {
-    if (draggingSectionId.value === category.id) {
-        return draggingSectionHeight.value;
+    const configured =
+        draggingSectionId.value === category.id
+            ? draggingSectionHeight.value
+            : sectionHeightFor(category, viewportWidth.value);
+
+    // El piso MEDIDO nunca reduce el alto que el admin ya configuró (o el
+    // que está arrastrando ahora mismo) — solo lo EXTIENDE cuando el
+    // contenido real (sobre todo elementos `position:absolute`, que no
+    // aportan alto al flujo normal: adornos y cualquier elemento
+    // personalizado ya "normalizado", ver measureSectionOverflow) se sale
+    // por debajo de ese valor. Nunca al revés.
+    const measured = sectionOverflowPx[category.id] ?? 0;
+
+    return Math.max(configured ?? 0, measured) || null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Piso de alto MEDIDO por sección — evita que una categoría invada a la  */
+/* siguiente cuando el contenido real (sobre todo adornos/elementos       */
+/* normalizados, que viven en position:absolute y por eso NO empujan el   */
+/* alto natural de la sección) termina más abajo que el alto configurado  */
+/* o el automático de flujo. Nunca REDUCE nada — ver liveOrStoredSectionHeight, */
+/* que toma el máximo entre esto y lo configurado/arrastrado. Comparte    */
+/* exactamente el mismo DOM (.tc-mp-decoration-layer/.tc-mp-customized-layer) */
+/* que ya usa el editor visual, así que editor y /menu público miden      */
+/* igual (ver requisito 7). */
+/* ------------------------------------------------------------------ */
+
+const sectionOverflowPx = reactive<Record<number, number>>({});
+const SECTION_OVERFLOW_SAFETY_MARGIN = 24;
+let sectionOverflowObserver: ResizeObserver | null = null;
+let remeasureFrame = 0;
+
+/** Alto real que ocupa el contenido de una sección, incluyendo cualquier
+ * elemento `position:absolute` (adornos + elementos ya `normalized`) que
+ * viva fuera del flujo — estos NUNCA aportan alto al contenedor padre, así
+ * que sin esta medición explícita una sección podía terminar antes que su
+ * propio contenido visible (confirmado en el repro: contenedores de
+ * 119-202px de alto con elementos absolutos de más de 2000px). Mide contra
+ * TODOS los `[data-element-key]` dentro de las capas fuera de flujo, nunca
+ * solo los adornos — un platillo/título ya `normalized` (arrastrado a mano)
+ * también sale del flujo (ver MenuEditableElement.vue) y puede sobresalir
+ * igual. */
+function measureSectionOverflow(categoryId: number) {
+    const sectionEl = document.getElementById(`cat-${categoryId}`);
+
+    if (!sectionEl) {
+        return;
     }
 
-    return sectionHeightFor(category, viewportWidth.value);
+    const sectionRect = sectionEl.getBoundingClientRect();
+    const targets = sectionEl.querySelectorAll<HTMLElement>(
+        '.tc-mp-decoration-layer [data-element-key], .tc-mp-customized-layer [data-element-key]',
+    );
+
+    let maxBottom = 0;
+
+    targets.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        const bottom = rect.bottom - sectionRect.top;
+
+        if (bottom > maxBottom) {
+            maxBottom = bottom;
+        }
+
+        // Observa cada elemento fuera de flujo individualmente — un cambio
+        // de TAMAÑO ahí (p. ej. una imagen que termina de decodificar y
+        // recupera sus dimensiones intrínsecas reales) dispara un
+        // recálculo, aunque el propio contenedor de la sección no haya
+        // cambiado de tamaño todavía.
+        sectionOverflowObserver?.observe(el);
+    });
+
+    sectionOverflowPx[categoryId] =
+        maxBottom > 0 ? Math.ceil(maxBottom) + SECTION_OVERFLOW_SAFETY_MARGIN : 0;
+}
+
+/** Recalcula TODAS las secciones no-portada — usado por el ResizeObserver
+ * global y por window 'resize' (el ancho real del viewport cambia la
+ * posición de cualquier elemento en % sin necesariamente cambiar el tamaño
+ * de ningún nodo individual, así que un ResizeObserver por elemento solo no
+ * basta). Encolado en un solo rAF para colapsar ráfagas de callbacks (várias
+ * imágenes terminando de cargar casi al mismo tiempo, o el propio
+ * ResizeObserver reaccionando a los cambios de alto que esta función acaba
+ * de aplicar) en una sola medición por frame. */
+function scheduleRemeasureAllSections() {
+    if (remeasureFrame) {
+        return;
+    }
+
+    remeasureFrame = requestAnimationFrame(() => {
+        remeasureFrame = 0;
+
+        for (const category of categories) {
+            if (category.layout !== 'portada') {
+                measureSectionOverflow(category.id);
+            }
+        }
+    });
 }
 
 async function persistSectionHeight(category: MenuCategoryData, height: number) {
