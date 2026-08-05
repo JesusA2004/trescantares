@@ -20,28 +20,39 @@ class MenuDecorationController extends Controller
     private const BREAKPOINTS = ['mobile', 'tablet', 'desktop'];
 
     /**
-     * Crea un adorno subiendo una imagen nueva O reutilizando una ruta ya
-     * existente en la biblioteca (`image_library_path`) — nunca ambas a la
-     * vez, y nunca duplica el archivo si se reutiliza.
+     * Crea un adorno — de IMAGEN (subiendo un archivo nuevo O reutilizando
+     * una ruta ya existente en la biblioteca vía `image_library_path`, nunca
+     * ambas a la vez, nunca duplica el archivo si se reutiliza) o de TEXTO
+     * libre (`kind=text` + `text_content`, sin ninguna imagen) — pedido
+     * explícito del admin: poder escribir un nombre de platillo, precio o
+     * promo a mano, sin depender de un MenuItem real.
      */
     public function store(Request $request): JsonResponse
     {
+        $kind = $request->input('kind', 'image') === 'text' ? 'text' : 'image';
+
         $data = $request->validate([
             'menu_category_id' => 'required|exists:menu_categories,id',
             'name' => 'required|string|max:120',
+            'kind' => ['nullable', Rule::in(['image', 'text'])],
             'alt_text' => 'nullable|string|max:255',
-            'image' => 'required_without:image_library_path|nullable|image|mimes:jpg,jpeg,png,webp|max:6144|dimensions:min_width=20,min_height=20',
-            'image_library_path' => 'required_without:image|nullable|string|max:500',
+            'image' => $kind === 'image'
+                ? 'required_without:image_library_path|nullable|image|mimes:jpg,jpeg,png,webp|max:6144|dimensions:min_width=20,min_height=20'
+                : 'nullable',
+            'image_library_path' => $kind === 'image'
+                ? 'required_without:image|nullable|string|max:500'
+                : 'nullable',
+            'text_content' => $kind === 'text' ? 'required|string|max:500' : 'nullable|string|max:500',
         ]);
-
-        $imagePath = $this->resolveImagePath($request, $data);
 
         $maxOrder = MenuDecoration::where('menu_category_id', $data['menu_category_id'])->max('sort_order') ?? -1;
 
         $decoration = MenuDecoration::create([
             'menu_category_id' => $data['menu_category_id'],
             'name' => $data['name'],
-            'image_path' => $imagePath,
+            'kind' => $kind,
+            'image_path' => $kind === 'image' ? $this->resolveImagePath($request, $data) : '',
+            'text_content' => $kind === 'text' ? $data['text_content'] : null,
             'alt_text' => $data['alt_text'] ?? null,
             'is_active' => true,
             'sort_order' => $maxOrder + 1,
@@ -69,6 +80,7 @@ class MenuDecorationController extends Controller
             'sort_order' => 'sometimes|integer',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144|dimensions:min_width=20,min_height=20',
             'image_library_path' => 'nullable|string|max:500',
+            'text_content' => $menuDecoration->kind === 'text' ? 'sometimes|required|string|max:500' : 'nullable|string|max:500',
         ]);
 
         if ($request->hasFile('image') || $request->filled('image_library_path')) {
@@ -112,7 +124,9 @@ class MenuDecorationController extends Controller
         $copy = MenuDecoration::create([
             'menu_category_id' => $menuDecoration->menu_category_id,
             'name' => $menuDecoration->name.' (copia)',
+            'kind' => $menuDecoration->kind,
             'image_path' => $menuDecoration->image_path,
+            'text_content' => $menuDecoration->text_content,
             'alt_text' => $menuDecoration->alt_text,
             'is_active' => $menuDecoration->is_active,
             'sort_order' => $maxOrder + 1,
@@ -160,8 +174,11 @@ class MenuDecorationController extends Controller
 
         $data = $request->validate(array_merge(
             ['breakpoint' => ['required', Rule::in(self::BREAKPOINTS)]],
-            // Los adornos nunca tienen texto — sin reglas de tipografía.
-            MenuElementConfigRules::forConfig($request->input('config'), includeTypography: false),
+            // Un adorno de imagen nunca tiene texto (sin reglas de
+            // tipografía); uno de texto SÍ las necesita — mismo control que
+            // cualquier otro texto del editor (tamaño de fuente, color,
+            // alineación…).
+            MenuElementConfigRules::forConfig($request->input('config'), includeTypography: $menuDecoration->kind === 'text'),
         ));
 
         $settings = $menuDecoration->visual_settings ?? [];

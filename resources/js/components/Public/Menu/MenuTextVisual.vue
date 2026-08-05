@@ -11,11 +11,18 @@ const props = withDefaults(
         editable?: boolean;
         selectedKey?: string | null;
         as?: string;
+        /** true SOLO para un adorno de texto (ver Menu.vue) — reenviado tal
+         * cual a MenuEditableElement, que lo necesita para fijar SIEMPRE
+         * position:absolute (nunca condicionado a Teleport/normalized, ver
+         * comentario completo en MenuEditableElement.vue) y así vivir en
+         * .tc-mp-decoration-layer igual que un adorno de imagen. */
+        decoration?: boolean;
     }>(),
     {
         editable: false,
         selectedKey: null,
         as: 'div',
+        decoration: false,
     },
 );
 
@@ -64,6 +71,7 @@ const textStyle = computed(() => {
         :editable="editable"
         :selected="selectedKey === elementKey"
         kind="text"
+        :decoration="decoration"
         @select="emit('select', $event)"
         @commit="(k, c) => emit('commit', k, c)"
     >

@@ -740,6 +740,10 @@ export interface MenuDecorationData {
     id: number;
     menu_category_id: number;
     name: string;
+    /** 'image' (de siempre) o 'text' — un bloque de texto libre sin ningún
+     * platillo/imagen detrás (nombre manual, precio a mano, promo…). */
+    kind: 'image' | 'text';
+    text_content?: string | null;
     alt_text?: string | null;
     is_active: boolean;
     sort_order: number;

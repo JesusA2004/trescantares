@@ -7306,6 +7306,24 @@ body,
     height: auto;
 }
 
+/* Adorno de TEXTO libre (nombre/precio manual, promo…) — comparte capa,
+   posicionamiento absoluto y pointer-events con .tc-mp-decoration (ver
+   arriba), pero el ancho fijo de 220px de esa regla existe por una razón
+   específica de IMÁGENES (shrink-to-fit con max-width:100% en el hijo, ver
+   comentario completo) que no aplica a texto — aquí basta max-content para
+   que la caja se ajuste al texto real, con un tope razonable en pantallas
+   angostas. Tamaño/color por defecto SOLO para que un adorno recién creado
+   ya sea legible antes de personalizarlo — el inspector (font_size/color/
+   align, mismos campos que cualquier otro texto) los sobreescribe. */
+.tc-mp-decoration-text {
+    width: max-content;
+    max-width: min(80vw, 420px);
+    font-family: var(--tc-font-display);
+    font-size: 1.5rem;
+    color: var(--tc-blue, #144e8f);
+    white-space: pre-wrap;
+}
+
 .tc-mp--editable .tc-mp-decoration {
     pointer-events: auto;
 }

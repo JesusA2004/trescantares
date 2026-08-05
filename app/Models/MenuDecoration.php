@@ -11,7 +11,9 @@ class MenuDecoration extends Model
     protected $fillable = [
         'menu_category_id',
         'name',
+        'kind',
         'image_path',
+        'text_content',
         'alt_text',
         'is_active',
         'sort_order',
@@ -37,10 +39,14 @@ class MenuDecoration extends Model
     }
 
     /** Clave estable usada por el editor visual y el menú público — NUNCA un
-     * índice de array, que se invalidaría al reordenar. */
+     * índice de array, que se invalidaría al reordenar. El sufijo cambia
+     * según `kind` (':image' o ':text') para que MenuEditableElement.vue
+     * (que decide font/tipografía vs. imagen por el sufijo de la clave, ver
+     * IMAGE_ELEMENTS/TEXT_ELEMENTS en Index.vue) trate un adorno de texto
+     * como cualquier otro texto del editor. */
     public function getElementKeyAttribute(): string
     {
-        return "decoration-{$this->id}:image";
+        return "decoration-{$this->id}:{$this->kind}";
     }
 
     public function toPublicArray(): array
@@ -49,6 +55,8 @@ class MenuDecoration extends Model
             'id' => $this->id,
             'menu_category_id' => $this->menu_category_id,
             'name' => $this->name,
+            'kind' => $this->kind,
+            'text_content' => $this->text_content,
             'alt_text' => $this->alt_text,
             'is_active' => $this->is_active,
             'sort_order' => $this->sort_order,

@@ -775,6 +775,28 @@ async function renameSelectedDecoration(name: string) {
     }
 }
 
+/** Contenido REAL de un adorno de texto (lo que se ve en el menú, a
+ * diferencia de "Nombre descriptivo" que es solo una etiqueta interna del
+ * admin en esta barra lateral) — mismo patrón de guardado que
+ * renameSelectedDecoration. */
+async function updateSelectedDecorationText(text: string) {
+    if (!selectedDecoration.value) {
+        return;
+    }
+
+    selectedDecoration.value.text_content = text;
+    scheduleIframeReload();
+
+    try {
+        await patchJson(
+            `/admin/menu-decorations/${selectedDecoration.value.id}`,
+            { text_content: text },
+        );
+    } catch {
+        notify.error('No se pudo guardar el texto.');
+    }
+}
+
 const selectedItemCategory = computed<MenuCategoryData | null>(() => {
     if (!selectedItem.value) {
         return null;
@@ -822,6 +844,12 @@ const IMAGE_ELEMENTS = new Set([
     'caption_image',
 ]);
 const TEXT_ELEMENTS = new Set([
+    // Sufijo de element_key de un adorno de TEXTO libre (ver
+    // MenuDecoration::getElementKeyAttribute) — con esto, selectedKind ya
+    // resuelve 'text' y el inspector muestra los mismos controles de
+    // tipografía (tamaño de fuente/color/alineación) que cualquier otro
+    // texto del editor, sin duplicar esa sección de UI.
+    'text',
     'name',
     'description',
     'price',
@@ -1604,8 +1632,12 @@ const decorationsSaving = ref(false);
 const addDecorationOpen = ref(false);
 const replaceDecorationImageOpen = ref(false);
 
-function selectDecoration(id: number) {
-    onSelectFromSidebar(`decoration-${id}:image`);
+function selectDecoration(decoration: MenuDecorationData) {
+    // element_key ya trae el sufijo correcto (':image' o ':text', ver
+    // MenuDecoration::getElementKeyAttribute) — reconstruirlo a mano aquí
+    // asumía siempre ':image', lo que rompía la selección de un adorno de
+    // texto recién creado.
+    onSelectFromSidebar(decoration.element_key);
 }
 
 async function toggleDecorationActive(decoration: MenuDecorationData) {
@@ -1671,7 +1703,7 @@ async function deleteDecorationAction(decoration: MenuDecorationData) {
             );
         }
 
-        if (selectedKey.value === `decoration-${decoration.id}:image`) {
+        if (selectedKey.value === decoration.element_key) {
             selectedKey.value = null;
         }
 
@@ -1679,6 +1711,44 @@ async function deleteDecorationAction(decoration: MenuDecorationData) {
         notify.success('Adorno eliminado.');
     } catch {
         notify.error('No se pudo eliminar el adorno.');
+    } finally {
+        decorationsSaving.value = false;
+    }
+}
+
+/** "+ Texto" — crea un adorno de TEXTO libre (sin imagen, sin ligarlo a
+ * ningún platillo) con un contenido de arranque genérico, seleccionado de
+ * inmediato para que el admin lo escriba/mueva/estilice sin pasos extra. A
+ * diferencia de una imagen, no necesita ningún modal previo: no hay archivo
+ * que elegir. */
+async function addTextDecoration() {
+    if (!activeCategory.value) {
+        return;
+    }
+
+    decorationsSaving.value = true;
+
+    try {
+        const res = await postJson<{ decoration: MenuDecorationData }>(
+            '/admin/menu-decorations',
+            {
+                menu_category_id: activeCategory.value.id,
+                name: 'Texto nuevo',
+                kind: 'text',
+                text_content: 'Escribe aquí',
+            },
+        );
+        activeCategory.value.decorations = [
+            ...(activeCategory.value.decorations ?? []),
+            res.decoration,
+        ];
+        scheduleIframeReload();
+        selectDecoration(res.decoration);
+        notify.success(
+            'Texto agregado — cambia el contenido abajo y muévelo en el lienzo.',
+        );
+    } catch {
+        notify.error('No se pudo agregar el texto.');
     } finally {
         decorationsSaving.value = false;
     }
@@ -1706,7 +1776,7 @@ async function onDecorationPicked({ path }: { path: string; url: string }) {
             res.decoration,
         ];
         scheduleIframeReload();
-        selectDecoration(res.decoration.id);
+        selectDecoration(res.decoration);
         notify.success(
             'Adorno agregado — ya puedes moverlo/redimensionarlo en el lienzo.',
         );
@@ -2265,16 +2335,23 @@ function onDecorationHandleDown(
                                 class="tc-element-btn flex-1"
                                 :class="{
                                     'tc-element-btn--active':
-                                        selectedKey ===
-                                        `decoration-${decoration.id}:image`,
+                                        selectedKey === decoration.element_key,
                                 }"
-                                @click="selectDecoration(decoration.id)"
+                                @click="selectDecoration(decoration)"
                             >
+                                <TypeIcon
+                                    v-if="decoration.kind === 'text'"
+                                    class="h-3.5 w-3.5 shrink-0 opacity-60"
+                                />
                                 <ImageIcon
+                                    v-else
                                     class="h-3.5 w-3.5 shrink-0 opacity-60"
                                 />
                                 <span class="truncate">{{
-                                    decoration.name
+                                    decoration.kind === 'text'
+                                        ? decoration.text_content ||
+                                          decoration.name
+                                        : decoration.name
                                 }}</span>
                             </button>
                             <button
@@ -2320,13 +2397,23 @@ function onDecorationHandleDown(
                             Esta sección todavía no tiene adornos.
                         </li>
                     </ul>
-                    <button
-                        type="button"
-                        class="tc-btn-secondary w-full text-xs"
-                        @click="addDecorationOpen = true"
-                    >
-                        <Plus class="mr-1 inline h-3.5 w-3.5" />Agregar adorno
-                    </button>
+                    <div class="flex gap-1.5">
+                        <button
+                            type="button"
+                            class="tc-btn-secondary flex-1 text-xs"
+                            @click="addDecorationOpen = true"
+                        >
+                            <ImageIcon class="mr-1 inline h-3.5 w-3.5" />Imagen
+                        </button>
+                        <button
+                            type="button"
+                            class="tc-btn-secondary flex-1 text-xs"
+                            :disabled="decorationsSaving"
+                            @click="addTextDecoration"
+                        >
+                            <TypeIcon class="mr-1 inline h-3.5 w-3.5" />Texto
+                        </button>
+                    </div>
                 </template>
             </aside>
 
@@ -2799,15 +2886,37 @@ function onDecorationHandleDown(
                         v-if="selectedDecoration"
                         class="mb-4 space-y-2.5 border-t border-gray-100 pt-3"
                     >
-                        <p class="tc-inspector-label">Adorno</p>
+                        <p class="tc-inspector-label">
+                            {{
+                                selectedDecoration.kind === 'text'
+                                    ? 'Texto'
+                                    : 'Adorno'
+                            }}
+                        </p>
+                        <TcTextarea
+                            v-if="selectedDecoration.kind === 'text'"
+                            label="Contenido"
+                            :rows="2"
+                            :model-value="selectedDecoration.text_content ?? ''"
+                            hint="Esto es lo que se ve en el menú — nombre de platillo, precio o promo escrito a mano."
+                            @update:model-value="
+                                updateSelectedDecorationText($event as string)
+                            "
+                        />
                         <TcInput
                             label="Nombre descriptivo"
                             :model-value="selectedDecoration.name"
+                            :hint="
+                                selectedDecoration.kind === 'text'
+                                    ? 'Solo para identificarlo en esta lista — no se ve en el menú.'
+                                    : undefined
+                            "
                             @update:model-value="
                                 renameSelectedDecoration($event as string)
                             "
                         />
                         <button
+                            v-if="selectedDecoration.kind !== 'text'"
                             type="button"
                             class="tc-btn-secondary w-full text-xs"
                             @click="replaceDecorationImageOpen = true"

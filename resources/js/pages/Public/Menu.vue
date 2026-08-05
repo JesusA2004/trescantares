@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { layoutFor } from '@/components/Public/Menu/layoutRegistry';
 import MenuEditableElement from '@/components/Public/Menu/MenuEditableElement.vue';
 import MenuSideNav from '@/components/Public/Menu/MenuSideNav.vue';
+import MenuTextVisual from '@/components/Public/Menu/MenuTextVisual.vue';
 import {
     MENU_DEVICE_WIDTH,
     categoryElementFor,
@@ -762,22 +763,41 @@ function startSectionResize(event: PointerEvent, category: MenuCategoryData) {
                      (top:0/left:0 de su caja de relleno), así que ningún x/y
                      guardado cambia de significado. -->
                 <div class="tc-mp-decoration-layer">
-                    <MenuEditableElement
+                    <template
                         v-for="decoration in visibleDecorations(category)"
                         :key="decoration.element_key"
-                        :element-key="decoration.element_key"
-                        :label="decoration.name"
-                        :config="decorationElementFor(decoration, viewportWidth)"
-                        :editable="editable"
-                        :selected="selectedKey === decoration.element_key"
-                        kind="image"
-                        :src="decoration.image_url"
-                        :alt="decoration.alt_text ?? decoration.name"
-                        decoration
-                        class="tc-mp-decoration"
-                        @select="onElementSelect"
-                        @commit="onElementCommit"
-                    />
+                    >
+                        <MenuTextVisual
+                            v-if="decoration.kind === 'text'"
+                            :element-key="decoration.element_key"
+                            :label="decoration.name"
+                            :config="decorationElementFor(decoration, viewportWidth)"
+                            :editable="editable"
+                            :selected-key="selectedKey"
+                            as="p"
+                            decoration
+                            class="tc-mp-decoration tc-mp-decoration-text"
+                            @select="onElementSelect"
+                            @commit="onElementCommit"
+                        >
+                            {{ decoration.text_content }}
+                        </MenuTextVisual>
+                        <MenuEditableElement
+                            v-else
+                            :element-key="decoration.element_key"
+                            :label="decoration.name"
+                            :config="decorationElementFor(decoration, viewportWidth)"
+                            :editable="editable"
+                            :selected="selectedKey === decoration.element_key"
+                            kind="image"
+                            :src="decoration.image_url"
+                            :alt="decoration.alt_text ?? decoration.name"
+                            decoration
+                            class="tc-mp-decoration"
+                            @select="onElementSelect"
+                            @commit="onElementCommit"
+                        />
+                    </template>
                 </div>
 
                 <!-- Cuarta capa, reservada para la interfaz del editor
