@@ -313,7 +313,19 @@ class MenuItemController extends Controller
 
         return [
             'menu_category_id' => 'required|exists:menu_categories,id',
-            'zone' => $allowedZones !== [] ? ['nullable', Rule::in($allowedZones)] : 'nullable|string|max:40',
+            // La plantilla (layout) de la categoría decide si `zone` es de
+            // verdad obligatoria: los layouts con zonas reales (pozole,
+            // pancita, birria, comal, bebidas_tabla, destilados) FILTRAN sus
+            // platillos por zona (ver byZone() en cada *Page.vue) — un
+            // platillo guardado con zone=null en uno de esos layouts no
+            // aparece en NINGUNA parte del menú público (ni su imagen, ni su
+            // nombre, nada), sin ningún error visible para el admin. Antes
+            // este campo era 'nullable' incluso cuando el layout SÍ tenía
+            // zonas, lo que permitía crear platillos invisibles por
+            // accidente. Los layouts sin zonas (grid, fusiones, postres,
+            // bebidas_promo, portada, promo_full_image) siguen aceptando
+            // cualquier texto libre opcional, igual que antes.
+            'zone' => $allowedZones !== [] ? ['required', Rule::in($allowedZones)] : 'nullable|string|max:40',
             'name' => [
                 'required', 'string', 'max:255',
                 // `slug` (derivado de `name`) tiene un índice ÚNICO a nivel de

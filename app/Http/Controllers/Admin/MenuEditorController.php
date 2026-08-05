@@ -107,6 +107,81 @@ class MenuEditorController extends Controller
     }
 
     /**
+     * "Duplicar platillo" — el admin pidió poder copiar los textos/precio de
+     * un platillo existente como punto de partida para uno nuevo (en vez de
+     * escribir todo desde cero), igual que ya podía duplicar un adorno (ver
+     * MenuDecorationController::duplicate, mismo patrón). Comparte la MISMA
+     * imagen (legacy `image` + cada fila de `images`, nunca duplica el
+     * archivo físico) y copia `layout_settings` (si el original se movió a
+     * mano en el editor, la copia nace en la misma posición — el admin
+     * puede reacomodarla después). `slug` es único en BD, así que el nombre
+     * copiado se desambigua solo si hace falta (copia de una copia, etc.).
+     */
+    public function duplicateItem(MenuItem $menuItem): JsonResponse
+    {
+        $menuItem->load('images');
+
+        $name = $menuItem->name.' (copia)';
+        $slug = Str::slug($name);
+        $suffix = 2;
+
+        while (MenuItem::where('slug', $slug)->exists()) {
+            $name = $menuItem->name.' (copia '.$suffix.')';
+            $slug = Str::slug($name);
+            $suffix++;
+        }
+
+        $copy = MenuItem::create([
+            'menu_category_id' => $menuItem->menu_category_id,
+            'zone' => $menuItem->zone,
+            'name' => $name,
+            'slug' => $slug,
+            'description' => $menuItem->description,
+            'price' => $menuItem->price,
+            'price_label' => $menuItem->price_label,
+            'price_secondary' => $menuItem->price_secondary,
+            'price_secondary_label' => $menuItem->price_secondary_label,
+            'presentation' => $menuItem->presentation,
+            'image' => $menuItem->image,
+            'alt_text' => $menuItem->alt_text,
+            'image_position_x' => $menuItem->image_position_x,
+            'image_position_y' => $menuItem->image_position_y,
+            'image_scale' => $menuItem->image_scale,
+            'image_fit' => $menuItem->image_fit,
+            'image_align' => $menuItem->image_align,
+            'visual_size' => $menuItem->visual_size,
+            'layout_settings' => $menuItem->layout_settings,
+            'badge' => $menuItem->badge,
+            'choice_label' => $menuItem->choice_label,
+            'choice_label_hidden' => $menuItem->choice_label_hidden,
+            'ingredients' => $menuItem->ingredients,
+            'ingredients_hidden' => $menuItem->ingredients_hidden,
+            'is_featured' => false,
+            'is_active' => $menuItem->is_active,
+            'image_hidden' => $menuItem->image_hidden,
+            'sort_order' => (int) MenuItem::where('menu_category_id', $menuItem->menu_category_id)->max('sort_order') + 1,
+        ]);
+
+        foreach ($menuItem->images as $image) {
+            $copy->images()->create([
+                'image_path' => $image->image_path,
+                'alt_text' => $image->alt_text,
+                'is_primary' => $image->is_primary,
+                'sort_order' => $image->sort_order,
+            ]);
+        }
+
+        $copy->load(['images', 'primaryImage']);
+        Cache::flush();
+
+        return response()->json([
+            'item' => array_merge($copy->toPublicArray(), [
+                'has_image' => $copy->image !== null || $copy->primaryImage !== null,
+            ]),
+        ], 201);
+    }
+
+    /**
      * "+ Nueva sección" del editor visual — misma validación/reglas de
      * negocio que CategoryController::store() (reutilizada vía
      * storeFromRequest()), pero responde JSON para insertar la sección
@@ -241,7 +316,17 @@ class MenuEditorController extends Controller
                 },
             ],
             'description' => 'nullable|string',
-            'zone' => $allowedZones !== [] ? ['nullable', Rule::in($allowedZones)] : 'nullable|string|max:40',
+            // 'sometimes' porque este endpoint recibe actualizaciones
+            // parciales (un solo campo a la vez, ver updateQuickField en
+            // Index.vue) — a diferencia de MenuItemController::rules()
+            // (formulario completo, donde 'zone' SIEMPRE se envía y por eso
+            // sí puede ser 'required' a secas), aquí exigirlo sin 'sometimes'
+            // rompería cualquier edición rápida de OTRO campo (nombre,
+            // precio…) en una categoría con zonas, porque 'zone' no viaja en
+            // esa petición. Cuando SÍ viaja (el admin edita la zona), sigue
+            // sin poder quedar vacía en un layout que la usa para filtrar
+            // (ver MenuItemController::rules() para el porqué).
+            'zone' => $allowedZones !== [] ? ['sometimes', 'required', Rule::in($allowedZones)] : 'sometimes|nullable|string|max:40',
             'price' => 'sometimes|required|numeric|min:0',
             'price_label' => 'nullable|string|max:40',
             'price_secondary' => 'nullable|numeric|min:0',

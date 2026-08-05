@@ -395,6 +395,7 @@ function submit() {
                                 v-model="form.zone"
                                 label="Zona en la plantilla"
                                 placeholder="Seleccionar categoría primero"
+                                :required="!!zoneOptions.length"
                                 :disabled="!zoneOptions.length"
                                 :options="
                                     zoneOptions.map((z) => ({
@@ -403,7 +404,11 @@ function submit() {
                                     }))
                                 "
                                 :error="form.errors.zone"
-                                hint="Determina en qué parte de la página se ubica este platillo, según la plantilla de la categoría."
+                                :hint="
+                                    zoneOptions.length
+                                        ? 'Obligatoria: si no eliges zona, el platillo no aparecerá en el menú público aunque tenga imagen y precio.'
+                                        : 'Esta plantilla no usa zonas — el platillo se muestra en el orden de la lista.'
+                                "
                             />
                         </div>
                     </AdminFormSection>

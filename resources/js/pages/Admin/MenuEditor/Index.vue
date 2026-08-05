@@ -74,6 +74,7 @@ import TcInput from '@/components/tc/TcInput.vue';
 import TcMediaLibraryModal from '@/components/tc/TcMediaLibraryModal.vue';
 import TcSelect from '@/components/tc/TcSelect.vue';
 import TcSwitch from '@/components/tc/TcSwitch.vue';
+import TcTextarea from '@/components/tc/TcTextarea.vue';
 import { useAutosave } from '@/composables/useAutosave';
 import { useDragSort } from '@/composables/useDragSort';
 import { useMenuPreviewParent } from '@/composables/useMenuPreviewBridge';
@@ -400,6 +401,45 @@ function onItemCreated(item: MenuItemData) {
     notify.success(
         `"${item.name}" agregado — ya puedes moverlo/configurarlo.`,
     );
+}
+
+/** "Duplicar platillo" — copia nombre/textos/precio/imagen de un platillo
+ * existente en un platillo nuevo dentro de la MISMA categoría, para que el
+ * admin pueda arrancar de un punto de partida real en vez de escribir todo
+ * desde cero (pedido explícito: "copiar textos de algún platillo"). La
+ * copia se inserta al final de la lista y se selecciona de inmediato para
+ * que sea obvio cuál es la nueva. */
+const itemsSaving = ref(false);
+
+async function duplicateItemAction(item: MenuItemData) {
+    if (itemsSaving.value) {
+        return;
+    }
+
+    const owner = categories.find((c) => c.items.some((i) => i.id === item.id));
+
+    if (!owner) {
+        return;
+    }
+
+    itemsSaving.value = true;
+
+    try {
+        const res = await postJson<{ item: MenuItemData }>(
+            `/admin/menu-editor/items/${item.id}/duplicate`,
+            {},
+        );
+        owner.items = [...owner.items, res.item];
+        selectedKey.value = `item-${res.item.id}:container`;
+        scheduleIframeReload();
+        notify.success(
+            `"${res.item.name}" creado — ya puedes cambiarle el nombre/precio.`,
+        );
+    } catch {
+        notify.error('No se pudo duplicar el platillo.');
+    } finally {
+        itemsSaving.value = false;
+    }
 }
 
 function goToIndex(idx: number) {
@@ -2110,6 +2150,16 @@ function onDecorationHandleDown(
                                     />
                                     {{ item.name }}
                                 </button>
+                                <button
+                                    type="button"
+                                    class="tc-lock-btn"
+                                    aria-label="Duplicar platillo"
+                                    title="Duplicar platillo — copia su nombre, textos, precio e imagen para editarlos"
+                                    :disabled="itemsSaving"
+                                    @click="duplicateItemAction(item)"
+                                >
+                                    <Copy class="h-3 w-3" />
+                                </button>
                             </div>
                             <ul
                                 v-if="expandedItems.has(item.id)"
@@ -2945,19 +2995,61 @@ function onDecorationHandleDown(
                                     updateQuickField('is_active', $event)
                                 "
                             />
-                            <TcSwitch
-                                v-if="
-                                    selectedItem.ingredients ||
-                                    selectedItem.ingredients_hidden
-                                "
-                                label="Ingredientes visibles"
-                                description="Ocultarlos no borra el texto"
-                                :model-value="!selectedItem.ingredients_hidden"
+                            <!-- Resto de textos del platillo (insignia,
+                                 etiquetas de precio, presentación,
+                                 ingredientes) — mismos campos que el CRUD
+                                 completo (Admin/MenuItems/Edit.vue), para
+                                 poder escribirlos/borrarlos sin salir del
+                                 editor visual ni navegar hasta el platillo. */ -->
+                            <TcInput
+                                label="Insignia"
+                                placeholder="Ej: Nuevo, Popular…"
+                                :model-value="selectedItem.badge ?? ''"
                                 @update:model-value="
-                                    updateQuickField(
-                                        'ingredients_hidden',
-                                        !$event,
-                                    )
+                                    updateQuickField('badge', $event)
+                                "
+                            />
+                            <TcInput
+                                label="Presentación / unidad"
+                                placeholder="Ej: 700 ml"
+                                :model-value="selectedItem.presentation ?? ''"
+                                @update:model-value="
+                                    updateQuickField('presentation', $event)
+                                "
+                            />
+                            <div class="grid grid-cols-2 gap-2">
+                                <TcInput
+                                    label="Etiqueta del precio"
+                                    placeholder="Ej: Blanco, Copa…"
+                                    :model-value="selectedItem.price_label ?? ''"
+                                    @update:model-value="
+                                        updateQuickField(
+                                            'price_label',
+                                            $event,
+                                        )
+                                    "
+                                />
+                                <TcInput
+                                    label="Etiqueta del precio secundario"
+                                    placeholder="Ej: Botella…"
+                                    :model-value="
+                                        selectedItem.price_secondary_label ??
+                                        ''
+                                    "
+                                    @update:model-value="
+                                        updateQuickField(
+                                            'price_secondary_label',
+                                            $event,
+                                        )
+                                    "
+                                />
+                            </div>
+                            <TcInput
+                                label="Etiqueta de elección"
+                                placeholder="Ej: TÚ ELIGES"
+                                :model-value="selectedItem.choice_label ?? ''"
+                                @update:model-value="
+                                    updateQuickField('choice_label', $event)
                                 "
                             />
                             <TcSwitch
@@ -2971,6 +3063,29 @@ function onDecorationHandleDown(
                                 @update:model-value="
                                     updateQuickField(
                                         'choice_label_hidden',
+                                        !$event,
+                                    )
+                                "
+                            />
+                            <TcTextarea
+                                label="Ingredientes / opciones"
+                                :rows="2"
+                                :model-value="selectedItem.ingredients ?? ''"
+                                @update:model-value="
+                                    updateQuickField('ingredients', $event)
+                                "
+                            />
+                            <TcSwitch
+                                v-if="
+                                    selectedItem.ingredients ||
+                                    selectedItem.ingredients_hidden
+                                "
+                                label="Ingredientes visibles"
+                                description="Ocultarlos no borra el texto"
+                                :model-value="!selectedItem.ingredients_hidden"
+                                @update:model-value="
+                                    updateQuickField(
+                                        'ingredients_hidden',
                                         !$event,
                                     )
                                 "

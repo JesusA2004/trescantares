@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { usePositioningRoot } from '@/composables/useMenuPositioningRoot';
 import {
     defaultElementConfig,
@@ -103,6 +103,43 @@ onMounted(() => {
 const shouldTeleport = computed(
     () => !props.decoration && isNormalized.value && !!teleportTarget.value,
 );
+
+/**
+ * Hueco reservado en el lugar de flujo original — bug real reportado por el
+ * admin: al arrastrar el TÍTULO de Bebidas (o cualquier elemento que arranca
+ * en flujo normal, no un adorno), Teleport lo saca por completo del árbol de
+ * `.tc-mp-frame-inner` hacia `.tc-mp-customized-layer` sin dejar NADA en su
+ * lugar — el espacio vertical que ocupaba desaparece de golpe, así que todo
+ * el contenido que estaba DEBAJO (tabla de bebidas, grupos, etc., que siguen
+ * en flujo normal) se recoloca hacia arriba para llenar el hueco. Esto hacía
+ * que mover el título pareciera "mover todo el texto" y volvía el arrastre
+ * casi inutilizable (el punto bajo el cursor se desplazaba en cada frame
+ * porque el propio layout se reacomodaba mientras se arrastraba). Ya estaba
+ * documentado como causa raíz conocida (ver memoria del proyecto, caso
+ * análogo en filas flex de un platillo) pero nunca se había aplicado el
+ * arreglo real: reservar el mismo tamaño en el lugar original con un
+ * placeholder invisible mientras el elemento vive en la capa personalizada.
+ *
+ * Se mide con getBoundingClientRect() justo en la transición flujo->
+ * personalizado (flush:'pre' — el watcher corre ANTES de que Vue vuelva a
+ * pintar, así que `root` todavía está en su posición de flujo original en
+ * ese instante), cubriendo tanto el primer arrastre en curso como un
+ * elemento que YA nace 'normalized' al montar (ver comentario de
+ * shouldTeleport: el primer tick siempre renderiza en flujo antes de
+ * Teleportar).
+ */
+const flowPlaceholderSize = ref<{ width: number; height: number } | null>(
+    null,
+);
+
+watch(shouldTeleport, (teleporting, wasTeleporting) => {
+    if (teleporting && !wasTeleporting && root.value) {
+        const rect = root.value.getBoundingClientRect();
+        flowPlaceholderSize.value = { width: rect.width, height: rect.height };
+    } else if (!teleporting) {
+        flowPlaceholderSize.value = null;
+    }
+});
 
 /** Máquina de estados de gestos — decidida UNA SOLA VEZ en pointerdown y
  * jamás reasignada a otro tipo después (ver startDrag/startResize):
@@ -861,6 +898,21 @@ defineExpose({ root });
          "Elementos de la sección"/platillo en Index.vue sigue listando el
          elemento y permite reseleccionarlo aunque no esté en el DOM del
          lienzo (igual que ya pasa con adornos ocultos). -->
+    <!-- Reserva el hueco que el elemento ocupaba en flujo normal mientras
+         vive Teleportado en la capa personalizada — ver flowPlaceholderSize.
+         Nunca se renderiza para adornos (nunca viven en flujo, ver prop
+         `decoration`) ni mientras el gesto de arrastre sigue en curso dentro
+         del propio flujo (shouldTeleport recién se activa AL COMMITEAR el
+         primer movimiento, no durante el arrastre en sí). -->
+    <div
+        v-if="shouldTeleport && flowPlaceholderSize"
+        class="tc-mev-flow-placeholder"
+        :style="{
+            width: `${flowPlaceholderSize.width}px`,
+            height: `${flowPlaceholderSize.height}px`,
+        }"
+        aria-hidden="true"
+    />
     <Teleport
         v-if="!config.hidden"
         :to="teleportTarget ?? 'body'"
@@ -926,6 +978,19 @@ defineExpose({ root });
 </template>
 
 <style scoped>
+/* Ver flowPlaceholderSize arriba — invisible pero SIGUE ocupando su tamaño
+   en el flujo normal (nunca display:none, que no reservaría nada). flex-
+   shrink:0 es necesario dentro de filas flex (p.ej. .tc-mp-hero-row) para
+   que un padre con poco espacio no lo comprima en vez de encoger a sus
+   hermanos reales, que es justo el reflow que este placeholder existe para
+   evitar. pointer-events:none porque nunca debe ser el objetivo de ningún
+   gesto (el elemento real, ya Teleportado, es quien recibe los clics). */
+.tc-mev-flow-placeholder {
+    visibility: hidden;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
 /* A propósito no fija display/position: el host (imagen, título, bloque de
    precio…) ya trae el display que necesita — imponer uno propio pisaría
    flex/grid del layout público. transform funciona en cualquier caja sin

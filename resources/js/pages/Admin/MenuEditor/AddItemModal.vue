@@ -193,6 +193,7 @@ async function submit() {
                         v-model="form.zone"
                         label="Zona en la plantilla"
                         placeholder="Elegir zona"
+                        required
                         :options="
                             zoneOptions.map((z) => ({
                                 value: z.value,
@@ -200,7 +201,7 @@ async function submit() {
                             }))
                         "
                         :error="fieldError('zone')"
-                        hint="Puede haber varios platillos en la misma zona."
+                        hint="Obligatoria: sin zona el platillo no aparece en el menú público."
                     />
                 </div>
 

@@ -64,6 +64,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'prevent
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
     Route::patch('menu-editor/items/{menuItem}/quick', [MenuEditorController::class, 'updateItemQuick'])->name('menu-editor.items.quick')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
+    Route::post('menu-editor/items/{menuItem}/duplicate', [MenuEditorController::class, 'duplicateItem'])->name('menu-editor.items.duplicate')
+        ->middleware(['permission:menu.update|super-admin', 'module:menu']);
     Route::post('menu-editor/items/reorder', [MenuEditorController::class, 'reorderItems'])->name('menu-editor.items.reorder')
         ->middleware(['permission:menu.update|super-admin', 'module:menu']);
     Route::patch('menu-editor/categories/{category}/element', [MenuEditorController::class, 'updateCategoryElement'])->name('menu-editor.categories.element')
