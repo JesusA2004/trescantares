@@ -13,6 +13,7 @@ import {
     itemElementFor,
     resolveMenuDevice,
     sectionHeightFor,
+    sectionHeightToAnchor,
     toAnchorCoordinates,
 } from '@/components/Public/Menu/types';
 import type {
@@ -678,14 +679,21 @@ function scheduleRemeasureAllSections() {
 
 async function persistSectionHeight(category: MenuCategoryData, height: number) {
     const device = currentDevice.value;
+    // `height` es un px CRUDO medido con getBoundingClientRect() al ancho
+    // REAL en que se está editando (viewportWidth.value — para Escritorio
+    // puede ser 1909px, no 1440). sectionHeightFor() siempre interpreta el
+    // valor guardado como "anclado" al ancho de referencia del dispositivo
+    // (MENU_DEVICE_WIDTH[device]), así que hay que anclarlo aquí ANTES de
+    // guardar — ver sectionHeightToAnchor().
+    const anchored = sectionHeightToAnchor(height, viewportWidth.value, device);
     const heights = { ...(category.section_height ?? {}) };
-    heights[device] = height;
+    heights[device] = anchored;
     category.section_height = heights;
 
     try {
         await patchJson(
             `/admin/menu-editor/categories/${category.id}/section-height`,
-            { breakpoint: device, height },
+            { breakpoint: device, height: anchored },
         );
     } catch {
         // Sin toast aquí a propósito: este componente no tiene acceso a
@@ -698,7 +706,7 @@ async function persistSectionHeight(category: MenuCategoryData, height: number) 
         type: 'sectionHeightCommit',
         categoryId: category.id,
         breakpoint: device,
-        sectionHeight: height,
+        sectionHeight: anchored,
     });
 }
 

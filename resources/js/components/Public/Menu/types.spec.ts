@@ -11,6 +11,7 @@ import {
     resolveElementConfig,
     resolveMenuDevice,
     sectionHeightFor,
+    sectionHeightToAnchor,
     upgradeV1ToV2,
     type ElementConfig,
     type ElementConfigV2,
@@ -556,6 +557,52 @@ describe('sectionHeightFor: escala proporcional + herencia entre dispositivos', 
 
         // Hereda la razón de Tablet (0.5), no la de Móvil (2).
         expect(heightAt1440).toBeCloseTo(0.5 * 1440, 6);
+    });
+});
+
+describe('sectionHeightToAnchor: ancla el alto medido en Escritorio a ancho real variable (bug real corregido)', () => {
+    it('Móvil/Tablet son no-op (editedAtWidth ya es su propia ancla)', () => {
+        expect(sectionHeightToAnchor(780, 390, 'mobile')).toBe(780);
+        expect(sectionHeightToAnchor(384, 768, 'tablet')).toBe(384);
+    });
+
+    it('Escritorio editado a un ancho real ≠1440 se ancla proporcionalmente', () => {
+        // Editado a 1909px con un alto medido de 600px -> anclado a 1440.
+        const anchored = sectionHeightToAnchor(600, 1909, 'desktop');
+
+        expect(anchored).toBe(Math.round(600 * (1440 / 1909)));
+    });
+
+    it('caso obligatorio del reporte: editar a 1909px conserva EXACTAMENTE esa altura al reabrir a 1909px, y escala una sola vez a 1440px', () => {
+        const editedAtWidth = 1909;
+        const measuredHeight = 600;
+
+        const anchored = sectionHeightToAnchor(
+            measuredHeight,
+            editedAtWidth,
+            'desktop',
+        );
+        const category = { section_height: { desktop: anchored } };
+
+        // Reabrir el menú público exactamente al mismo ancho real de edición
+        // (1909px) debe reproducir la altura medida original, sin doble
+        // escalado ni espacios en blanco — tolerancia máxima 2px (el redondeo
+        // entero de sectionHeightToAnchor introduce, como mucho, un error de
+        // sub-píxel al re-expandir).
+        const reopened = sectionHeightFor(category, editedAtWidth) as number;
+
+        expect(Math.abs(reopened - measuredHeight)).toBeLessThanOrEqual(2);
+
+        // A 1440px (el ancla) escala proporcionalmente UNA sola vez.
+        const at1440 = sectionHeightFor(category, 1440) as number;
+
+        expect(Math.abs(at1440 - anchored)).toBeLessThanOrEqual(2);
+    });
+
+    it('editedAtWidth no finito/≤0 no produce NaN/Infinity (guarda el valor crudo)', () => {
+        expect(sectionHeightToAnchor(500, 0, 'desktop')).toBe(500);
+        expect(sectionHeightToAnchor(500, -10, 'desktop')).toBe(500);
+        expect(sectionHeightToAnchor(500, NaN, 'desktop')).toBe(500);
     });
 });
 

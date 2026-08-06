@@ -57,6 +57,7 @@ import {
     hasOwnElementConfig,
     isV2Config,
     itemElementFor,
+    sectionHeightToAnchor,
     toAnchorCoordinates,
 } from '@/components/Public/Menu/types';
 import type {
@@ -295,10 +296,30 @@ const activeIndex = computed(() =>
  * vista actualmente seleccionada en la barra de herramientas — null =
  * automático (crece con el contenido, el comportamiento de siempre). Campo
  * discreto por vista, sin interpolar (mismo criterio que sectionHeightFor()
- * en types.ts, que es lo que consume el iframe/menú público). */
-const sectionHeightForCurrentDevice = computed<number | null>(
-    () => activeCategory.value?.section_height?.[selectedDevice.value] ?? null,
-);
+ * en types.ts, que es lo que consume el iframe/menú público).
+ *
+ * Lo guardado (`category.section_height[device]`) SIEMPRE está anclado al
+ * ancho de referencia del dispositivo (390/768/1440 — ver
+ * sectionHeightToAnchor/updateSectionHeight); este computed lo expande de
+ * vuelta al ancho REAL que se está mostrando ahora mismo
+ * (effectiveDeviceWidth, que para Escritorio puede ser 1909px) para que el
+ * número en el campo coincida con lo que el admin ve en el lienzo — mismo
+ * patrón "anclado al guardar, expandido al mostrar" que ya usa
+ * resolveConfig() para cualquier otro campo geométrico. Para Móvil/Tablet
+ * effectiveDeviceWidth === MENU_DEVICE_WIDTH del dispositivo, así que es un
+ * no-op ahí. */
+const sectionHeightForCurrentDevice = computed<number | null>(() => {
+    const stored = activeCategory.value?.section_height?.[selectedDevice.value];
+
+    if (stored == null) {
+        return null;
+    }
+
+    const anchorWidth = MENU_DEVICE_WIDTH[selectedDevice.value];
+    const realWidth = effectiveDeviceWidth.value[selectedDevice.value];
+
+    return Math.round(stored * (realWidth / anchorWidth));
+});
 
 async function updateSectionHeight(height: number | null) {
     if (!activeCategory.value) {
@@ -307,12 +328,26 @@ async function updateSectionHeight(height: number | null) {
 
     const category = activeCategory.value;
     const breakpoint = selectedDevice.value;
+    // El campo numérico representa "cuánto se ve ahora mismo" al ancho REAL
+    // mostrado (effectiveDeviceWidth — para Escritorio puede ser 1909px, no
+    // 1440), igual que la manija de arrastre en Public/Menu.vue — hay que
+    // anclarlo al ancho de referencia del dispositivo antes de guardar (ver
+    // sectionHeightToAnchor) para que no se duplique el escalado al leerlo
+    // de vuelta con sectionHeightFor().
+    const anchored =
+        height === null
+            ? null
+            : sectionHeightToAnchor(
+                  height,
+                  effectiveDeviceWidth.value[breakpoint],
+                  breakpoint,
+              );
     const heights = { ...(category.section_height ?? {}) };
 
-    if (height === null) {
+    if (anchored === null) {
         delete heights[breakpoint];
     } else {
-        heights[breakpoint] = height;
+        heights[breakpoint] = anchored;
     }
 
     category.section_height = Object.keys(heights).length ? heights : null;
@@ -320,7 +355,7 @@ async function updateSectionHeight(height: number | null) {
     try {
         await patchJson(
             `/admin/menu-editor/categories/${category.id}/section-height`,
-            { breakpoint, height },
+            { breakpoint, height: anchored },
         );
         scheduleIframeReload();
     } catch {

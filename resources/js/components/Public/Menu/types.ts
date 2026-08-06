@@ -760,6 +760,39 @@ export function sectionHeightFor(
     return (chosen.height / chosen.width) * viewportWidth;
 }
 
+/**
+ * Convierte un alto MEDIDO en un ancho real de edición (`editedAtWidth` — p.
+ * ej. 1909px, el ancho real de la ventana al arrastrar la manija de una
+ * sección en Escritorio) al equivalente anclado al ancho de referencia de su
+ * dispositivo (`MENU_DEVICE_WIDTH[device]`, 1440 para Escritorio), que es lo
+ * único que `sectionHeightFor` sabe interpretar — esa función SIEMPRE divide
+ * el alto guardado entre el ancho de referencia del dispositivo (nunca entre
+ * el ancho real en que se editó), así que persistir un alto sin este ancla
+ * previo produce doble-escalado o alturas "congeladas" incorrectas en
+ * cualquier ancho real de escritorio distinto de 1440 (bug real corregido:
+ * editar a 1909px guardaba el alto CRUDO medido en 1909px bajo la clave
+ * 'desktop', y al re-renderizar a 1909px `sectionHeightFor` lo dividía entre
+ * 1440 y volvía a multiplicar por 1909 — un escalado espurio de 1909/1440
+ * que nunca debió aplicarse porque el alto YA estaba en unidades de 1909px).
+ * Para Móvil/Tablet, `editedAtWidth` siempre coincide exactamente con su
+ * ancla (390/768 — el iframe del editor carga a ese ancho fijo), así que
+ * esto es un no-op ahí; solo Escritorio (ancho real variable) necesita la
+ * conversión.
+ */
+export function sectionHeightToAnchor(
+    measuredHeight: number,
+    editedAtWidth: number,
+    device: MenuDevice,
+): number {
+    const anchorWidth = MENU_DEVICE_WIDTH[device];
+
+    if (!Number.isFinite(editedAtWidth) || editedAtWidth <= 0) {
+        return Math.round(measuredHeight);
+    }
+
+    return Math.round(measuredHeight * (anchorWidth / editedAtWidth));
+}
+
 /** Config visual de UN adorno para un ancho de viewport — misma selección de
  * composición que categoryElementFor/itemElementFor (ver
  * resolveElementConfig), aplicado directamente sobre su ElementSettings
