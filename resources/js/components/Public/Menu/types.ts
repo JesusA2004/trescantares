@@ -1,9 +1,11 @@
 // El ancho REAL y continuo del viewport (px), no un bucket discreto — cada
-// elemento se posiciona interpolando entre las tres vistas configurables
-// (ver MenuDevice) según este número exacto. Sigue llamándose
-// "MenuBreakpoint" únicamente para no tener que tocar el prop `breakpoint`
-// que todas las plantillas de página (PozolePage, BirriaPage, etc.) ya
-// reciben y reenvían tal cual a itemElementFor/categoryElementFor.
+// elemento resuelve a qué vista pertenece (ver MenuDevice/resolveMenuDevice)
+// según este número exacto y adapta esa composición proporcionalmente a él
+// (ver resolveElementConfig: selección de composición, nunca interpolación
+// entre vistas distintas). Sigue llamándose "MenuBreakpoint" únicamente para
+// no tener que tocar el prop `breakpoint` que todas las plantillas de página
+// (PozolePage, BirriaPage, etc.) ya reciben y reenvían tal cual a
+// itemElementFor/categoryElementFor.
 export type MenuBreakpoint = number;
 
 /** Las tres vistas configurables que ve el administrador — todo lo demás
@@ -27,21 +29,28 @@ export const MENU_DEVICE_LABELS: Record<MenuDevice, string> = {
     desktop: 'Escritorio',
 };
 
-/** Vista más cercana a un ancho dado — usada solo para saber en qué vista
- * persistir un arrastre hecho dentro del iframe del editor (que siempre
- * carga a un ancho EXACTO de 390/768/1440, así que esto resuelve siempre al
- * ancla exacta, nunca a una zona intermedia). */
+/** Rango de ancho REAL (viewport o lienzo) que corresponde a cada vista —
+ * fijo e independiente del ancho de anclaje de cada composición (390/768/
+ * 1440): un teléfono de 593px sigue siendo Móvil (nunca "cae" en Tablet
+ * solo por estar más cerca de 768 que de 390 en línea recta). A propósito
+ * NO son los puntos medios entre anclas (390+768)/2=579 y (768+1440)/2=1104
+ * que usaba la versión anterior — esos puntos medios fueron exactamente el
+ * bug reportado: un teléfono de 593px (Galaxy S20 Ultra y similares) ya
+ * caía en Tablet, perdiendo la altura/composición Móvil pese a seguir
+ * siendo, a todos los efectos de diseño, un teléfono. Estos umbrales
+ * coinciden con los rangos que el propio negocio define para el admin
+ * (Móvil <640, Tablet 640-1023, Escritorio ≥1024) y son los ÚNICOS que usa
+ * todo el sistema — tanto para elegir qué composición completa mostrar
+ * (ver resolveElementConfig) como para decidir en qué vista persistir un
+ * arrastre hecho dentro del iframe del editor (que siempre carga a un ancho
+ * EXACTO de 390/768/1440, así que esto resuelve siempre a la vista
+ * correspondiente a esa ancla, nunca a una zona ambigua). */
 export function resolveMenuDevice(width: number): MenuDevice {
-    const midMobileTablet =
-        (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
-    const midTabletDesktop =
-        (MENU_DEVICE_WIDTH.tablet + MENU_DEVICE_WIDTH.desktop) / 2;
-
-    if (width <= midMobileTablet) {
+    if (width < 640) {
         return 'mobile';
     }
 
-    if (width <= midTabletDesktop) {
+    if (width < 1024) {
         return 'tablet';
     }
 
@@ -290,92 +299,14 @@ export function upgradeV1ToV2(
 }
 
 /** Un elemento tiene como máximo tres configuraciones guardadas (una por
- * MenuDevice) — todo ancho intermedio se calcula interpolando entre ellas,
+ * MenuDevice) — cualquier ancho se resuelve a UNA sola de estas tres
+ * composiciones completas (ver resolveElementConfig), nunca mezclando dos, y
  * nunca se guarda un cuarto/quinto/sexto valor. `_legacy_breakpoints` es un
  * respaldo de solo lectura que deja la migración de datos del formato
  * anterior (base/sm/md/lg/xl/2xl) — el código público nunca lo lee. */
 export type ElementSettings = Partial<Record<MenuDevice, StoredElementConfig>> & {
     _legacy_breakpoints?: unknown;
 };
-
-const INTERPOLATED_FIELDS = [
-    'x',
-    'y',
-    'x_pct',
-    'y_pct',
-    'scale',
-    'rotation',
-    'font_size',
-    'line_height',
-    'letter_spacing',
-    'max_width',
-    'object_x',
-    'object_y',
-    'inner_scale',
-    'opacity',
-] as const satisfies readonly (keyof ElementConfig | keyof ElementConfigV2)[];
-
-/** Campos discretos: no tiene sentido "mezclar" un z-index o una alineación
- * a medio camino — siempre toman el valor del ancla inferior más cercana. */
-const DISCRETE_FIELDS = [
-    'z_index',
-    'locked',
-    'hidden',
-    'align',
-    'fit',
-    'color',
-] as const satisfies readonly (keyof ElementConfig | keyof ElementConfigV2)[];
-
-function clamp01(t: number): number {
-    return Math.min(1, Math.max(0, t));
-}
-
-function lerp(a: number, b: number, t: number): number {
-    return a + (b - a) * t;
-}
-
-/**
- * Interpola cualquier campo numérico opcional — INCLUYE width/height y
- * width_pct/height_pct (antes tenían su propia `lerpSize`, que devolvía
- * `null` en cuanto CUALQUIERA de las dos anclas fuera `null`/`undefined`,
- * "automático"). Ese comportamiento se sentía razonable para dos anclas
- * genuinamente completas donde el admin dejó una en automático a propósito,
- * pero resultó ser la causa exacta del bug reportado en producción: un
- * ancla incompleta (Tablet ausente + Escritorio con solo `{z_index:3}`, o
- * simplemente un campo nunca tocado en esa vista) hacía que `width_pct`
- * quedara `null` ahí — no por decisión del admin, sino por ausencia de
- * datos — y esa `null` "ganaba" sobre el valor real de Móvil, devolviendo la
- * imagen a su tamaño intrínseco desde 391px. Confirmado con datos reales:
- * la decoración "Tacos Dorados" (Pozole) tiene `mobile.width:112` pero
- * `desktop.width:null` (nunca se le asignó ancho en Escritorio) — con la
- * `lerpSize` anterior, CUALQUIER ancho de viewport por encima de 390px
- * perdía el 112 y volvía a `null`. Ahora, si solo un lado está definido, se
- * usa ese lado (nunca se "apaga" un valor real por la ausencia del otro) —
- * solo cuando AMBOS lados son `null`/`undefined` el resultado se queda en
- * automático, que sigue siendo el único caso donde "automático" tiene un
- * significado inambiguo. */
-function lerpOptional(
-    a: number | null | undefined,
-    b: number | null | undefined,
-    t: number,
-): number | null {
-    const an = a ?? null;
-    const bn = b ?? null;
-
-    if (an === null && bn === null) {
-        return null;
-    }
-
-    if (an === null) {
-        return bn;
-    }
-
-    if (bn === null) {
-        return an;
-    }
-
-    return lerp(an, bn, t);
-}
 
 /**
  * Campos en px reales que deben escalar proporcionalmente al convertir entre
@@ -498,7 +429,18 @@ function hasOwnPosition(config: StoredElementConfig): boolean {
  * resultado que si Escritorio no tuviera ninguna configuración.
  * Si NINGUNA otra ancla tiene posición propia tampoco (caso degenerado), se
  * devuelve la ancla huérfana tal cual — el spread contra los valores por
- * defecto que ya hace `resolveElementConfig` sigue aplicando después. */
+ * defecto que ya hace `resolveElementConfig` sigue aplicando después.
+ *
+ * La geometría prestada se re-escala primero al ancho de referencia de LA
+ * PROPIA ancla huérfana (`fromAnchorCoordinates`, no-op para % — ver
+ * SCALABLE_PX_FIELDS) antes de adoptarla: sin esto, unos px V1 prestados de
+ * un donante con un ancho de referencia distinto (p. ej. Escritorio
+ * huérfano prestándose de Tablet) quedarían etiquetados con el ancho de
+ * Escritorio (1440) pero conservando magnitudes pensadas para 768 — al
+ * escalar después por `viewportWidth/1440` en `resolveElementConfig`, el
+ * resultado saldría equivocado por un factor 1440/768. Para % esto es un
+ * no-op exacto (ya son resolución-independientes), así que aplicarlo siempre
+ * es seguro. */
 function completeAnchor(
     anchor: DeviceAnchor,
     others: DeviceAnchor[],
@@ -519,7 +461,13 @@ function completeAnchor(
         return anchor.config;
     }
 
-    return { ...nearest.config, ...anchor.config };
+    const borrowed = fromAnchorCoordinates(
+        nearest.config,
+        anchor.width,
+        nearest.width,
+    );
+
+    return { ...borrowed, ...anchor.config };
 }
 
 function anchorsOf(
@@ -548,211 +496,83 @@ function defaultConfigFor(config: StoredElementConfig): StoredElementConfig {
     return isV2Config(config) ? defaultElementConfigV2() : defaultElementConfig();
 }
 
-/** Convierte SOLO PARA MEZCLAR una config V1 a pct transitorio, usando el
- * ancho de SU PROPIA ancla como referencia (p. ej. x/390*100 para un ancla
- * mobile) — nunca se persiste, es puro azúcar para que la interpolación
- * entre un ancla V1 y una V2 (mientras el admin migra sus anclas una por
- * una tocándolas en el editor) no "salte" bruscamente de un valor a otro en
- * vez de mezclarse. La conversión real y persistida SIEMPRE se hace desde el
- * rect medido del DOM (ver upgradeV1ToV2) — esta es la única excepción
- * documentada al requisito de "nunca x/ancho a secas". */
-function toTransientPct(config: ElementConfig, deviceWidth: number) {
-    return {
-        x_pct: (config.x / deviceWidth) * 100,
-        y_pct: (config.y / deviceWidth) * 100,
-        width_pct: config.width !== null ? (config.width / deviceWidth) * 100 : null,
-        height_pct: config.height !== null ? (config.height / deviceWidth) * 100 : null,
-    };
-}
-
 /**
  * Calcula la configuración real de un elemento para un ancho de viewport
- * arbitrario, interpolando linealmente entre las dos vistas configuradas más
- * cercanas (spec: t = (viewportWidth - anchoInferior) / (anchoSuperior -
- * anchoInferior), clamp 0..1).
+ * arbitrario mediante SELECCIÓN DE COMPOSICIÓN, nunca interpolación entre
+ * vistas distintas: se resuelve primero a qué dispositivo pertenece
+ * `viewportWidth` (ver resolveMenuDevice — Móvil <640, Tablet 640-1023,
+ * Escritorio ≥1024), se toma la composición COMPLETA guardada para ese
+ * dispositivo (o, si no existe, la del dispositivo con ancla más cercana —
+ * ver `anchorsOf`/`completeAnchor`, que ya hacían este respaldo para anclas
+ * "huérfanas" con solo `{z_index:3}` y ahora también cubre un dispositivo
+ * enteramente ausente) y se adapta proporcionalmente al ancho REAL del
+ * lienzo (`viewportWidth`) contra el ancho de referencia de la composición
+ * elegida.
  *
- * Fuera del rango configurado (por debajo del ancla más angosta o por
- * encima de la más ancha), la geometría escala PROPORCIONALMENTE en vez de
- * congelarse, para las TRES vistas (mobile/tablet/desktop) — no solo
- * 'desktop' como antes. Ese era exactamente el bug reportado: un ancla
- * mobile-only se quedaba pixel-idéntica tanto por debajo de 390px como en
- * CUALQUIER otro teléfono más ancho sin ancla propia (p. ej. 430px),
- * confirmado en el repro de Birria — ver comentario junto a
- * `viewportWidth >= last.width` más abajo sobre por qué NO se restringió
- * esto a 'desktop' pese a una sospecha inicial de regresión.
+ * Esto reemplaza la versión anterior, que interpolaba linealmente entre las
+ * dos anclas configuradas más cercanas — el bug de raíz reportado en
+ * producción: una composición editorial (título/foto/precio/adornos) no
+ * puede "morfearse" elemento por elemento entre Móvil y Tablet porque cada
+ * uno sigue una trayectoria distinta y termina encimándose a mitad de
+ * camino. Peor aún cuando una vista era V1 (px, semántica de FLUJO: x/y son
+ * un desplazamiento relativo al lugar natural del elemento, nunca una
+ * posición absoluta) y la otra V2 (%, semántica ABSOLUTA contra el ancho del
+ * root): la función anterior convertía el x/y de flujo V1 a un x_pct/y_pct
+ * absoluto vía `x/anchorWidth*100` para poder "mezclarlo" con la otra ancla
+ * — una conversión matemáticamente inválida (un desplazamiento relativo no
+ * es una posición absoluta) que hacía saltar el elemento a un lugar
+ * arbitrario en cuanto el viewport se movía un solo px fuera del ancla pura
+ * (390→391px). Con selección de composición esto es estructuralmente
+ * imposible: SIEMPRE se usa una sola ancla completa, nunca se mezclan dos
+ * versiones ni dos dispositivos en el mismo resultado.
  *
- * Para un ancla V2 esta escala es un no-op sobre x_pct/y_pct/width_pct/
- * height_pct (ya son resolución-independientes por diseño — pctToPx hace el
- * trabajo real en el momento de renderizar contra el ancho REAL medido del
- * root), pero SÍ sigue escalando los campos no geométricos heredados
- * (font_size/letter_spacing/max_width) igual que en V1. Ver
- * fromAnchorCoordinates/toAnchorCoordinates para el sentido inverso.
+ * Consecuencia directa: `position_mode` nunca cambia a mitad de un rango de
+ * dispositivo (solo puede cambiar en los saltos discretos 640/1024, donde
+ * cambia la composición completa) y un ancla V1 conserva su semántica de
+ * flujo sin conversión alguna hasta que se migra de verdad contra el DOM
+ * (ver upgradeV1ToV2) — nunca vía este resolver.
+ *
+ * La escala proporcional (`fromAnchorCoordinates`) es un no-op sobre
+ * x_pct/y_pct/width_pct/height_pct (ya son resolución-independientes por
+ * diseño — pctToPx hace el trabajo real al renderizar contra el ancho REAL
+ * medido del root), pero SÍ sigue escalando los campos en px heredados
+ * (x/y/width/height en V1, font_size/letter_spacing/max_width en ambos).
  */
 export function resolveElementConfig(
     settings: ElementSettings | null | undefined,
     viewportWidth: number,
 ): StoredElementConfig {
-    let anchors = anchorsOf(settings);
+    const anchors = anchorsOf(settings);
 
     if (anchors.length === 0) {
         return defaultElementConfig();
     }
 
-    // Dentro del rango Móvil (resolveMenuDevice), si NO hay una ancla Tablet
-    // propia, ignora cualquier ancla más lejana (Escritorio) por completo —
-    // nunca empieces a mezclar hacia Escritorio solo porque el viewport pasó
-    // de 390px. Sin esto, un teléfono de 393/412/414/430px (anchors =
-    // [mobile, desktop], Tablet nunca se configuró) ya arrancaba una
-    // interpolación real hacia Escritorio con t > 0 desde el primer px por
-    // encima del ancla Móvil — confirmado con datos reales: la decoración
-    // "Tacos Dorados" (mobile.width:112, sin tablet, desktop.width:1237.5)
-    // crecía progresivamente en CUALQUIER teléfono más ancho que el S20 en
-    // vez de conservar el tamaño diseñado para Móvil. Deliberadamente NO se
-    // aplica cuando SÍ existe una ancla Tablet propia (con o sin posición —
-    // `completeAnchor` ya la respalda si es parcial): esa es la transición
-    // Móvil->Tablet real y probada (ver tests 4/5), que este arreglo no debe
-    // tocar. El límite superior es el mismo punto medio que ya usa
-    // `resolveMenuDevice` para clasificar el viewport como 'mobile' — nunca
-    // se activa por debajo del propio ancho del ancla Móvil (ahí ya extrapola
-    // solo, sin mezclar, vía la rama `viewportWidth <= first.width` de abajo).
-    const mobileAnchor = anchors.find((a) => a.device === 'mobile');
-    const hasTabletAnchor = anchors.some((a) => a.device === 'tablet');
-    const midMobileTablet =
-        (MENU_DEVICE_WIDTH.mobile + MENU_DEVICE_WIDTH.tablet) / 2;
+    const device = resolveMenuDevice(viewportWidth);
+    const deviceWidth = MENU_DEVICE_WIDTH[device];
 
-    if (
-        mobileAnchor &&
-        !hasTabletAnchor &&
-        viewportWidth > mobileAnchor.width &&
-        viewportWidth < midMobileTablet
-    ) {
-        anchors = [mobileAnchor];
-    }
+    // Dispositivo resuelto sin ancla propia (nunca configurado, a diferencia
+    // de una ancla "huérfana" con solo `{z_index:3}` que ya cubre
+    // `completeAnchor` dentro de `anchorsOf`) — hereda la composición
+    // COMPLETA del dispositivo con ancla más cercana por distancia en su
+    // propio ancho de referencia (390/768/1440), nunca por la posición
+    // exacta de `viewportWidth` dentro del rango: así todo el rango del
+    // dispositivo ausente usa SIEMPRE la misma composición prestada, en vez
+    // de cambiar de una anchor a otra según en qué punto exacto cae el
+    // visitante (lo que rompería "una composición completa y coherente por
+    // rango" tan pronto como hubiera más de un candidato cerca).
+    const chosen =
+        anchors.find((a) => a.device === device) ??
+        [...anchors].sort(
+            (a, b) =>
+                Math.abs(a.width - deviceWidth) - Math.abs(b.width - deviceWidth),
+        )[0];
 
-    const first = anchors[0];
-    const last = anchors[anchors.length - 1];
+    const resolved = { ...defaultConfigFor(chosen.config), ...chosen.config };
 
-    if (viewportWidth <= first.width) {
-        const resolved = { ...defaultConfigFor(first.config), ...first.config };
-
-        return viewportWidth !== first.width
-            ? fromAnchorCoordinates(resolved, viewportWidth, first.width)
-            : resolved;
-    }
-
-    if (anchors.length === 1 || viewportWidth >= last.width) {
-        const resolved = { ...defaultConfigFor(last.config), ...last.config };
-
-        // Igual que el límite inferior: proporcional para CUALQUIER vista,
-        // nunca congelado — un ancla mobile-only vista en OTRO teléfono más
-        // ancho (p. ej. 430px) debe escalar, no quedarse pixel-idéntica (el
-        // caso exacto del bug reportado, confirmado en el repro de Birria a
-        // 360/390/430px). Nota: se investigó restringir esto solo a
-        // 'desktop' tras ver fallar tests-e2e/menu-decorations-stacking.spec.ts
-        // y menu-editor-hide-and-altclick.spec.ts con este cambio activo —
-        // pero se confirmó (comparando contra el código sin tocar, vía `git
-        // stash`) que esas mismas pruebas YA fallaban de forma idéntica en
-        // el código original, sin relación alguna con esta función: son
-        // fallas preexistentes de ese entorno, no una regresión de este
-        // arreglo. Ver fromAnchorCoordinates para el sentido inverso.
-        return viewportWidth !== last.width
-            ? fromAnchorCoordinates(resolved, viewportWidth, last.width)
-            : resolved;
-    }
-
-    let lower = first;
-    let upper = last;
-
-    for (let i = 0; i < anchors.length - 1; i++) {
-        if (
-            viewportWidth >= anchors[i].width &&
-            viewportWidth <= anchors[i + 1].width
-        ) {
-            lower = anchors[i];
-            upper = anchors[i + 1];
-            break;
-        }
-    }
-
-    const t = clamp01(
-        (viewportWidth - lower.width) / (upper.width - lower.width),
-    );
-    const lowerIsV2 = isV2Config(lower.config);
-    const upperIsV2 = isV2Config(upper.config);
-    const mixedVersions = lowerIsV2 !== upperIsV2;
-
-    let a: Record<string, unknown> = {
-        ...defaultConfigFor(lower.config),
-        ...lower.config,
-    };
-    let b: Record<string, unknown> = {
-        ...defaultConfigFor(upper.config),
-        ...upper.config,
-    };
-
-    if (mixedVersions) {
-        if (!lowerIsV2) {
-            a = { ...a, ...toTransientPct(a as unknown as ElementConfig, lower.width) };
-        }
-        if (!upperIsV2) {
-            b = { ...b, ...toTransientPct(b as unknown as ElementConfig, upper.width) };
-        }
-    }
-
-    const out: Record<string, unknown> = { ...a };
-
-    for (const field of INTERPOLATED_FIELDS) {
-        out[field] = lerpOptional(
-            a[field] as number | null | undefined,
-            b[field] as number | null | undefined,
-            t,
-        );
-    }
-
-    out.width = lerpOptional(a.width as number | null, b.width as number | null, t);
-    out.height = lerpOptional(
-        a.height as number | null,
-        b.height as number | null,
-        t,
-    );
-    out.width_pct = lerpOptional(
-        a.width_pct as number | null,
-        b.width_pct as number | null,
-        t,
-    );
-    out.height_pct = lerpOptional(
-        a.height_pct as number | null,
-        b.height_pct as number | null,
-        t,
-    );
-
-    for (const field of DISCRETE_FIELDS) {
-        out[field] = a[field];
-    }
-
-    // Cualquier ancla V2 en el par hace que el resultado sea V2 (nunca
-    // "vuelve" a V1 a mitad de camino), PERO eso NO implica normalized: una
-    // config puede ser V2 y seguir en 'flow' (p. ej. un elemento solo
-    // redimensionado, nunca movido — ver upgradeV1ToV2/startResize, que
-    // preservan position_mode:'flow' en un resize puro). Solo escapa del
-    // flujo en el resultado interpolado si ALGUNA de las dos anclas YA
-    // estaba, de verdad, en 'normalized' — nunca por el mero hecho de ser
-    // V2. Bug anterior: un elemento redimensionado pero nunca movido saltaba
-    // fuera de flujo (position:absolute) en cualquier ancho intermedio entre
-    // dos anclas donde una fuera V2, aunque ninguna estuviera normalized.
-    if (lowerIsV2 || upperIsV2) {
-        const lowerNormalized =
-            lowerIsV2 &&
-            (lower.config as ElementConfigV2).position_mode === 'normalized';
-        const upperNormalized =
-            upperIsV2 &&
-            (upper.config as ElementConfigV2).position_mode === 'normalized';
-
-        out.coordinate_version = 2;
-        out.position_mode = lowerNormalized || upperNormalized ? 'normalized' : 'flow';
-    }
-
-    return out as unknown as StoredElementConfig;
+    return viewportWidth === chosen.width
+        ? resolved
+        : fromAnchorCoordinates(resolved, viewportWidth, chosen.width);
 }
 
 export function hasOwnElementConfig(
@@ -884,23 +704,64 @@ export interface MenuCategoryData {
 }
 
 /**
- * Alto mínimo forzado de una sección para un ancho de viewport dado —
- * a propósito NO interpola entre vistas como resolveElementConfig(): es un
- * valor discreto que el admin fija a mano por dispositivo (mobile/tablet/
- * desktop, ver resolveMenuDevice), sin un "intermedio" con sentido propio.
- * Si la vista resuelta no tiene un alto guardado, es automático (null).
+ * Alto mínimo forzado de una sección para un ancho de viewport dado — el
+ * admin fija a mano un valor en px por dispositivo (ver
+ * `startSectionResize`/`persistSectionHeight` en Public/Menu.vue, siempre
+ * arrastrado con el lienzo mostrado exactamente al ancho de referencia de
+ * esa vista), pero se CONSUME como una razón `alto guardado / ancho de
+ * referencia de SU dispositivo`, igual que cualquier otra medida en px del
+ * sistema — nunca como un número fijo independiente del ancho real. Esto es
+ * lo que hace que la altura "acompañe" el escalado del resto de la
+ * composición dentro del rango de un mismo dispositivo (p. ej. Móvil a
+ * 320px vs 390px vs 593px), en vez de quedar fija en px sin relación con
+ * cuánto se encogió o creció el lienzo.
+ *
+ * Si el dispositivo resuelto (ver resolveMenuDevice) no tiene una altura
+ * propia guardada, hereda la del dispositivo con altura MÁS CERCANO por
+ * ancho de referencia — nunca `null` solo porque falta esa vista concreta:
+ * bug real que esto corrige, una categoría con altura fijada en Móvil pero
+ * nunca en Tablet perdía el forzado de altura completo en cualquier ancho
+ * ≥640px, aunque Tablet estuviera mucho más cerca geométricamente de Móvil
+ * que de Escritorio. Solo si NINGÚN dispositivo tiene una altura guardada el
+ * resultado es `null` (automático, crece con el contenido como siempre).
  */
 export function sectionHeightFor(
     category: Pick<MenuCategoryData, 'section_height'>,
     viewportWidth: MenuBreakpoint,
 ): number | null {
-    const device = resolveMenuDevice(viewportWidth);
+    const heights = category.section_height;
 
-    return category.section_height?.[device] ?? null;
+    if (!heights) {
+        return null;
+    }
+
+    const owners = MENU_DEVICE_ORDER.filter(
+        (d) => typeof heights[d] === 'number',
+    ).map((d) => ({
+        device: d,
+        width: MENU_DEVICE_WIDTH[d],
+        height: heights[d] as number,
+    }));
+
+    if (owners.length === 0) {
+        return null;
+    }
+
+    const device = resolveMenuDevice(viewportWidth);
+    const deviceWidth = MENU_DEVICE_WIDTH[device];
+
+    const chosen =
+        owners.find((o) => o.device === device) ??
+        [...owners].sort(
+            (a, b) =>
+                Math.abs(a.width - deviceWidth) - Math.abs(b.width - deviceWidth),
+        )[0];
+
+    return (chosen.height / chosen.width) * viewportWidth;
 }
 
-/** Config visual de UN adorno para un ancho de viewport — mismo mecanismo
- * de interpolación/extrapolación que categoryElementFor/itemElementFor (ver
+/** Config visual de UN adorno para un ancho de viewport — misma selección de
+ * composición que categoryElementFor/itemElementFor (ver
  * resolveElementConfig), aplicado directamente sobre su ElementSettings
  * propio (un adorno no tiene "elementos" internos, ES el elemento). */
 export function decorationElementFor(
